@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#071A2F">
+  <meta name="robots" content="noindex, nofollow">
+  <title>لوحة التحكم · نظام إدارة لوما</title>
+
+  <link rel="icon" type="image/png" href="assets/logo/favicon.png">
+  <link rel="apple-touch-icon" href="assets/logo/luma-mark-yellow.png">
+  <link rel="preload" as="font" type="font/ttf" href="assets/fonts/DINNextArabic-Regular.ttf" crossorigin>
+  <link rel="preload" as="font" type="font/ttf" href="assets/fonts/DINNextArabic-Bold.ttf" crossorigin>
+  <link rel="preload" as="font" type="font/ttf" href="assets/fonts/DINNextArabic-Medium.ttf" crossorigin>
+
+  <link rel="stylesheet" href="css/variables.css">
+  <link rel="stylesheet" href="css/global.css">
+  <link rel="stylesheet" href="css/layout.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/rtl.css">
+  <link rel="stylesheet" href="css/print.css">
+  <link rel="stylesheet" href="css/responsive.css">
+
+  <!-- Restore the saved theme before first paint to avoid a flash. -->
+  <script>
+    try {
+      var t = localStorage.getItem('luma.theme');
+      if (t) document.documentElement.dataset.theme = t;
+      if (localStorage.getItem('luma.sidebarCollapsed') === '1') {
+        document.documentElement.dataset.sidebar = 'collapsed';
+      }
+    } catch (e) {}
+  </script>
+
+  <!-- Third-party UI libraries (all pinned) -->
+  <script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.7/dist/purify.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#page-container">تخطّي إلى المحتوى</a>
+
+  <div class="app-shell" id="app-shell">
+
+    <!-- ============================== SIDEBAR ============================== -->
+    <aside class="sidebar" id="sidebar" aria-label="القائمة الرئيسية">
+      <div class="sidebar__brand">
+        <span class="logo-mark"></span>
+        <div class="sidebar__brand-text">
+          <span class="sidebar__brand-name">لوما</span>
+          <span class="sidebar__brand-sub">LUMA AGENCY</span>
+        </div>
+      </div>
+
+      <a class="sidebar__profile" href="#/profile" id="sidebar-profile">
+        <span class="avatar-wrap" id="sidebar-avatar">
+          <span class="avatar">؟</span>
+          <span class="presence presence--offline"></span>
+        </span>
+        <span class="sidebar__profile-info">
+          <span class="sidebar__profile-name" id="sidebar-name">…</span>
+          <span class="sidebar__profile-role" id="sidebar-role">…</span>
+        </span>
+      </a>
+
+      <div class="sidebar__search">
+        <i data-lucide="search"></i>
+        <input type="search" id="sidebar-search" placeholder="بحث سريع…" aria-label="بحث سريع">
+      </div>
+
+      <nav class="sidebar__nav" id="sidebar-nav">
+        <div class="nav-section">
+          <div class="nav-section__title">نظرة عامة</div>
+          <div id="nav-primary"></div>
+        </div>
+      </nav>
+
+      <div class="sidebar__cta" id="sidebar-cta"></div>
+
+      <div class="sidebar__footer">
+        <div class="sidebar__tools">
+          <button class="icon-btn" id="theme-toggle" aria-label="تبديل الوضع الليلي" title="الوضع الليلي / النهاري">
+            <i data-lucide="moon"></i>
+          </button>
+          <button class="icon-btn" id="collapse-toggle" aria-label="طيّ القائمة" title="طيّ القائمة">
+            <i data-lucide="panel-right-close"></i>
+          </button>
+          <button class="icon-btn" id="help-btn" aria-label="المساعدة" title="المساعدة">
+            <i data-lucide="life-buoy"></i>
+          </button>
+          <button class="icon-btn" id="logout-btn" aria-label="تسجيل الخروج" title="تسجيل الخروج">
+            <i data-lucide="log-out"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ================================ MAIN ============================== -->
+    <div class="main">
+      <header class="topbar">
+        <button class="topbar__icon-btn topbar__toggle" id="drawer-toggle" aria-label="القائمة">
+          <i data-lucide="menu"></i>
+        </button>
+
+        <div class="topbar__title-group">
+          <div class="topbar__title" id="page-title">الرئيسية</div>
+          <nav class="breadcrumbs" id="breadcrumbs" aria-label="مسار التنقل"></nav>
+        </div>
+
+        <div class="global-search">
+          <i data-lucide="search" class="global-search__icon"></i>
+          <input type="search" id="global-search" placeholder="ابحث عن مهمة، موظف، عميل…"
+                 aria-label="البحث الشامل" autocomplete="off">
+          <span class="global-search__kbd">Ctrl K</span>
+          <div class="search-results" id="search-results" hidden></div>
+        </div>
+
+        <div class="topbar__actions">
+          <button class="topbar__icon-btn" id="quick-add" aria-label="إضافة سريعة" title="إضافة سريعة">
+            <i data-lucide="plus"></i>
+          </button>
+
+          <span id="status-pill-host"></span>
+
+          <button class="topbar__icon-btn" id="notif-btn" aria-label="الإشعارات" title="الإشعارات">
+            <i data-lucide="bell"></i>
+            <span class="dot" id="notif-dot" hidden></span>
+          </button>
+
+          <button class="profile-menu-btn" id="profile-btn" aria-label="حسابي" aria-haspopup="menu">
+            <span id="topbar-avatar"><span class="avatar avatar--sm">؟</span></span>
+            <span class="profile-menu-btn__name" id="topbar-name">…</span>
+            <i data-lucide="chevron-down" class="icon-sm"></i>
+          </button>
+        </div>
+      </header>
+
+      <main class="page" id="page-container" tabindex="-1">
+        <div class="page__inner">
+          <div class="skeleton skeleton--title"></div>
+          <div class="grid grid-4 mt-4">
+            <div class="skeleton skeleton--card"></div>
+            <div class="skeleton skeleton--card"></div>
+            <div class="skeleton skeleton--card"></div>
+            <div class="skeleton skeleton--card"></div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <div class="drawer-backdrop" id="drawer-backdrop"></div>
+
+  <button class="mobile-fab" id="mobile-fab" aria-label="إضافة سريعة">
+    <i data-lucide="plus"></i>
+  </button>
+
+  <div class="toast-host" role="status" aria-live="polite"></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>

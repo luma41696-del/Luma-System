@@ -1,0 +1,168 @@
+/* =============================================================================
+   Luma Agency — Printable / PDF document sheet (Arabic RTL)
+   Used by js/utils/pdf.js. The browser does the Arabic shaping, so letters are
+   always joined and never reversed — unlike embedding a raw TTF in jsPDF.
+   ============================================================================= */
+
+.doc-sheet {
+  width: 794px;               /* A4 @ 96dpi */
+  min-height: 1123px;
+  padding: 56px 60px;
+  background: #ffffff;
+  color: #171B22;
+  font-family: "DIN", "DIN Next Arabic", "Cairo", Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.8;
+  direction: rtl;
+  text-align: right;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.doc-sheet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding-bottom: 20px;
+  border-bottom: 3px solid #FFC928;
+  margin-bottom: 28px;
+}
+.doc-sheet__brand { display: flex; align-items: center; gap: 16px; }
+.doc-sheet__logo {
+  width: 34px;
+  height: 95px;
+  -webkit-mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
+  mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
+  background-color: #071A2F;
+  flex: none;
+}
+.doc-sheet__brand-name {
+  font-size: 24px;
+  font-weight: 800;
+  color: #071A2F;
+  line-height: 1.1;
+  letter-spacing: 0.3em;
+  direction: ltr;
+}
+.doc-sheet__brand-word {
+  font-size: 11px;
+  color: #41505F;
+  letter-spacing: 0.42em;
+  direction: ltr;
+  margin-top: 3px;
+}
+.doc-sheet__brand-sub { font-size: 12px; color: #7F8998; margin-top: 5px; }
+
+.doc-sheet__meta { text-align: left; font-size: 12px; color: #41505F; direction: ltr; }
+.doc-sheet__no {
+  display: inline-block;
+  padding: 5px 12px;
+  background: #FFC928;
+  color: #12100A;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 13px;
+  margin-bottom: 6px;
+  direction: ltr;
+}
+
+.doc-sheet__title {
+  font-size: 22px;
+  font-weight: 800;
+  color: #071A2F;
+  margin-bottom: 4px;
+}
+.doc-sheet__subtitle { font-size: 13px; color: #7F8998; margin-bottom: 26px; }
+
+.doc-section { margin-bottom: 24px; break-inside: avoid; }
+.doc-section__title {
+  font-size: 14px;
+  font-weight: 800;
+  color: #102943;
+  padding-bottom: 6px;
+  margin-bottom: 12px;
+  border-bottom: 1px solid #E1E7F0;
+}
+
+.doc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px 28px;
+}
+.doc-row { display: flex; gap: 10px; font-size: 13px; align-items: baseline; }
+.doc-row__k { color: #7F8998; min-width: 96px; flex: none; }
+.doc-row__v { color: #171B22; font-weight: 600; word-break: break-word; }
+.doc-row__v.ltr { direction: ltr; text-align: right; }
+
+.doc-box {
+  padding: 14px 16px;
+  background: #F7F9FC;
+  border: 1px solid #E1E7F0;
+  border-radius: 10px;
+  font-size: 13px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.doc-status {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+}
+.doc-status--approved { background: #DCFCE7; color: #15803D; }
+.doc-status--rejected { background: #FEE2E2; color: #B91C1C; }
+.doc-status--pending  { background: #FEF3C7; color: #A16207; }
+.doc-status--neutral  { background: #EEF1F6; color: #41505F; }
+
+.doc-signatures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 40px;
+  margin-top: 46px;
+}
+.doc-sign { text-align: center; }
+.doc-sign__line { border-top: 1px solid #7F8998; margin-bottom: 8px; }
+.doc-sign__label { font-size: 12px; color: #7F8998; }
+
+.doc-sheet__footer {
+  position: absolute;
+  inset-inline: 60px;
+  bottom: 32px;
+  padding-top: 12px;
+  border-top: 1px solid #E1E7F0;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: #7F8998;
+}
+
+.doc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.doc-table th, .doc-table td {
+  padding: 8px 10px;
+  border: 1px solid #E1E7F0;
+  text-align: right;
+}
+.doc-table th { background: #F7F9FC; font-weight: 700; color: #102943; }
+
+/* Off-screen staging container used while rasterising to PDF. */
+.pdf-stage {
+  position: fixed;
+  inset-inline-start: -10000px;
+  top: 0;
+  z-index: -1;
+  opacity: 1;
+  pointer-events: none;
+}
+
+/* When the sheet is printed directly (window.print fallback) hide the app. */
+@media print {
+  body.is-printing > *:not(.print-root) { display: none !important; }
+  body.is-printing .print-root { display: block !important; }
+  body.is-printing .pdf-stage { position: static; inset: auto; }
+  .doc-sheet { box-shadow: none; width: 100%; min-height: auto; padding: 0; }
+  @page { size: A4; margin: 14mm; }
+}

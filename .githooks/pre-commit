@@ -1,0 +1,57 @@
+#!/bin/sh
+#
+# Block credential material from ever entering a commit.
+#
+# .gitignore only matches names. A Firebase service-account key can be called
+# anything — one in this project was named "wed-luma.json" and no
+# service-account*.json pattern would have caught it. This hook looks at the
+# *content* of what is actually staged.
+#
+# Enabled with:  git config core.hooksPath .githooks
+# Bypass (do not, unless you are certain):  git commit --no-verify
+
+fail=0
+
+# Content markers that mean "this is a real credential", not a reference to one.
+patterns='BEGIN [A-Z ]*PRIVATE KEY|"type"[[:space:]]*:[[:space:]]*"service_account"|"private_key"[[:space:]]*:[[:space:]]*"-----BEGIN'
+
+for file in $(git diff --cached --name-only --diff-filter=ACM); do
+    [ -f "$file" ] || continue
+
+    # Skip this hook and the docs that legitimately describe key handling.
+    case "$file" in
+        .githooks/*|*.md) continue ;;
+    esac
+
+    if git show ":$file" 2>/dev/null | grep -qE "$patterns"; then
+        echo "  ✗ $file contains private key / service-account material"
+        fail=1
+    fi
+done
+
+# A populated .env is a secret; .env.example is the template and is fine.
+for file in $(git diff --cached --name-only --diff-filter=ACM); do
+    case "$file" in
+        *.env|*/.env|.env|*.secret.local|*/.secret.local)
+            echo "  ✗ $file is a secrets file and must not be committed"
+            fail=1
+            ;;
+    esac
+done
+
+if [ "$fail" -ne 0 ]; then
+    cat <<'EOF'
+
+COMMIT BLOCKED — credential material is staged.
+
+  git restore --staged <file>     unstage it
+  then add it to .gitignore
+
+If a key like this was ever pushed, treat it as compromised and rotate it in
+the Google Cloud console immediately.
+
+EOF
+    exit 1
+fi
+
+exit 0

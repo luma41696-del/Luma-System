@@ -1,0 +1,180 @@
+/* =============================================================================
+   Luma Agency — Responsive layers
+   Breakpoints: 1400 (compact desktop) · 1180 (tablet-L) · 900 (tablet) · 640 (mobile)
+   ============================================================================= */
+
+@media (max-width: 1400px) {
+  .grid-4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-main { grid-template-columns: minmax(0, 1fr) 320px; }
+  .page { padding: var(--sp-5) var(--sp-5) var(--sp-8); }
+}
+
+@media (max-width: 1180px) {
+  :root { --sidebar-w: 232px; }
+  .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid-main,
+  .grid-main-wide { grid-template-columns: minmax(0, 1fr); }
+  .global-search { max-width: 260px; }
+  .chat-layout { grid-template-columns: 260px minmax(0, 1fr); }
+}
+
+/* ------------------------------------------------------------- tablet */
+@media (max-width: 900px) {
+  .app-shell { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
+  .app-shell.is-collapsed { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
+
+  /* On tablet the sidebar is icon-only until the user opens the drawer. */
+  .sidebar { padding-inline: var(--sp-2); align-items: center; }
+  .sidebar__brand { justify-content: center; padding-inline: 0; }
+  .sidebar__brand-text,
+  .sidebar__profile-info,
+  .nav-item__label,
+  .nav-section__title,
+  .sidebar__search,
+  .sidebar__cta { display: none; }
+  .sidebar__profile { justify-content: center; padding: var(--sp-2); }
+  .nav-item { justify-content: center; padding-inline: 0; }
+  .sidebar__tools { flex-direction: column; }
+
+  .app-shell.is-drawer-open .sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: var(--sidebar-w);
+    padding-inline: var(--sp-3);
+    align-items: stretch;
+    box-shadow: var(--shadow-lg);
+  }
+  .app-shell.is-drawer-open .sidebar__brand-text,
+  .app-shell.is-drawer-open .sidebar__profile-info,
+  .app-shell.is-drawer-open .nav-item__label,
+  .app-shell.is-drawer-open .nav-section__title,
+  .app-shell.is-drawer-open .sidebar__search,
+  .app-shell.is-drawer-open .sidebar__cta { display: block; }
+  .app-shell.is-drawer-open .sidebar__brand { justify-content: flex-start; }
+  .app-shell.is-drawer-open .sidebar__profile { justify-content: flex-start; padding: var(--sp-3); }
+  .app-shell.is-drawer-open .nav-item { justify-content: flex-start; padding-inline: var(--sp-3); }
+  .app-shell.is-drawer-open .sidebar__tools { flex-direction: row; }
+
+  .auth-page { grid-template-columns: 1fr; }
+  .auth-hero { display: none; }
+  .auth-mobile-logo {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-3);
+    margin-bottom: var(--sp-6);
+  }
+  .auth-mobile-logo .logo-mark { width: 30px; height: 84px; }
+
+  .form-grid { grid-template-columns: minmax(0, 1fr); }
+  .cal-cell { min-height: 84px; }
+}
+
+/* -------------------------------------------------------------- mobile */
+@media (max-width: 640px) {
+  :root { --topbar-h: 60px; }
+
+  .app-shell { grid-template-columns: 1fr; }
+  .app-shell.is-collapsed { grid-template-columns: 1fr; }
+
+  .sidebar {
+    position: fixed;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: min(84vw, var(--sidebar-w));
+    padding-inline: var(--sp-3);
+    align-items: stretch;
+    transform: translateX(105%);
+    transition: transform var(--t-slow) var(--ease-out);
+    box-shadow: var(--shadow-lg);
+  }
+  html[dir="ltr"] .sidebar { transform: translateX(-105%); }
+  .app-shell.is-drawer-open .sidebar { transform: none; }
+  .main { grid-column: 1; }
+
+  .topbar { padding: 0 var(--sp-4); gap: var(--sp-2); }
+  .topbar__title-group { display: none; }
+  .global-search { max-width: none; margin-inline: 0; }
+  .global-search input { height: 38px; }
+  .global-search__kbd { display: none; }
+  .topbar__actions { gap: 4px; }
+  .topbar__icon-btn { width: 38px; height: 38px; }
+  .profile-menu-btn__name,
+  .profile-menu-btn [data-lucide="chevron-down"] { display: none; }
+  .profile-menu-btn { padding: 4px; }
+
+  .page { padding: var(--sp-4) var(--sp-4) 96px; }
+  .page-head { margin-bottom: var(--sp-4); }
+  .page-head__title { font-size: var(--fs-xl); }
+
+  .grid-2, .grid-3, .grid-4, .grid-auto { grid-template-columns: minmax(0, 1fr); }
+  .grid { gap: var(--sp-3); }
+
+  .card { padding: var(--sp-4); border-radius: var(--radius-md); }
+  .stat { padding: var(--sp-3) var(--sp-4); }
+  .stat__value { font-size: var(--fs-xl); }
+  .stat__icon { width: 40px; height: 40px; }
+
+  .mobile-fab { display: grid; }
+
+  .btn { height: 42px; }              /* touch target */
+  .btn--sm { height: 36px; }
+  .icon-btn { width: 40px; height: 40px; }
+
+  .filter-bar { gap: var(--sp-2); padding: var(--sp-3); }
+  .filter-bar .select, .filter-bar .input { min-width: 0; flex: 1 1 140px; }
+
+  .tabs { gap: 0; }
+  .tab { padding: var(--sp-3) var(--sp-3); font-size: var(--fs-sm); }
+
+  .modal { max-width: none; border-radius: var(--radius-lg) var(--radius-lg) 0 0; max-height: 92vh; }
+  .modal-backdrop { align-items: flex-end; padding: 0; }
+  .modal__foot { flex-direction: column-reverse; }
+  .modal__foot .btn { width: 100%; }
+
+  .toast-host {
+    inset-inline: var(--sp-3);
+    inset-block-start: var(--sp-3);
+    max-width: none;
+  }
+
+  /* Simplified calendar: month grid becomes a compact agenda-friendly grid */
+  .cal-cell { min-height: 62px; padding: 4px; }
+  .cal-cell__num { font-size: var(--fs-xs); padding: 1px 4px; }
+  .cal-event { font-size: 10px; padding: 2px 4px; }
+  .cal-month__dow { padding: var(--sp-2) 2px; font-size: 10px; }
+  .cal-title { font-size: var(--fs-lg); min-width: 130px; }
+  .cal-week { grid-template-columns: 46px repeat(7, minmax(64px, 1fr)); }
+
+  /* Chat becomes a single pane with a back button */
+  .chat-layout { grid-template-columns: minmax(0, 1fr); height: calc(100vh - var(--topbar-h) - 120px); }
+  .chat-layout.show-panel .chat-list { display: none; }
+  .chat-layout:not(.show-panel) .chat-panel { display: none; }
+  .msg { max-width: 88%; }
+
+  .table { min-width: 520px; }
+  .table th, .table td { padding: var(--sp-2) var(--sp-3); font-size: var(--fs-sm); }
+
+  .kanban { grid-auto-columns: 84vw; }
+
+  .avatar-stack .avatar { margin-inline-start: -8px; }
+}
+
+@media (max-width: 380px) {
+  .page { padding-inline: var(--sp-3); }
+  .cal-month__dow:nth-child(n) { font-size: 9px; }
+}
+
+/* Nothing may ever push the page sideways. */
+html, body { max-width: 100%; overflow-x: hidden; }
+
+/* ------------------------------------------------------------- printing */
+@media print {
+  .sidebar, .topbar, .mobile-fab, .toast-host, .page-head__actions,
+  .filter-bar, .btn, .drawer-backdrop { display: none !important; }
+  .app-shell { display: block; }
+  .page { overflow: visible; padding: 0; height: auto; }
+  body { background: #fff; color: #000; }
+  .card { border: 1px solid #ccc; box-shadow: none; break-inside: avoid; }
+}

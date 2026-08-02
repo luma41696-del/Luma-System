@@ -1,0 +1,27 @@
+{
+  "name": "luma-functions",
+  "version": "1.0.0",
+  "description": "Cloud Functions for the Luma Agency management system",
+  "type": "commonjs",
+  "main": "index.js",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "serve": "firebase emulators:start --only functions,firestore,auth,database,storage",
+    "shell": "firebase functions:shell",
+    "deploy": "firebase deploy --only functions",
+    "logs": "firebase functions:log",
+    "seed:admin": "node scripts/seed-admin.js",
+    "seed:demo": "node scripts/seed-demo.js",
+    "seed:demo:reset": "node scripts/seed-demo.js --reset"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  },
+  "devDependencies": {
+    "dotenv": "^16.4.5"
+  },
+  "private": true
+}

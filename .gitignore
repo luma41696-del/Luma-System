@@ -1,0 +1,55 @@
+# --- secrets (never commit) ---------------------------------------------------
+.env
+.env.*
+!.env.example
+functions/.env
+functions/.env.*
+functions/.secret.local
+**/.secret.local
+**/service-account*.json
+**/serviceAccountKey*.json
+# Firebase service-account keys. These grant FULL admin access to the project,
+# so they are matched by name AND blocked by the pre-commit hook in .githooks/.
+wed-luma.json
+**/*firebase-adminsdk*.json
+**/*-service-account*.json
+skills-lock.json
+*.pem
+*.key
+
+# --- dependencies -------------------------------------------------------------
+node_modules/
+functions/node_modules/
+package-lock.json
+functions/package-lock.json
+
+# --- firebase ---------------------------------------------------------------
+emulator-data/
+emulator.log
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+database-debug.log
+ui-debug.log
+pubsub-debug.log
+*.log
+
+# --- agent tooling (installed locally, not project source) ---------------------
+.agents/
+.claude/
+
+# --- editors / OS -------------------------------------------------------------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+
+# --- build / temp -------------------------------------------------------------
+dist/
+build/
+tmp/
+.cache/

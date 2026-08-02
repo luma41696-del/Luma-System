@@ -1,0 +1,78 @@
+/* =============================================================================
+   Luma Agency — Direction layer
+   The whole UI is authored with logical properties (inset-inline, margin-inline,
+   padding-inline), so RTL is the natural default and LTR needs only the few
+   physical corrections below. Adding English later = set dir="ltr" on <html>.
+   ============================================================================= */
+
+html[dir="rtl"] {
+  direction: rtl;
+  text-align: right;
+}
+
+html[dir="ltr"] {
+  direction: ltr;
+  text-align: left;
+}
+
+/* Content that must stay latin-ordered regardless of page direction:
+   emails, IBANs, URLs, code, times, phone numbers. */
+.ltr,
+input[type="email"],
+input[type="url"],
+input[type="tel"],
+input[type="password"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="date"],
+.secret-field,
+.iban,
+code,
+pre {
+  direction: ltr;
+  text-align: start;
+  unicode-bidi: isolate;
+}
+
+html[dir="rtl"] input[type="date"],
+html[dir="rtl"] input[type="datetime-local"],
+html[dir="rtl"] input[type="time"] { text-align: right; }
+
+/* Icons that encode a direction get mirrored in RTL. */
+html[dir="rtl"] [data-lucide="chevron-right"],
+html[dir="rtl"] [data-lucide="chevron-left"],
+html[dir="rtl"] [data-lucide="arrow-right"],
+html[dir="rtl"] [data-lucide="arrow-left"],
+html[dir="rtl"] [data-lucide="corner-up-left"],
+html[dir="rtl"] [data-lucide="reply"],
+html[dir="rtl"] [data-lucide="log-out"],
+html[dir="rtl"] [data-lucide="send"],
+html[dir="rtl"] [data-lucide="trending-up"],
+html[dir="rtl"] [data-lucide="external-link"] {
+  transform: scaleX(-1);
+}
+
+/* Chart.js renders into a canvas — force LTR so its internal layout is sane. */
+.chart-box canvas { direction: ltr; }
+
+/* Numbers inside RTL prose need isolation to avoid digit reordering. */
+.num,
+.tabular,
+.stat__value,
+.cal-day-pill__num,
+.cal-cell__num,
+.break-banner__timer {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* The brand mark and the sidebar sit on the right in RTL; the border flips
+   automatically thanks to border-inline-end. Nothing extra is needed here —
+   this block exists as the documented hook for future LTR-only tweaks. */
+html[dir="ltr"] .sidebar { border-inline-end: 1px solid var(--border); }
+
+/* Toast host mirrors */
+html[dir="ltr"] .toast-host { inset-inline-end: var(--sp-5); }
+
+/* Progress fill grows from the start edge in both directions. */
+.progress__bar { margin-inline-end: auto; }

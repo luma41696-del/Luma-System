@@ -1,0 +1,238 @@
+/* =============================================================================
+   Luma Agency — Design tokens
+   Dark theme is the default; [data-theme="light"] overrides it on <html>.
+   ============================================================================= */
+
+/* ------------------------------------------------------------------ fonts */
+@font-face {
+  font-family: "DIN Next Arabic";
+  src: url("../assets/fonts/DINNextArabic-UltraLight.ttf") format("truetype");
+  font-weight: 200;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DIN Next Arabic";
+  src: url("../assets/fonts/DINNextArabic-Light.ttf") format("truetype");
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DIN Next Arabic";
+  src: url("../assets/fonts/DINNextArabic-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DIN Next Arabic";
+  src: url("../assets/fonts/DINNextArabic-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DIN Next Arabic";
+  src: url("../assets/fonts/DINNextArabic-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DIN Next Arabic";
+  src: url("../assets/fonts/DINNextArabic-Black.ttf") format("truetype");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DIN Next Arabic";
+  src: url("../assets/fonts/DINNextArabic-Heavy.ttf") format("truetype");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* "DIN" is kept as the public alias used across the codebase, so a Latin-only
+   DIN can be dropped in later without touching every rule. */
+@font-face {
+  font-family: "DIN";
+  src: url("../assets/fonts/DINNextArabic-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DIN";
+  src: url("../assets/fonts/DINNextArabic-Medium.ttf") format("truetype");
+  font-weight: 500;
+  font-display: swap;
+}
+@font-face {
+  font-family: "DIN";
+  src: url("../assets/fonts/DINNextArabic-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  /* ---------------------------------------------------------- typography */
+  --font-base: "DIN", "DIN Next Arabic", "Cairo", "Segoe UI", Arial, sans-serif;
+  --font-num: "DIN", "DIN Next Arabic", Arial, sans-serif;
+
+  --fs-2xs: 0.6875rem;  /* 11px */
+  --fs-xs: 0.75rem;     /* 12px */
+  --fs-sm: 0.8125rem;   /* 13px */
+  --fs-md: 0.875rem;    /* 14px */
+  --fs-base: 0.9375rem; /* 15px */
+  --fs-lg: 1.0625rem;   /* 17px */
+  --fs-xl: 1.25rem;     /* 20px */
+  --fs-2xl: 1.5rem;     /* 24px */
+  --fs-3xl: 2rem;       /* 32px */
+  --fs-4xl: 2.5rem;     /* 40px */
+
+  --lh-tight: 1.25;
+  --lh-normal: 1.6;
+
+  /* -------------------------------------------------------------- brand */
+  --navy-900: #071A2F;   /* dark navy   */
+  --navy-800: #0B2136;
+  --navy-700: #102943;   /* navy surface */
+  --navy-600: #16324f;
+  --border-dark: #263B52;
+
+  --yellow: #FFC928;
+  --yellow-hover: #EAB600;
+  --yellow-soft: rgba(255, 201, 40, 0.14);
+
+  --white: #F8FAFC;
+  --soft-black: #171B22;
+  --gray: #7F8998;
+  --gray-light: #D8DEE8;
+
+  /* --------------------------------------------------------- semantic */
+  --success: #34D399;
+  --success-soft: rgba(52, 211, 153, 0.14);
+  --warning: #FBBF24;
+  --warning-soft: rgba(251, 191, 36, 0.14);
+  --danger: #F87171;
+  --danger-soft: rgba(248, 113, 113, 0.14);
+  --info: #60A5FA;
+  --info-soft: rgba(96, 165, 250, 0.14);
+  --purple: #A78BFA;
+  --purple-soft: rgba(167, 139, 250, 0.14);
+
+  /* Event / label palette (calendar + task colours) */
+  --accent-1: #FFC928;
+  --accent-2: #60A5FA;
+  --accent-3: #A78BFA;
+  --accent-4: #34D399;
+  --accent-5: #F472B6;
+  --accent-6: #FB923C;
+
+  /* ------------------------------------------------ dark theme surfaces */
+  --bg-app: #05121F;
+  --bg-canvas: var(--navy-900);
+  --bg-surface: var(--navy-700);
+  --bg-surface-2: var(--navy-600);
+  --bg-elevated: #14314e;
+  --bg-inset: rgba(255, 255, 255, 0.03);
+  --bg-hover: rgba(255, 255, 255, 0.06);
+  --bg-active: rgba(255, 201, 40, 0.12);
+  --bg-overlay: rgba(3, 10, 18, 0.72);
+
+  --text-primary: var(--white);
+  --text-secondary: var(--gray-light);
+  --text-muted: var(--gray);
+  --text-inverse: var(--navy-900);
+  --text-on-brand: #12100A;
+
+  --border: var(--border-dark);
+  --border-soft: rgba(216, 222, 232, 0.10);
+  --border-strong: #34506e;
+
+  /* ------------------------------------------------------------ shape */
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.22);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.20);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.26);
+  --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.36);
+  --shadow-focus: 0 0 0 3px rgba(255, 201, 40, 0.35);
+
+  /* ----------------------------------------------------------- spacing */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+  --sp-9: 56px;
+
+  /* ------------------------------------------------------------ layout */
+  --sidebar-w: 264px;
+  --sidebar-w-collapsed: 76px;
+  --topbar-h: 68px;
+  --content-max: 1680px;
+
+  /* -------------------------------------------------------- animation */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 120ms;
+  --t-base: 200ms;
+  --t-slow: 320ms;
+
+  --z-sticky: 100;
+  --z-sidebar: 200;
+  --z-dropdown: 400;
+  --z-overlay: 600;
+  --z-modal: 700;
+  --z-toast: 900;
+
+  color-scheme: dark;
+}
+
+/* ------------------------------------------------------------ light theme */
+[data-theme="light"] {
+  --bg-app: #EEF1F6;
+  --bg-canvas: #F4F6FA;
+  --bg-surface: #FFFFFF;
+  --bg-surface-2: #F7F9FC;
+  --bg-elevated: #FFFFFF;
+  --bg-inset: rgba(7, 26, 47, 0.035);
+  --bg-hover: rgba(7, 26, 47, 0.05);
+  --bg-active: rgba(255, 201, 40, 0.20);
+  --bg-overlay: rgba(23, 27, 34, 0.45);
+
+  --text-primary: var(--soft-black);
+  --text-secondary: #41505F;
+  --text-muted: var(--gray);
+  --text-inverse: var(--white);
+
+  --border: #E1E7F0;
+  --border-soft: rgba(7, 26, 47, 0.08);
+  --border-strong: #C9D3E0;
+
+  --shadow-xs: 0 1px 2px rgba(16, 41, 67, 0.06);
+  --shadow-sm: 0 2px 10px rgba(16, 41, 67, 0.07);
+  --shadow-md: 0 10px 28px rgba(16, 41, 67, 0.10);
+  --shadow-lg: 0 20px 48px rgba(16, 41, 67, 0.14);
+
+  color-scheme: light;
+}
+
+/* Users who ask for less motion get less motion. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --t-fast: 0ms;
+    --t-base: 0ms;
+    --t-slow: 0ms;
+  }
+}

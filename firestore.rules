@@ -1,0 +1,377 @@
+rules_version = '2';
+
+// =============================================================================
+// Luma Agency — Firestore Security Rules
+// -----------------------------------------------------------------------------
+// Model:
+//   * Authorisation is driven by Firebase Auth custom claims, never by data the
+//     client sends. Claims are written exclusively by Cloud Functions.
+//       token.role   -> 'admin' | 'manager' | 'employee'
+//       token.perms  -> array of short permission codes (see js/permissions.js)
+//       token.status -> 'active' | 'disabled'
+//   * Anything privileged (roles, permissions, salary, banking, credentials,
+//     audit logs) is WRITE-DENIED here and only reachable through Cloud
+//     Functions running the Admin SDK, which re-validate the caller.
+// =============================================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------------------------------------------------------------- helpers
+    function signedIn() {
+      return request.auth != null;
+    }
+    function claims() {
+      return request.auth.token;
+    }
+    function active() {
+      return signedIn() && claims().get('status', 'active') == 'active';
+    }
+    function isAdmin() {
+      return active() && claims().get('role', 'employee') == 'admin';
+    }
+    // Permission check — admins implicitly hold every permission.
+    function can(p) {
+      return isAdmin() ||
+        (active() && claims().get('perms', []) is list && p in claims().get('perms', []));
+    }
+    function uid() {
+      return request.auth.uid;
+    }
+    function changed() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+    function onlyChanged(allowed) {
+      return changed().hasOnly(allowed);
+    }
+    function touches(fields) {
+      return changed().hasAny(fields);
+    }
+    function isMemberOfChat(chatId) {
+      return active() &&
+        uid() in get(/databases/$(database)/documents/chats/$(chatId)).data.members;
+    }
+    function notLarger(field, n) {
+      return !(field in request.resource.data) ||
+        !(request.resource.data[field] is string) ||
+        request.resource.data[field].size() <= n;
+    }
+
+    // ------------------------------------------------------------------ users
+    // Employee directory. Sensitive money data lives in the /private subtree.
+    match /users/{userId} {
+      // Every active employee can read the directory: the team page, chat member
+      // lists and task-assignee pickers all need it, and Firestore cannot filter
+      // fields — a list query would otherwise be denied outright for anyone
+      // without `employees.view`, leaving those screens empty.
+      // Nothing sensitive lives here: salary and banking sit in /private below,
+      // each behind its own permission.
+      allow read: if active();
+
+      // Accounts are only ever created / removed by Cloud Functions.
+      allow create, delete: if false;
+
+      // An employee may maintain a small set of their own profile fields.
+      allow update: if active() && uid() == userId
+        && onlyChanged([
+             'phone', 'personalEmail', 'photoURL', 'personalNotes',
+             'birthday', 'notifPrefs', 'theme', 'updatedAt'
+           ])
+        && notLarger('personalNotes', 2000)
+        && notLarger('phone', 32);
+
+      // Management may edit descriptive fields, never the security-critical ones.
+      allow update: if can('ee')
+        && !touches([
+             'roles', 'perms', 'role', 'username', 'usernameLower',
+             'status', 'authEmail', 'uid', 'leave'
+           ]);
+
+      // Salary — separate permission from everything else.
+      match /private/salary {
+        allow read: if active() && (uid() == userId || can('evs'));
+        allow write: if false; // Cloud Function `updateEmployeeFinance` only
+      }
+      // Banking (IBAN / CliQ) — separate permission again.
+      match /private/banking {
+        allow read: if active() && (uid() == userId || can('evb'));
+        allow write: if false; // Cloud Function `updateOwnBanking` / `updateEmployeeFinance`
+      }
+      match /private/{other} {
+        allow read, write: if false;
+      }
+
+      // Per-employee aggregated statistics, maintained by Cloud Functions.
+      match /stats/{docId} {
+        allow read: if active() && (uid() == userId || can('ev') || can('dvt') || can('dvc'));
+        allow write: if false;
+      }
+    }
+
+    // Username -> uid index. Resolved server-side only, never readable by clients
+    // (prevents user enumeration).
+    match /usernames/{usernameLower} {
+      allow read, write: if false;
+    }
+
+    // Login throttling counters — Cloud Functions only.
+    match /loginAttempts/{key} {
+      allow read, write: if false;
+    }
+
+    // Atomic counters (request numbers, task numbers) — Cloud Functions only.
+    match /counters/{name} {
+      allow read, write: if false;
+    }
+
+    // ------------------------------------------------------------------ roles
+    match /roles/{roleId} {
+      allow read: if active();
+      allow write: if can('sm');
+    }
+    match /permissions/{permId} {
+      allow read: if active();
+      allow write: if isAdmin();
+    }
+
+    // ---------------------------------------------------------------- clients
+    match /clients/{clientId} {
+      allow read: if can('cv');
+      allow create: if can('cc')
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 140;
+      allow update: if can('ce') && !touches(['createdAt', 'createdBy']);
+      // Deletion runs through the `deleteClient` Cloud Function so the social
+      // accounts, files, activity log and vault entries go with it.
+      allow delete: if false;
+
+      // Social accounts never contain passwords — those live in the vault.
+      match /social/{accountId} {
+        allow read: if can('cv');
+        allow write: if can('ce') &&
+          !( 'password' in request.resource.data ) &&
+          !( 'secret' in request.resource.data );
+      }
+      match /files/{fileId} {
+        allow read: if can('cv');
+        allow create, update: if can('ce');
+        allow delete: if can('ce');
+      }
+      match /activity/{eventId} {
+        allow read: if can('cv');
+        allow create: if can('ce');
+        allow update, delete: if false;
+      }
+    }
+
+    // Encrypted credential vault. Ciphertext must never reach a browser:
+    // reads and writes go exclusively through the vault Cloud Functions, which
+    // require `clients.viewCredentials`, fresh re-authentication and audit logging.
+    match /clientCredentials/{credId} {
+      allow read, write: if false;
+    }
+
+    // ------------------------------------------------------------------ tasks
+    function isAssignee() {
+      return uid() in resource.data.get('assignees', []);
+    }
+    function isTaskOwner() {
+      return resource.data.get('createdBy', '') == uid();
+    }
+    function canSeeTask() {
+      return active() && (can('te') || can('dvc') || isAssignee() || isTaskOwner());
+    }
+
+    match /tasks/{taskId} {
+      allow read: if canSeeTask();
+
+      // Managers create anything; anyone may create a personal task for themself.
+      allow create: if active()
+        && request.resource.data.createdBy == uid()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200
+        && (
+             can('tc') ||
+             ( request.resource.data.assignees == [uid()] &&
+               request.resource.data.get('isPersonal', false) == true )
+           );
+
+      // Full edit for managers; assignees may only move their own work forward.
+      allow update: if active() && (
+        can('te') ||
+        ( (isAssignee() || isTaskOwner()) && onlyChanged([
+            'status', 'progress', 'checklist', 'timeSpentMs', 'startedAt',
+            'completedAt', 'lastStatusAt', 'updatedAt', 'attachments', 'watchers'
+          ]) )
+      );
+
+      allow delete: if can('tx');
+
+      match /comments/{commentId} {
+        allow read: if canSeeTask();
+        allow create: if active()
+          && request.resource.data.authorId == uid()
+          && request.resource.data.body is string
+          && request.resource.data.body.size() <= 4000;
+        allow update: if active() && resource.data.authorId == uid()
+          && onlyChanged(['body', 'editedAt']);
+        allow delete: if active() && (resource.data.authorId == uid() || can('te'));
+      }
+
+      match /activity/{eventId} {
+        allow read: if canSeeTask();
+        allow create: if active() && request.resource.data.actorId == uid();
+        allow update, delete: if false; // history is append-only
+      }
+    }
+
+    // --------------------------------------------------------------- requests
+    match /requests/{requestId} {
+      function isRequester() { return resource.data.employeeId == uid(); }
+      function isApprover()  { return can('ra') || resource.data.get('managerId', '') == uid(); }
+
+      allow read: if active() && (isRequester() || isApprover());
+
+      allow create: if active()
+        && request.resource.data.employeeId == uid()
+        && request.resource.data.type in ['leave', 'departure', 'advance', 'sick']
+        && request.resource.data.status in ['draft', 'submitted']
+        && notLarger('reason', 3000);
+
+      // Requester: may edit their own draft or withdraw a submitted request.
+      allow update: if active() && isRequester()
+        && resource.data.status in ['draft', 'submitted']
+        && !touches(['employeeId', 'requestNo', 'decidedAt', 'decidedBy']);
+
+      // Approver: may move it through the review workflow.
+      allow update: if active() && isApprover()
+        && onlyChanged([
+             'status', 'managerResponse', 'decidedAt', 'decidedBy',
+             'reviewedAt', 'updatedAt'
+           ]);
+
+      allow delete: if false; // soft-delete / cancel only
+
+      match /thread/{messageId} {
+        allow read: if active() &&
+          ( get(/databases/$(database)/documents/requests/$(requestId)).data.employeeId == uid()
+            || can('ra') );
+        allow create: if active() && request.resource.data.authorId == uid()
+          && request.resource.data.body is string
+          && request.resource.data.body.size() <= 3000;
+        allow update, delete: if false;
+      }
+    }
+
+    // ------------------------------------------------------------------- chat
+    match /chats/{chatId} {
+      allow read: if active() && (uid() in resource.data.members || can('cm'));
+
+      allow create: if active()
+        && uid() in request.resource.data.members
+        && request.resource.data.members.size() <= 200
+        && request.resource.data.type in ['group', 'department', 'direct', 'manager'];
+
+      // Members may update lightweight metadata; membership changes need chat.manage.
+      allow update: if active() && (
+        can('cm') ||
+        ( uid() in resource.data.members && onlyChanged([
+            'lastMessage', 'lastMessageAt', 'updatedAt', 'readAt', 'unread'
+          ]) )
+      );
+
+      // Deletion goes through the `deleteChat` Cloud Function so the messages
+      // subcollection is removed with the room instead of being orphaned.
+      allow delete: if false;
+
+      match /messages/{messageId} {
+        allow read: if isMemberOfChat(chatId);
+        allow create: if isMemberOfChat(chatId)
+          && request.resource.data.senderId == uid()
+          && request.resource.data.get('body', '') is string
+          && request.resource.data.get('body', '').size() <= 4000
+          && request.resource.data.get('deleted', false) == false;
+        // Authors may edit or soft-delete their own message; moderators may remove.
+        allow update: if isMemberOfChat(chatId) && (
+          ( resource.data.senderId == uid() &&
+            onlyChanged(['body', 'editedAt', 'deleted', 'deletedAt', 'readBy']) ) ||
+          ( onlyChanged(['readBy']) ) ||
+          can('cm')
+        );
+        allow delete: if can('cm');
+      }
+    }
+
+    // --------------------------------------------------------------- calendar
+    match /calendarEvents/{eventId} {
+      allow read: if active() && (
+        can('dvc') || can('dvt') ||
+        resource.data.get('visibility', 'team') == 'team' ||
+        uid() in resource.data.get('participants', []) ||
+        resource.data.get('createdBy', '') == uid()
+      );
+      allow create: if active() && request.resource.data.createdBy == uid()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 200;
+      allow update: if active() &&
+        (resource.data.createdBy == uid() || can('tc') || can('sm'));
+      allow delete: if active() && (resource.data.createdBy == uid() || can('sm'));
+    }
+
+    // ------------------------------------------------- work / break sessions
+    match /workSessions/{sessionId} {
+      allow read: if active() && (resource.data.userId == uid() || can('dvt') || can('dvc'));
+      allow create: if active() && request.resource.data.userId == uid();
+      allow update: if active() && resource.data.userId == uid()
+        && onlyChanged(['endedAt', 'durationMs', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    match /breakSessions/{sessionId} {
+      allow read: if active() && (resource.data.userId == uid() || can('dvt') || can('dvc'));
+      allow create: if active() && request.resource.data.userId == uid()
+        && request.resource.data.startedAt == request.time;
+      allow update: if active() && resource.data.userId == uid()
+        && resource.data.get('endedAt', null) == null
+        && onlyChanged(['endedAt', 'durationMs', 'updatedAt']);
+      allow delete: if false;
+    }
+
+    // ---------------------------------------------------------- notifications
+    match /notifications/{notifId} {
+      allow read: if active() && resource.data.userId == uid();
+      // Cloud Functions raise notifications; clients may only mark them read.
+      allow create: if false;
+      allow update: if active() && resource.data.userId == uid()
+        && onlyChanged(['read', 'readAt']);
+      allow delete: if active() && resource.data.userId == uid();
+    }
+
+    // --------------------------------------------------------------- reports
+    match /reports/{reportId} {
+      allow read: if can('rv');
+      allow create, update: if can('rv') && request.resource.data.createdBy == uid();
+      allow delete: if can('rv') && resource.data.createdBy == uid();
+    }
+
+    // ------------------------------------------------------------ audit logs
+    // Append-only, written by Cloud Functions with the Admin SDK.
+    match /auditLogs/{logId} {
+      allow read: if isAdmin() || can('sm');
+      allow write: if false;
+    }
+
+    // --------------------------------------------------------------- settings
+    match /settings/{docId} {
+      allow read: if active();
+      allow write: if can('sm');
+    }
+
+    // Deny everything not explicitly matched above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

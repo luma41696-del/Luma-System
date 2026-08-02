@@ -1,0 +1,82 @@
+rules_version = '2';
+
+// =============================================================================
+// Luma Agency — Cloud Storage Security Rules
+// Nothing is world-readable. Every path validates content type and size.
+// =============================================================================
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn()  { return request.auth != null; }
+    function claims()    { return request.auth.token; }
+    function active()    { return signedIn() && claims().get('status', 'active') == 'active'; }
+    function isAdmin()   { return active() && claims().get('role', 'employee') == 'admin'; }
+    function can(p) {
+      return isAdmin() ||
+        (active() && claims().get('perms', []) is list && p in claims().get('perms', []));
+    }
+    function uid() { return request.auth.uid; }
+
+    function isImage() {
+      return request.resource.contentType.matches('image/(png|jpe?g|gif|webp|svg\\+xml)');
+    }
+    function isDocument() {
+      return request.resource.contentType.matches(
+        'application/(pdf|msword|vnd\\.openxmlformats-officedocument\\..*|vnd\\.ms-excel|zip)'
+      ) || request.resource.contentType.matches('text/(plain|csv)');
+    }
+    function underMB(n) { return request.resource.size < n * 1024 * 1024; }
+
+    // -------------------------------------------------------------- avatars
+    // Readable by any signed-in colleague, writable only by the owner.
+    match /avatars/{userId}/{fileName} {
+      allow read:   if active();
+      allow write:  if active() && uid() == userId && isImage() && underMB(3);
+      allow delete: if active() && (uid() == userId || can('ee'));
+    }
+
+    // ------------------------------------------------------- client assets
+    match /clients/{clientId}/{allPaths=**} {
+      allow read:   if can('cv');
+      allow write:  if can('ce') && (isImage() || isDocument()) && underMB(20);
+      allow delete: if can('ce');
+    }
+
+    // --------------------------------------------------- task attachments
+    match /tasks/{taskId}/{fileName} {
+      allow read:   if active();
+      allow write:  if active() && (isImage() || isDocument()) && underMB(25);
+      allow delete: if active() && (can('te') || can('tx'));
+    }
+
+    // ------------------------------------------------ request attachments
+    // e.g. a sick-note. Only the owner and approvers can see it.
+    match /requests/{userId}/{fileName} {
+      allow read:   if active() && (uid() == userId || can('ra'));
+      allow write:  if active() && uid() == userId && (isImage() || isDocument()) && underMB(10);
+      allow delete: if active() && uid() == userId;
+    }
+
+    // ------------------------------------------------------ chat uploads
+    // Membership is enforced by the Firestore message document; here we cap
+    // type/size and keep the object out of any public listing.
+    match /chat/{chatId}/{userId}/{fileName} {
+      allow read:   if active();
+      allow write:  if active() && uid() == userId && (isImage() || isDocument()) && underMB(15);
+      allow delete: if active() && (uid() == userId || can('cm'));
+    }
+
+    // ------------------------------------------------- generated documents
+    // PDFs produced by Cloud Functions. Clients read, only the backend writes.
+    match /generated/{userId}/{fileName} {
+      allow read:  if active() && (uid() == userId || can('ra') || can('rv'));
+      allow write: if false;
+    }
+
+    // Everything else is denied.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
