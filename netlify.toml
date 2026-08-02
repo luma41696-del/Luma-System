@@ -13,9 +13,20 @@
   # scripts, emulator-data (which contains password hashes) and .env off the CDN.
   command = "node build.js"
   publish = "dist"
+  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "20"
+
+# The adapter in netlify/functions/api.js requires the handlers from functions/,
+# so that tree must be bundled with it.
+[functions]
+  node_bundler = "esbuild"
+  included_files = ["functions/**"]
+
+[functions.api]
+  # Account creation and vault decryption do real work; the default 10s is tight.
+  timeout = 26
 
 # --------------------------------------------------------------------- routing
 # The app uses hash routing (#/tasks, #/clients), so no SPA rewrite is needed —
@@ -34,6 +45,13 @@
   from = "/login"
   to = "/index.html"
   status = 200
+
+# Friendly path for the backend; the client posts to /api/<functionName>.
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+  force = true
 
 # --------------------------------------------------------------------- headers
 [[headers]]

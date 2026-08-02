@@ -1,0 +1,19 @@
+{
+  "name": "luma-agency",
+  "version": "1.0.0",
+  "description": "Luma Agency internal management system — frontend + Netlify Functions backend",
+  "private": true,
+  "type": "commonjs",
+  "engines": {
+    "node": "20"
+  },
+  "scripts": {
+    "build": "node build.js",
+    "dev": "netlify dev",
+    "test:api": "node netlify/functions/_selftest.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.1.0"
+  }
+}

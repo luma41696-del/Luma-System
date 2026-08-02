@@ -15,10 +15,61 @@ import {
 const cache = new Map();
 
 /**
+ * Where the privileged backend lives.
+ *
+ * Cloud Functions need the Blaze plan, so the same handlers can instead be
+ * served by Netlify Functions on the free tier. Set the base URL and every
+ * `callFn` goes there over the identical callable protocol:
+ *
+ *   <script>window.__LUMA_API_BASE__ = "/.netlify/functions/api";</script>
+ *
+ * Leave it unset to use Firebase Cloud Functions.
+ */
+const API_BASE = (typeof window !== 'undefined' && window.__LUMA_API_BASE__) || '';
+
+/** CALLABLE_STATUS → the hyphenated codes the UI already maps to Arabic. */
+function toErrorCode(status) {
+  return String(status || 'INTERNAL').toLowerCase().replace(/_/g, '-');
+}
+
+async function callViaHttp(name, payload) {
+  const { auth } = await import('../firebase-config.js');
+  const user = auth.currentUser;
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (user) headers.Authorization = `Bearer ${await user.getIdToken()}`;
+
+  let response;
+  try {
+    response = await fetch(`${API_BASE}/${name}`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ data: payload })
+    });
+  } catch {
+    const err = new Error('تعذّر الاتصال بالخادم. تحقق من الإنترنت.');
+    err.code = 'unavailable';
+    throw err;
+  }
+
+  let body = {};
+  try { body = await response.json(); } catch { /* empty or non-JSON */ }
+
+  if (!response.ok || body.error) {
+    const err = new Error(body.error?.message || 'حدث خطأ في الخادم.');
+    err.code = toErrorCode(body.error?.status);
+    err.details = body.error?.details;
+    throw err;
+  }
+  return body.result;
+}
+
+/**
  * @param {string} name    exported callable name
  * @param {object} payload plain JSON payload
  */
 export async function callFn(name, payload = {}) {
+  if (API_BASE) return callViaHttp(name, payload);
   if (!cache.has(name)) cache.set(name, httpsCallable(functions, name, { timeout: 60_000 }));
   const result = await cache.get(name)(payload);
   return result.data;

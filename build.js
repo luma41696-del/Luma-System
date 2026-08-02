@@ -82,11 +82,17 @@ function copyDir(src, dest, stats) {
 function injectKeys(html) {
   const appCheck = process.env.LUMA_APPCHECK_SITE_KEY || '';
   const vapid = process.env.LUMA_FCM_VAPID_KEY || '';
-  if (!appCheck && !vapid) return html;
+  // On Netlify the privileged handlers run as a Netlify Function rather than a
+  // Cloud Function, so the client is told where to send callable requests.
+  // NETLIFY is set automatically during a Netlify build.
+  const apiBase = process.env.LUMA_API_BASE || (process.env.NETLIFY ? '/api' : '');
+
+  if (!appCheck && !vapid && !apiBase) return html;
 
   const snippet = `  <script>
     window.__LUMA_APPCHECK_SITE_KEY__ = ${JSON.stringify(appCheck)};
     window.__LUMA_FCM_VAPID_KEY__ = ${JSON.stringify(vapid)};
+    window.__LUMA_API_BASE__ = ${JSON.stringify(apiBase)};
   </script>\n`;
 
   // Must run before the module scripts read them.

@@ -9,14 +9,50 @@
  * identically in the emulator and in production.
  */
 
-const { initializeApp, getApps } = require('firebase-admin/app');
+const { initializeApp, getApps, cert } = require('firebase-admin/app');
 const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
 const { getAuth } = require('firebase-admin/auth');
 const { getDatabase } = require('firebase-admin/database');
 const { getStorage } = require('firebase-admin/storage');
 const { getMessaging } = require('firebase-admin/messaging');
 
-const app = getApps().length ? getApps()[0] : initializeApp();
+/**
+ * Credentials.
+ *
+ * On Cloud Functions the runtime supplies them and `initializeApp()` needs no
+ * arguments. Anywhere else — Netlify Functions, a container, a script — the
+ * service-account JSON is passed in through FIREBASE_SERVICE_ACCOUNT so the
+ * same code runs unchanged.
+ */
+function buildApp() {
+  if (getApps().length) return getApps()[0];
+
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT;
+  if (!raw) return initializeApp();
+
+  let parsed;
+  try {
+    // Accept raw JSON or base64, since some dashboards mangle multi-line values.
+    parsed = JSON.parse(
+      raw.trim().startsWith('{') ? raw : Buffer.from(raw, 'base64').toString('utf8')
+    );
+  } catch (err) {
+    throw new Error(
+      'FIREBASE_SERVICE_ACCOUNT is set but is not valid JSON (or base64 JSON): ' + err.message
+    );
+  }
+
+  return initializeApp({
+    credential: cert(parsed),
+    projectId: parsed.project_id,
+    databaseURL: process.env.FIREBASE_DATABASE_URL ||
+      `https://${parsed.project_id}-default-rtdb.firebaseio.com`,
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET ||
+      `${parsed.project_id}.firebasestorage.app`
+  });
+}
+
+const app = buildApp();
 
 const db = getFirestore(app);
 try {
