@@ -145,6 +145,16 @@ function emulatorRequested() {
 
 export const usingEmulators = emulatorRequested();
 
+/**
+ * Emulator host.
+ *
+ * Uses whatever host the page was served from rather than a hard-coded
+ * 127.0.0.1, so one machine on the office network can act as the server and
+ * colleagues reach it at http://192.168.x.x:5000 — their browsers then talk to
+ * the emulators on that same machine instead of looking for them locally.
+ */
+const EMULATOR_HOST = location.hostname || '127.0.0.1';
+
 if (usingEmulators) {
   const [{ connectAuthEmulator }, { connectFirestoreEmulator }, { connectDatabaseEmulator },
          { connectStorageEmulator }, { connectFunctionsEmulator }] = await Promise.all([
@@ -154,10 +164,10 @@ if (usingEmulators) {
     import('https://www.gstatic.com/firebasejs/12.17.0/firebase-storage.js'),
     import('https://www.gstatic.com/firebasejs/12.17.0/firebase-functions.js')
   ]);
-  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
-  connectFirestoreEmulator(db, '127.0.0.1', 8080);
-  connectDatabaseEmulator(rtdb, '127.0.0.1', 9000);
-  connectStorageEmulator(storage, '127.0.0.1', 9199);
-  connectFunctionsEmulator(functions, '127.0.0.1', 5001);
-  console.info('[luma] Connected to Firebase emulators.');
+  connectAuthEmulator(auth, `http://${EMULATOR_HOST}:9099`, { disableWarnings: true });
+  connectFirestoreEmulator(db, EMULATOR_HOST, 8080);
+  connectDatabaseEmulator(rtdb, EMULATOR_HOST, 9000);
+  connectStorageEmulator(storage, EMULATOR_HOST, 9199);
+  connectFunctionsEmulator(functions, EMULATOR_HOST, 5001);
+  console.info(`[luma] Connected to Firebase emulators at ${EMULATOR_HOST}.`);
 }

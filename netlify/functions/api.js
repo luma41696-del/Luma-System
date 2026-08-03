@@ -20,16 +20,20 @@
 
 'use strict';
 
-const path = require('path');
-
-const ROOT = path.join(__dirname, '..', '..', 'functions');
-
-/* Only the callables — Firestore triggers and scheduled jobs cannot run here. */
+/*
+ * These requires are deliberately static string literals.
+ * Netlify bundles functions with esbuild, which can only follow imports it can
+ * see at build time — a computed `require(path.join(...))` is invisible to it,
+ * so the handlers would be missing at runtime and every call would 500.
+ *
+ * Only the callables are pulled in; Firestore triggers and scheduled jobs
+ * cannot be served over HTTP.
+ */
 const modules = [
-  require(path.join(ROOT, 'auth')),
-  require(path.join(ROOT, 'encryption')),
-  require(path.join(ROOT, 'deletion')),
-  require(path.join(ROOT, 'pdf'))
+  require('../../functions/auth'),
+  require('../../functions/encryption'),
+  require('../../functions/deletion'),
+  require('../../functions/pdf')
 ];
 
 /** name -> onCall handler */
@@ -152,14 +156,25 @@ exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: CORS, body: '' };
   }
-  if (event.httpMethod !== 'POST') {
-    return fail(405, 'INVALID_ARGUMENT', 'يجب استخدام POST.');
-  }
 
   // /.netlify/functions/api/<name>  — or  ?fn=<name>
   const segments = String(event.path || '').split('/').filter(Boolean);
   const name = (event.queryStringParameters && event.queryStringParameters.fn) ||
     segments[segments.length - 1];
+
+  // Diagnostics endpoint — reachable with a plain GET from a browser.
+  if (name === '__health') {
+    const report = await exports.health();
+    return {
+      statusCode: 200,
+      headers: { ...CORS, 'Content-Type': 'application/json' },
+      body: JSON.stringify(report, null, 2)
+    };
+  }
+
+  if (event.httpMethod !== 'POST') {
+    return fail(405, 'INVALID_ARGUMENT', 'يجب استخدام POST.');
+  }
 
   if (!name || !ALLOWED.has(name)) {
     return fail(404, 'NOT_FOUND', 'الدالة المطلوبة غير موجودة.');
@@ -194,8 +209,49 @@ exports.handler = async (event) => {
     };
   } catch (err) {
     console.error(`[api] ${name} failed`, err);
-    return fail(500, 'INTERNAL', 'حدث خطأ في الخادم.');
+
+    // Map the handful of failures that are really *configuration* problems to a
+    // message that says what to fix. A bare "server error" sends you to the logs
+    // for something the response can answer directly.
+    const text = `${err?.code || ''} ${err?.message || ''}`;
+    let hint = 'حدث خطأ في الخادم.';
+
+    if (/Cannot find module/i.test(text)) {
+      hint = 'ملفات الخادم غير مكتملة في النشر. تحقق من included_files في netlify.toml.';
+    } else if (/NOT_FOUND|database \(default\) does not exist|5 NOT_FOUND/i.test(text)) {
+      hint = 'قاعدة بيانات Firestore غير مُنشأة في مشروع Firebase. أنشئها من الـ Console ثم أعد المحاولة.';
+    } else if (/PERMISSION_DENIED|permission_denied|IAM/i.test(text)) {
+      hint = 'مفتاح الخدمة لا يملك صلاحية كافية، أو واجهة Firestore غير مفعّلة في المشروع.';
+    } else if (/credential|Invalid JWT|invalid_grant|DECODER/i.test(text)) {
+      hint = 'مفتاح الخدمة (FIREBASE_SERVICE_ACCOUNT) غير صالح أو مقصوص. أعد لصقه كاملاً.';
+    } else if (/UNAUTHENTICATED/i.test(text)) {
+      hint = 'تعذّرت مصادقة الخادم مع Firebase. راجع مفتاح الخدمة.';
+    }
+
+    return fail(500, 'INTERNAL', hint);
   }
+};
+
+/**
+ * Health check: GET /api/__health
+ * Reports whether the environment and the Firebase connection are usable,
+ * without exposing any secret value.
+ */
+exports.health = async () => {
+  const report = {
+    serviceAccount: !!process.env.FIREBASE_SERVICE_ACCOUNT,
+    vaultKey: !!process.env.VAULT_ENCRYPTION_KEY,
+    callables: Object.keys(registry).length,
+    firestore: 'unknown'
+  };
+  try {
+    const { db } = require('../../functions/lib/admin');
+    await db.collection('_health').limit(1).get();
+    report.firestore = 'ok';
+  } catch (err) {
+    report.firestore = `error: ${(err.message || '').slice(0, 160)}`;
+  }
+  return report;
 };
 
 /** Exposed for the self-test. */
