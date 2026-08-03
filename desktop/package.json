@@ -1,0 +1,58 @@
+{
+  "name": "luma-agency-desktop",
+  "productName": "Luma Agency",
+  "version": "1.0.0",
+  "description": "نظام إدارة وكالة لوما — نسخة سطح المكتب",
+  "main": "main.js",
+  "private": true,
+  "author": "Luma Agency",
+  "scripts": {
+    "icon": "node make-icon.js",
+    "build": "node prepare.js",
+    "start": "npm run build && electron .",
+    "start:emulator": "npm run build && electron . --emulator",
+    "dist": "npm run icon && npm run build && electron-builder --win --publish never",
+    "dist:portable": "npm run icon && npm run build && electron-builder --win portable --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "jo.lumaagency.management",
+    "productName": "Luma Agency",
+    "copyright": "© Luma Agency",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "app/**/*"
+    ],
+    "win": {
+      "target": [
+        { "target": "nsis", "arch": ["x64"] }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "Luma-Agency-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "نظام إدارة لوما",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "deleteAppDataOnUninstall": false,
+      "runAfterFinish": true
+    },
+    "portable": {
+      "artifactName": "Luma-Agency-Portable-${version}.${ext}"
+    }
+  }
+}

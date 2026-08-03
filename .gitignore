@@ -48,6 +48,13 @@ desktop.ini
 *.swp
 *~
 
+# --- desktop app (generated) --------------------------------------------------
+desktop/node_modules/
+desktop/app/
+desktop/release/
+desktop/build/
+desktop/package-lock.json
+
 # --- build / temp -------------------------------------------------------------
 dist/
 build/
