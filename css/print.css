@@ -25,7 +25,7 @@
   justify-content: space-between;
   gap: 24px;
   padding-bottom: 20px;
-  border-bottom: 3px solid #FFC928;
+  border-bottom: 3px solid #4070C8;
   margin-bottom: 28px;
 }
 .doc-sheet__brand { display: flex; align-items: center; gap: 16px; }
@@ -58,7 +58,7 @@
 .doc-sheet__no {
   display: inline-block;
   padding: 5px 12px;
-  background: #FFC928;
+  background: #4070C8;
   color: #12100A;
   border-radius: 6px;
   font-weight: 800;

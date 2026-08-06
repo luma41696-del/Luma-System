@@ -6,17 +6,23 @@
  */
 
 export const FEATURES = {
+  /** File & image uploads (avatars, chat images, task and client files). */
+  uploads: true,
+
   /**
-   * File & image uploads (Cloud Storage).
+   * Fallback for when Cloud Storage is unavailable — it needs the Blaze plan.
    *
-   * Cloud Storage requires the Firebase **Blaze** plan. Until the project is
-   * upgraded every upload entry point is hidden and `uploadFile()` refuses to
-   * run, so nothing fails halfway through and leaves an orphaned record.
+   * With this on, an image that Storage rejects is downscaled, re-encoded and
+   * stored inline as a data URL on the document itself. Firestore caps a
+   * document at 1 MB, so it only applies to images and only under the limit
+   * below; documents and anything larger still need Storage.
    *
-   * ▶ To re-enable after subscribing: set this to `true`. Nothing else changes —
-   *   the upload code, the Storage rules and the UI are all already in place.
+   * Set to false once Storage is enabled, to keep images out of the database.
    */
-  uploads: false
+  inlineImageFallback: true,
+
+  /** Largest inline image, in KB. Well under the 1 MB document ceiling. */
+  inlineImageMaxKB: 420
 };
 
 /** Shown wherever an upload control used to be. */
@@ -38,4 +44,8 @@ export function uploadsDisabledNotice(extra = '') {
 /** Guard for click handlers that would otherwise start an upload. */
 export function uploadsEnabled() {
   return FEATURES.uploads === true;
+}
+
+export function inlineFallbackEnabled() {
+  return FEATURES.uploads === true && FEATURES.inlineImageFallback === true;
 }

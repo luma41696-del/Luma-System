@@ -194,6 +194,24 @@ function notificationsTab(host) {
       </div>
 
       <div class="card">
+        <div class="card__head"><div class="card__title"><i data-lucide="volume-2"></i> صوت التنبيه</div></div>
+        <label class="switch" style="display:flex;justify-content:space-between;padding:10px 0">
+          <span>تشغيل صوت عند وصول مهمة أو رسالة جديدة</span>
+          <span style="display:flex;align-items:center">
+            <input type="checkbox" id="s-sound">
+            <span class="switch__track"></span>
+          </span>
+        </label>
+        <p class="fs-xs text-muted" style="line-height:1.8">
+          الصوت يعمل فقط عندما تكون خارج الموقع (تبويب آخر أو نافذة أخرى) — تماماً مثل واتساب،
+          فلا يزعجك وأنت تعمل داخل النظام.
+        </p>
+        <button class="btn btn--secondary btn--block mt-3" id="s-sound-test">
+          <i data-lucide="play"></i> تجربة الصوت
+        </button>
+      </div>
+
+      <div class="card">
         <div class="card__head"><div class="card__title"><i data-lucide="monitor-smartphone"></i> إشعارات المتصفح</div></div>
         <div class="kv"><span class="kv__k">الحالة</span><span class="kv__v">${
           permission === 'granted' ? 'مفعّلة' :
@@ -223,6 +241,19 @@ function notificationsTab(host) {
     } catch (err) { reportError(err, 'notif-prefs'); }
     finally { setBusy(button, false); }
   });
+
+  const soundBox = $('#s-sound');
+  if (soundBox) {
+    import('./utils/sound.js').then(({ soundEnabled, setSoundEnabled, playNotificationSound }) => {
+      soundBox.checked = soundEnabled();
+      soundBox.addEventListener('change', () => {
+        setSoundEnabled(soundBox.checked);
+        if (soundBox.checked) playNotificationSound({ force: true });
+        toastSuccess(soundBox.checked ? 'تم تفعيل صوت التنبيه.' : 'تم كتم صوت التنبيه.');
+      });
+      $('#s-sound-test')?.addEventListener('click', () => playNotificationSound({ force: true }));
+    });
+  }
 
   $('#ask-perm')?.addEventListener('click', async () => {
     const result = await Notification.requestPermission();

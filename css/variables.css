@@ -101,9 +101,18 @@
   --navy-600: #16324f;
   --border-dark: #263B52;
 
-  --yellow: #FFC928;
-  --yellow-hover: #EAB600;
-  --yellow-soft: rgba(255, 201, 40, 0.14);
+  /* Brand accent — sampled from the Luma logo artwork (#4070C8). */
+  --brand: #4070C8;
+  --brand-hover: #355DAB;
+  --brand-light: #5C8AE0;
+  --brand-soft: rgba(64, 112, 200, 0.16);
+  --brand-glow: rgba(64, 112, 200, 0.28);
+
+  /* Kept as aliases so the whole stylesheet did not have to be rewritten when
+     the accent moved from yellow to the brand blue. Prefer --brand in new code. */
+  --yellow: var(--brand);
+  --yellow-hover: var(--brand-hover);
+  --yellow-soft: var(--brand-soft);
 
   --white: #F8FAFC;
   --soft-black: #171B22;
@@ -123,7 +132,7 @@
   --purple-soft: rgba(167, 139, 250, 0.14);
 
   /* Event / label palette (calendar + task colours) */
-  --accent-1: #FFC928;
+  --accent-1: #4070C8;
   --accent-2: #60A5FA;
   --accent-3: #A78BFA;
   --accent-4: #34D399;
@@ -138,14 +147,15 @@
   --bg-elevated: #14314e;
   --bg-inset: rgba(255, 255, 255, 0.03);
   --bg-hover: rgba(255, 255, 255, 0.06);
-  --bg-active: rgba(255, 201, 40, 0.12);
+  --bg-active: rgba(64, 112, 200, 0.12);
   --bg-overlay: rgba(3, 10, 18, 0.72);
 
   --text-primary: var(--white);
   --text-secondary: var(--gray-light);
   --text-muted: var(--gray);
   --text-inverse: var(--navy-900);
-  --text-on-brand: #12100A;
+  /* White on the blue accent — the old dark-on-yellow value fails contrast here. */
+  --text-on-brand: #FFFFFF;
 
   --border: var(--border-dark);
   --border-soft: rgba(216, 222, 232, 0.10);
@@ -163,7 +173,7 @@
   --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.20);
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.26);
   --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.36);
-  --shadow-focus: 0 0 0 3px rgba(255, 201, 40, 0.35);
+  --shadow-focus: 0 0 0 3px rgba(64, 112, 200, 0.35);
 
   /* ----------------------------------------------------------- spacing */
   --sp-1: 4px;
@@ -208,7 +218,7 @@
   --bg-elevated: #FFFFFF;
   --bg-inset: rgba(7, 26, 47, 0.035);
   --bg-hover: rgba(7, 26, 47, 0.05);
-  --bg-active: rgba(255, 201, 40, 0.20);
+  --bg-active: rgba(64, 112, 200, 0.20);
   --bg-overlay: rgba(23, 27, 34, 0.45);
 
   --text-primary: var(--soft-black);

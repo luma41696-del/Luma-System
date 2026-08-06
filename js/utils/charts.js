@@ -11,7 +11,7 @@ function cssVar(name, fallback = '') {
 
 export function palette() {
   return {
-    brand: cssVar('--yellow', '#FFC928'),
+    brand: cssVar('--yellow', '#4070C8'),
     success: cssVar('--success', '#34D399'),
     danger: cssVar('--danger', '#F87171'),
     info: cssVar('--info', '#60A5FA'),

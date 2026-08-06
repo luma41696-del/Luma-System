@@ -18,6 +18,7 @@ import {
   WORK_STATES, presence
 } from './utils/presence.js';
 import { formatStopwatch, formatDuration, timeAgo } from './utils/format.js';
+import { initSound, playNotificationSound, isAway } from './utils/sound.js';
 import {
   col, query, where, orderBy, limit, onSnapshot, getMany, updateDoc, ref, callFn, getDirectory
 } from './utils/api.js';
@@ -34,6 +35,7 @@ function track(unsub) { if (typeof unsub === 'function') teardown.push(unsub); }
 
 (async function bootstrap() {
   bootIcons();
+  initSound();
   if (!(await requireAuth())) return;
 
   // A temporary password must be replaced before anything else loads.
@@ -415,21 +417,29 @@ function watchNotifications() {
       badge.hidden = unread.length === 0;
     }
 
-    // Browser notification for anything that arrived in the last 15 seconds.
-    if (Notification?.permission === 'granted') {
-      snap.docChanges()
-        .filter((change) => change.type === 'added')
-        .map((change) => ({ id: change.doc.id, ...change.doc.data() }))
-        .filter((n) => !n.read && Date.now() - (n.createdAt?.toMillis?.() || 0) < 15000)
-        .forEach((n) => {
+    // Anything that genuinely just arrived — not the initial snapshot, and not
+    // an old unread being re-delivered.
+    const arrivals = snap.docChanges()
+      .filter((change) => change.type === 'added')
+      .map((change) => ({ id: change.doc.id, ...change.doc.data() }))
+      .filter((n) => !n.read && Date.now() - (n.createdAt?.toMillis?.() || 0) < 15000);
+
+    if (arrivals.length) {
+      // Sound only when the employee is looking elsewhere, so it behaves like a
+      // messaging app rather than beeping at someone already reading the screen.
+      if (isAway()) playNotificationSound();
+
+      if (Notification?.permission === 'granted') {
+        arrivals.forEach((n) => {
           try {
             new Notification(n.title || 'إشعار جديد', {
               body: n.body || '',
-              icon: 'assets/logo/luma-mark-yellow.png',
+              icon: 'assets/logo/favicon.png',
               tag: n.id
             });
           } catch { /* not supported in this context */ }
         });
+      }
     }
 
     window.dispatchEvent(new CustomEvent('luma:notifications', { detail: items }));

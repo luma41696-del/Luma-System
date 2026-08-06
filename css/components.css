@@ -80,7 +80,7 @@
   background: var(--yellow);
   color: var(--text-on-brand);
   font-weight: 700;
-  box-shadow: 0 4px 14px rgba(255, 201, 40, 0.22);
+  box-shadow: 0 4px 14px rgba(64, 112, 200, 0.22);
 }
 .btn--primary:hover:not(:disabled) { background: var(--yellow-hover); }
 
@@ -935,7 +935,7 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
   min-width: 0;
   position: relative;
 }
-.msg.is-own .msg__bubble { background: var(--yellow-soft); border-color: rgba(255, 201, 40, 0.25); }
+.msg.is-own .msg__bubble { background: var(--yellow-soft); border-color: rgba(64, 112, 200, 0.25); }
 .msg__author { font-size: var(--fs-xs); font-weight: 700; color: var(--yellow); margin-bottom: 3px; }
 .msg__text { font-size: var(--fs-md); line-height: 1.55; word-break: break-word; white-space: pre-wrap; }
 .msg__text a { text-decoration: underline; }
@@ -1219,7 +1219,7 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .logo-lockup--sm { --lockup-mark: 30px; --lockup-name: 1.05rem; gap: var(--sp-3); }
 .logo-lockup--lg { --lockup-mark: 74px; --lockup-name: 2.6rem; }
 .logo-lockup--brand { color: var(--yellow); }
-.logo-lockup--brand .logo-lockup__sub { color: rgba(255, 201, 40, 0.62); }
+.logo-lockup--brand .logo-lockup__sub { color: rgba(64, 112, 200, 0.62); }
 
 /* Horizontal variant used in tight chrome (sidebar, document headers). */
 .logo-lockup--row {

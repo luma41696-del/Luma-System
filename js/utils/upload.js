@@ -9,7 +9,38 @@ import {
   ref, uploadBytesResumable, getDownloadURL, deleteObject
 } from 'https://www.gstatic.com/firebasejs/12.17.0/firebase-storage.js';
 import { validateFile, safeFileName } from './sanitize.js';
-import { uploadsEnabled, UPLOADS_DISABLED_MSG } from '../features.js';
+import {
+  uploadsEnabled, inlineFallbackEnabled, FEATURES, UPLOADS_DISABLED_MSG
+} from '../features.js';
+
+/**
+ * Re-encode an image small enough to live inside a Firestore document.
+ * Used when Cloud Storage is unavailable (it requires the Blaze plan) so that
+ * avatars and chat images still work on the free tier.
+ */
+async function toInlineImage(file) {
+  const maxBytes = (FEATURES.inlineImageMaxKB || 420) * 1024;
+
+  for (const [size, quality] of [[900, 0.82], [640, 0.74], [420, 0.66]]) {
+    const shrunk = await compressImage(file, { maxSize: size, quality });
+    if (shrunk.size <= maxBytes) {
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve({
+          url: reader.result,          // data: URL, stored on the document
+          path: null,                  // nothing in Storage to clean up later
+          name: file.name,
+          size: shrunk.size,
+          type: shrunk.type,
+          inline: true
+        });
+        reader.onerror = () => reject(new Error('تعذّرت قراءة الصورة.'));
+        reader.readAsDataURL(shrunk);
+      });
+    }
+  }
+  throw new Error('الصورة كبيرة جداً. اختر صورة أصغر أو فعّل التخزين السحابي.');
+}
 
 /** Storage path builders — keep them in sync with storage.rules. */
 export const paths = {
@@ -45,7 +76,21 @@ export function uploadFile(file, path, {
     task.on(
       'state_changed',
       (snap) => onProgress?.(Math.round((snap.bytesTransferred / snap.totalBytes) * 100)),
-      reject,
+      async (err) => {
+        // Storage is unavailable without the Blaze plan. Rather than fail an
+        // avatar or a chat image outright, keep it inline where that is safe.
+        const recoverable = [
+          'storage/unauthorized', 'storage/unknown', 'storage/quota-exceeded',
+          'storage/project-not-found', 'storage/bucket-not-found', 'storage/retry-limit-exceeded'
+        ].includes(err?.code);
+
+        if (recoverable && inlineFallbackEnabled() && file.type?.startsWith('image/')) {
+          console.warn(`[luma] Storage unavailable (${err.code}) — storing the image inline.`);
+          try { resolve(await toInlineImage(file)); } catch (fallbackErr) { reject(fallbackErr); }
+          return;
+        }
+        reject(err);
+      },
       async () => {
         try {
           resolve({
@@ -53,7 +98,8 @@ export function uploadFile(file, path, {
             path,
             name: file.name,
             size: file.size,
-            type: file.type
+            type: file.type,
+            inline: false
           });
         } catch (err) { reject(err); }
       }
