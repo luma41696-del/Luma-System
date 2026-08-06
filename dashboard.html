@@ -21,13 +21,17 @@
   <link rel="stylesheet" href="css/print.css">
   <link rel="stylesheet" href="css/responsive.css">
 
-  <!-- Restore the saved theme before first paint to avoid a flash. -->
+  <!-- Restore the saved theme and language before first paint to avoid a flash. -->
   <script>
     try {
       var t = localStorage.getItem('luma.theme');
       if (t) document.documentElement.dataset.theme = t;
       if (localStorage.getItem('luma.sidebarCollapsed') === '1') {
         document.documentElement.dataset.sidebar = 'collapsed';
+      }
+      if (localStorage.getItem('luma.lang') === 'en') {
+        document.documentElement.lang = 'en';
+        document.documentElement.dir = 'ltr';
       }
     } catch (e) {}
   </script>
@@ -40,7 +44,7 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#page-container">تخطّي إلى المحتوى</a>
+  <a class="skip-link" href="#page-container" data-i18n="shell.skipToContent">تخطّي إلى المحتوى</a>
 
   <div class="app-shell" id="app-shell">
 
@@ -49,7 +53,7 @@
       <div class="sidebar__brand">
         <span class="logo-mark"></span>
         <div class="sidebar__brand-text">
-          <span class="sidebar__brand-name">لوما</span>
+          <span class="sidebar__brand-name" data-i18n="app.brand">لوما</span>
           <span class="sidebar__brand-sub">LUMA AGENCY</span>
         </div>
       </div>
@@ -67,12 +71,13 @@
 
       <div class="sidebar__search">
         <i data-lucide="search"></i>
-        <input type="search" id="sidebar-search" placeholder="بحث سريع…" aria-label="بحث سريع">
+        <input type="search" id="sidebar-search" placeholder="بحث سريع…" aria-label="بحث سريع"
+               data-i18n-placeholder="sidebar.quickSearch" data-i18n-aria-label="sidebar.quickSearch">
       </div>
 
       <nav class="sidebar__nav" id="sidebar-nav">
         <div class="nav-section">
-          <div class="nav-section__title">نظرة عامة</div>
+          <div class="nav-section__title" data-i18n="nav.section.overview">نظرة عامة</div>
           <div id="nav-primary"></div>
         </div>
       </nav>
@@ -81,16 +86,20 @@
 
       <div class="sidebar__footer">
         <div class="sidebar__tools">
-          <button class="icon-btn" id="theme-toggle" aria-label="تبديل الوضع الليلي" title="الوضع الليلي / النهاري">
+          <button class="icon-btn" id="theme-toggle" aria-label="تبديل الوضع الليلي" title="الوضع الليلي / النهاري"
+                  data-i18n-aria-label="sidebar.themeToggle" data-i18n-title="sidebar.themeToggle">
             <i data-lucide="moon"></i>
           </button>
-          <button class="icon-btn" id="collapse-toggle" aria-label="طيّ القائمة" title="طيّ القائمة">
+          <button class="icon-btn" id="collapse-toggle" aria-label="طيّ القائمة" title="طيّ القائمة"
+                  data-i18n-aria-label="sidebar.collapse" data-i18n-title="sidebar.collapse">
             <i data-lucide="panel-right-close"></i>
           </button>
-          <button class="icon-btn" id="help-btn" aria-label="المساعدة" title="المساعدة">
+          <button class="icon-btn" id="help-btn" aria-label="المساعدة" title="المساعدة"
+                  data-i18n-aria-label="sidebar.help" data-i18n-title="sidebar.help">
             <i data-lucide="life-buoy"></i>
           </button>
-          <button class="icon-btn" id="logout-btn" aria-label="تسجيل الخروج" title="تسجيل الخروج">
+          <button class="icon-btn" id="logout-btn" aria-label="تسجيل الخروج" title="تسجيل الخروج"
+                  data-i18n-aria-label="sidebar.logout" data-i18n-title="sidebar.logout">
             <i data-lucide="log-out"></i>
           </button>
         </div>
@@ -100,7 +109,8 @@
     <!-- ================================ MAIN ============================== -->
     <div class="main">
       <header class="topbar">
-        <button class="topbar__icon-btn topbar__toggle" id="drawer-toggle" aria-label="القائمة">
+        <button class="topbar__icon-btn topbar__toggle" id="drawer-toggle" aria-label="القائمة"
+                data-i18n-aria-label="sidebar.menu">
           <i data-lucide="menu"></i>
         </button>
 
@@ -112,24 +122,28 @@
         <div class="global-search">
           <i data-lucide="search" class="global-search__icon"></i>
           <input type="search" id="global-search" placeholder="ابحث عن مهمة، موظف، عميل…"
-                 aria-label="البحث الشامل" autocomplete="off">
+                 aria-label="البحث الشامل" autocomplete="off"
+                 data-i18n-placeholder="topbar.globalSearch" data-i18n-aria-label="topbar.globalSearch">
           <span class="global-search__kbd">Ctrl K</span>
           <div class="search-results" id="search-results" hidden></div>
         </div>
 
         <div class="topbar__actions">
-          <button class="topbar__icon-btn" id="quick-add" aria-label="إضافة سريعة" title="إضافة سريعة">
+          <button class="topbar__icon-btn" id="quick-add" aria-label="إضافة سريعة" title="إضافة سريعة"
+                  data-i18n-aria-label="topbar.quickAdd" data-i18n-title="topbar.quickAdd">
             <i data-lucide="plus"></i>
           </button>
 
           <span id="status-pill-host"></span>
 
-          <button class="topbar__icon-btn" id="notif-btn" aria-label="الإشعارات" title="الإشعارات">
+          <button class="topbar__icon-btn" id="notif-btn" aria-label="الإشعارات" title="الإشعارات"
+                  data-i18n-aria-label="topbar.notifications" data-i18n-title="topbar.notifications">
             <i data-lucide="bell"></i>
             <span class="dot" id="notif-dot" hidden></span>
           </button>
 
-          <button class="profile-menu-btn" id="profile-btn" aria-label="حسابي" aria-haspopup="menu">
+          <button class="profile-menu-btn" id="profile-btn" aria-label="حسابي" aria-haspopup="menu"
+                  data-i18n-aria-label="topbar.myAccount">
             <span id="topbar-avatar"><span class="avatar avatar--sm">؟</span></span>
             <span class="profile-menu-btn__name" id="topbar-name">…</span>
             <i data-lucide="chevron-down" class="icon-sm"></i>
@@ -153,7 +167,7 @@
 
   <div class="drawer-backdrop" id="drawer-backdrop"></div>
 
-  <button class="mobile-fab" id="mobile-fab" aria-label="إضافة سريعة">
+  <button class="mobile-fab" id="mobile-fab" aria-label="إضافة سريعة" data-i18n-aria-label="topbar.quickAdd">
     <i data-lucide="plus"></i>
   </button>
 

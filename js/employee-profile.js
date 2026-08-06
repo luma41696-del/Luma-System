@@ -123,6 +123,8 @@ export async function render(container, ctx) {
     const meta = WORK_STATES[state];
     node.innerHTML = `<span class="status-pill" data-state="${attr(state)}">
       <span class="status-pill__dot"></span>${esc(meta.ar)}</span>`;
+    const dot = $('#avatar-presence-dot');
+    if (dot) dot.className = `presence presence--${state}`;
   }
 
   function wireHeader() {
@@ -154,10 +156,11 @@ export async function render(container, ctx) {
 function headerHTML(profile, state, isSelf) {
   const canEdit = isSelf || can(session.claims, 'employees.edit');
   return `
-    <div class="card">
+    <div class="card profile-hero">
       <div class="flex gap-4 items-start" style="flex-wrap:wrap">
-        <div style="position:relative">
+        <div class="avatar-wrap">
           ${avatarHTML(profile, 'xl')}
+          ${!isSelf ? `<span class="presence presence--${attr(state)}" id="avatar-presence-dot"></span>` : ''}
           ${isSelf && uploadsEnabled() ? `<button class="icon-btn" id="change-avatar"
             style="position:absolute;bottom:-4px;inset-inline-end:-4px;background:var(--yellow);
                    color:var(--text-on-brand);border-radius:50%;width:30px;height:30px"
@@ -212,6 +215,25 @@ function renderOverview(host, profile, stats, tasks, isSelf) {
       ${stat('list-todo', 'info', stats.open, 'مهام متبقية')}
       ${stat('alert-triangle', 'danger', stats.overdue, 'مهام متأخرة')}
       ${stat('percent', 'brand', `${stats.completionRate}%`, 'نسبة الإنجاز')}
+    </div>
+
+    <div class="grid grid-2 mt-4">
+      <div class="card">
+        <div class="card__head"><div class="card__title"><i data-lucide="target"></i> نسبة الإنجاز</div></div>
+        <div class="flex items-center gap-4 mt-2" style="flex-wrap:wrap">
+          ${ringHTML(stats.completionRate, { sub: 'إنجاز' })}
+          <div class="flex-col gap-2">
+            <div class="kv"><span class="kv__k">مكتملة</span><span class="kv__v num">${stats.completed}</span></div>
+            <div class="kv"><span class="kv__k">متبقية</span><span class="kv__v num">${stats.open}</span></div>
+            <div class="kv"><span class="kv__k">متأخرة</span>
+              <span class="kv__v num" style="color:var(--danger)">${stats.overdue}</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card__head"><div class="card__title"><i data-lucide="activity"></i> النشاط الأسبوعي</div></div>
+        ${weekBarsHTML(tasks)}
+      </div>
     </div>
 
     <div class="grid grid-main mt-4">
@@ -919,6 +941,48 @@ function openDeleteEmployee(profile) {
       });
     }
   });
+}
+
+/** A circular progress ring with the percentage centred inside it. */
+function ringHTML(percent, { size = 128, stroke = 12, sub = '' } = {}) {
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const clamped = Math.max(0, Math.min(100, Number(percent) || 0));
+  const offset = c - (clamped / 100) * c;
+  return `
+    <div class="ring-wrap" style="width:${size}px;height:${size}px">
+      <svg class="progress-ring" width="${size}" height="${size}">
+        <circle class="progress-ring__track" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}"></circle>
+        <circle class="progress-ring__fill" cx="${size / 2}" cy="${size / 2}" r="${r}" stroke-width="${stroke}"
+          stroke-dasharray="${c.toFixed(2)}" stroke-dashoffset="${offset.toFixed(2)}"></circle>
+      </svg>
+      <div class="ring-wrap__label">
+        <div class="ring-wrap__value num">${Math.round(clamped)}%</div>
+        ${sub ? `<div class="ring-wrap__sub">${esc(sub)}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+/** Tasks completed per day, last 7 days — one column per day, today highlighted. */
+function weekBarsHTML(tasks) {
+  const days = dailySeries(tasks, 7);
+  const max = Math.max(1, ...days.map((d) => d.completed));
+  const todayStr = new Date().toDateString();
+  return `
+    <div class="week-bars">
+      ${days.map((d) => {
+        const isToday = d.date.toDateString() === todayStr;
+        const h = d.completed ? Math.max(10, Math.round((d.completed / max) * 100)) : 4;
+        return `
+          <div class="week-bars__col">
+            <div class="week-bars__count">${d.completed || ''}</div>
+            <div class="week-bars__track">
+              <div class="week-bars__fill${isToday ? ' week-bars__fill--today' : ''}" style="height:${h}%"></div>
+            </div>
+            <div class="week-bars__label${isToday ? ' is-today' : ''}">${esc(AR_DAYS_SHORT[weekdayIndex(d.date)])}</div>
+          </div>`;
+      }).join('')}
+    </div>`;
 }
 
 function stat(icon, tone, value, label) {

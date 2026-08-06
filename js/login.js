@@ -12,8 +12,12 @@ import {
 import { $, setBusy, refreshIcons, bootIcons, esc } from './utils/dom.js';
 import { toastSuccess, toastError, errorMessage } from './utils/toast.js';
 import { checkPassword, isValidUsername, normalizeUsername } from './utils/sanitize.js';
+import { t, applyStaticI18n } from './utils/i18n.js';
 
 const DASHBOARD = 'dashboard.html';
+
+applyStaticI18n();
+document.title = `${t('login.pageTitle')} · ${t('app.name')}`;
 
 const steps = {
   login: $('#step-login'),
@@ -61,7 +65,7 @@ if (remembered) {
 }
 
 if (new URLSearchParams(location.search).has('disabled')) {
-  alertBox('تم تعطيل هذا الحساب. يرجى مراجعة مدير النظام.');
+  alertBox(t('login.accountDisabled'));
 }
 
 /* Already signed in? Skip straight through — unless a password change is due. */
@@ -83,7 +87,7 @@ $('#toggle-password').addEventListener('click', () => {
   const isText = input.type === 'text';
   input.type = isText ? 'password' : 'text';
   $('#toggle-password').innerHTML = `<i data-lucide="${isText ? 'eye' : 'eye-off'}"></i>`;
-  $('#toggle-password').setAttribute('aria-label', isText ? 'إظهار كلمة المرور' : 'إخفاء كلمة المرور');
+  $('#toggle-password').setAttribute('aria-label', isText ? t('login.showPassword') : t('login.hidePassword'));
   refreshIcons($('#toggle-password'));
   input.focus();
 });
@@ -99,12 +103,12 @@ $('#login-form').addEventListener('submit', async (event) => {
   const remember = $('#remember').checked;
 
   let invalid = false;
-  if (!username) { fieldError('username', 'اسم المستخدم مطلوب'); invalid = true; }
+  if (!username) { fieldError('username', t('login.usernameRequired')); invalid = true; }
   else if (!isValidUsername(username)) {
-    fieldError('username', 'اسم المستخدم يجب أن يتكون من 3-24 حرفاً لاتينياً');
+    fieldError('username', t('login.usernameInvalid'));
     invalid = true;
   }
-  if (!password) { fieldError('password', 'كلمة المرور مطلوبة'); invalid = true; }
+  if (!password) { fieldError('password', t('login.passwordRequired')); invalid = true; }
   if (invalid) return;
 
   const button = $('#login-submit');
@@ -116,7 +120,7 @@ $('#login-form').addEventListener('submit', async (event) => {
     const profile = await loadProfileOnce(session.user.uid);
     if (profile?.status === 'disabled') {
       await signOutUser();
-      alertBox('تم تعطيل هذا الحساب. يرجى مراجعة مدير النظام.');
+      alertBox(t('login.accountDisabled'));
       return;
     }
 
@@ -127,7 +131,7 @@ $('#login-form').addEventListener('submit', async (event) => {
       return;
     }
 
-    toastSuccess(`أهلاً بك ${profile?.displayName || ''}`);
+    toastSuccess(t('login.welcomeToast', { name: profile?.displayName || '' }));
     location.replace(nextTarget());
   } catch (err) {
     console.error('[luma] login failed', err);
@@ -142,18 +146,18 @@ $('#login-form').addEventListener('submit', async (event) => {
 /* -------------------------------------------------- forced password change */
 
 const RULES = [
-  { test: (p) => p.length >= 10, label: '10 أحرف على الأقل' },
-  { test: (p) => /[a-z]/.test(p), label: 'حرف إنجليزي صغير (a-z)' },
-  { test: (p) => /[A-Z]/.test(p), label: 'حرف إنجليزي كبير (A-Z)' },
-  { test: (p) => /\d/.test(p), label: 'رقم واحد على الأقل' },
-  { test: (p) => /[^A-Za-z0-9]/.test(p), label: 'رمز خاص (@ # $ ! ...)' }
+  { test: (p) => p.length >= 10, key: 'login.rule.length' },
+  { test: (p) => /[a-z]/.test(p), key: 'login.rule.lower' },
+  { test: (p) => /[A-Z]/.test(p), key: 'login.rule.upper' },
+  { test: (p) => /\d/.test(p), key: 'login.rule.digit' },
+  { test: (p) => /[^A-Za-z0-9]/.test(p), key: 'login.rule.symbol' }
 ];
 
 function paintRules(password) {
   $('#pw-rules').innerHTML = RULES.map((rule) => {
     const ok = rule.test(password);
     return `<li style="color:${ok ? 'var(--success)' : 'var(--text-muted)'}">
-      ${ok ? '✓' : '○'} ${esc(rule.label)}</li>`;
+      ${ok ? '✓' : '○'} ${esc(t(rule.key))}</li>`;
   }).join('');
 
   const score = RULES.filter((r) => r.test(password)).length;
@@ -188,7 +192,7 @@ $('#change-form').addEventListener('submit', async (event) => {
   const policy = checkPassword(next);
   if (!policy.ok) { toastError(policy.issues[0]); return; }
   if (next !== confirm) {
-    errorNode.textContent = 'كلمتا المرور غير متطابقتين';
+    errorNode.textContent = t('login.passwordMismatch');
     errorNode.hidden = false;
     return;
   }
@@ -197,7 +201,7 @@ $('#change-form').addEventListener('submit', async (event) => {
   setBusy(button, true);
   try {
     await changeOwnPassword(current, next);
-    toastSuccess('تم تغيير كلمة المرور بنجاح.');
+    toastSuccess(t('login.passwordChanged'));
     setTimeout(() => location.replace(nextTarget()), 700);
   } catch (err) {
     toastError(errorMessage(err));
@@ -225,14 +229,14 @@ $('#forgot-back').addEventListener('click', () => showStep('login'));
 $('#forgot-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   const username = normalizeUsername($('#forgot-username').value);
-  if (!username) { toastError('يرجى إدخال اسم المستخدم.'); return; }
+  if (!username) { toastError(t('login.usernameRequiredToast')); return; }
 
   const button = $('#forgot-submit');
   setBusy(button, true);
   try {
     await requestPasswordReset(username);
     // Deliberately generic: the response must not reveal whether the account exists.
-    toastSuccess('إذا كان اسم المستخدم صحيحاً فسيصلك رابط الاستعادة على البريد المسجّل.');
+    toastSuccess(t('login.resetSent'));
     showStep('login');
   } catch (err) {
     toastError(errorMessage(err));

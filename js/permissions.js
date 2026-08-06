@@ -187,20 +187,20 @@ export function isManager(claims) {
  * Items with no `perm` are visible to every active employee.
  */
 export const NAV_ITEMS = [
-  { id: 'home',        route: '#/',           label: 'الرئيسية',            icon: 'layout-dashboard' },
-  { id: 'my-tasks',    route: '#/my-tasks',   label: 'مهامي',               icon: 'check-square' },
-  { id: 'calendar',    route: '#/calendar',   label: 'التقويم',             icon: 'calendar-days' },
-  { id: 'team',        route: '#/team',       label: 'الفريق',              icon: 'users' },
-  { id: 'employees',   route: '#/employees',  label: 'الموظفون',            icon: 'id-card',
+  { id: 'home',        route: '#/',           labelKey: 'nav.home',        icon: 'layout-dashboard' },
+  { id: 'my-tasks',    route: '#/my-tasks',   labelKey: 'nav.myTasks',     icon: 'check-square' },
+  { id: 'calendar',    route: '#/calendar',   labelKey: 'nav.calendar',    icon: 'calendar-days' },
+  { id: 'team',        route: '#/team',       labelKey: 'nav.team',        icon: 'users' },
+  { id: 'employees',   route: '#/employees',  labelKey: 'nav.employees',   icon: 'id-card',
     perm: ['employees.view'] },
-  { id: 'clients',     route: '#/clients',    label: 'العملاء',             icon: 'briefcase',
+  { id: 'clients',     route: '#/clients',    labelKey: 'nav.clients',     icon: 'briefcase',
     perm: ['clients.view'] },
-  { id: 'documents',   route: '#/documents',  label: 'المستندات والطلبات',  icon: 'file-text' },
-  { id: 'chat',        route: '#/chat',       label: 'الدردشة',             icon: 'message-circle' },
-  { id: 'reports',     route: '#/reports',    label: 'التقارير',            icon: 'bar-chart-3',
+  { id: 'documents',   route: '#/documents',  labelKey: 'nav.documents',   icon: 'file-text' },
+  { id: 'chat',        route: '#/chat',       labelKey: 'nav.chat',        icon: 'message-circle' },
+  { id: 'reports',     route: '#/reports',    labelKey: 'nav.reports',     icon: 'bar-chart-3',
     perm: ['reports.view'] },
-  { id: 'notifications', route: '#/notifications', label: 'الإشعارات',      icon: 'bell' },
-  { id: 'settings',    route: '#/settings',   label: 'الإعدادات',           icon: 'settings' }
+  { id: 'notifications', route: '#/notifications', labelKey: 'nav.notifications', icon: 'bell' },
+  { id: 'settings',    route: '#/settings',   labelKey: 'nav.settings',    icon: 'settings' }
 ];
 
 export function visibleNavItems(claims) {

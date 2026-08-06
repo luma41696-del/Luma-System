@@ -214,7 +214,7 @@ async function renderEmployee(root, unsubs) {
     lineChart('chart-productivity',
       daily.map((d) => AR_DAYS_SHORT[weekdayIndex(d.date)]),
       [
-        { label: 'مكتملة', data: daily.map((d) => d.completed), color: getComputedStyle(document.documentElement).getPropertyValue('--yellow').trim() },
+        { label: 'مكتملة', data: daily.map((d) => d.completed), color: getComputedStyle(document.documentElement).getPropertyValue('--success').trim() },
         { label: 'جديدة', data: daily.map((d) => d.created), color: getComputedStyle(document.documentElement).getPropertyValue('--info').trim(), fill: false }
       ]);
     $('#productivity-note').textContent =
@@ -404,8 +404,8 @@ async function renderManager(root, unsubs) {
     lineChart('chart-company',
       daily.map((d) => `${d.date.getDate()}`),
       [
-        { label: 'مكتملة', data: daily.map((d) => d.completed) },
-        { label: 'جديدة', data: daily.map((d) => d.created), fill: false }
+        { label: 'مكتملة', data: daily.map((d) => d.completed), color: getComputedStyle(document.documentElement).getPropertyValue('--success').trim() },
+        { label: 'جديدة', data: daily.map((d) => d.created), color: getComputedStyle(document.documentElement).getPropertyValue('--info').trim(), fill: false }
       ]);
 
     /* status doughnut */

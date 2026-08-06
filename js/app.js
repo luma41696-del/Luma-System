@@ -14,14 +14,14 @@ import {
 import { toastError, toastSuccess, reportError } from './utils/toast.js';
 import { confirmDialog, openModal } from './utils/modal.js';
 import {
-  initPresence, onSelfPresence, setWorkState, confirmStartBreak, confirmEndBreak,
-  WORK_STATES, presence
+  initPresence, onSelfPresence, setWorkState, confirmStartBreak, confirmEndBreak, presence
 } from './utils/presence.js';
 import { formatStopwatch, formatDuration, timeAgo } from './utils/format.js';
 import { initSound, playNotificationSound, isAway } from './utils/sound.js';
 import {
   col, query, where, orderBy, limit, onSnapshot, getMany, updateDoc, ref, callFn, getDirectory
 } from './utils/api.js';
+import { t, applyStaticI18n } from './utils/i18n.js';
 
 /* -------------------------------------------------------------- elements */
 
@@ -35,6 +35,7 @@ function track(unsub) { if (typeof unsub === 'function') teardown.push(unsub); }
 
 (async function bootstrap() {
   bootIcons();
+  applyStaticI18n();
   initSound();
   if (!(await requireAuth())) return;
 
@@ -65,9 +66,9 @@ function track(unsub) { if (typeof unsub === 'function') teardown.push(unsub); }
   render(pageContainer, `
     <div class="page__inner"><div class="empty-state error-state">
       <div class="empty-state__icon"><i data-lucide="alert-triangle"></i></div>
-      <div class="empty-state__title">تعذّر تشغيل النظام</div>
+      <div class="empty-state__title">${esc(t('boot.failedTitle'))}</div>
       <p class="empty-state__text">${esc(err?.message || '')}</p>
-      <button class="btn btn--secondary" onclick="location.reload()">إعادة التحميل</button>
+      <button class="btn btn--secondary" onclick="location.reload()">${esc(t('boot.reload'))}</button>
     </div></div>`);
 });
 
@@ -75,10 +76,10 @@ function track(unsub) { if (typeof unsub === 'function') teardown.push(unsub); }
 
 function paintIdentity() {
   const profile = session.profile || {};
-  const name = profile.displayName || 'موظف';
+  const name = profile.displayName || t('common.employee');
   const roleText = profile.roles?.length
     ? rolesLabel(profile.roles)
-    : ROLE_LABELS[session.claims?.role] || 'موظف';
+    : ROLE_LABELS[session.claims?.role] || t('common.employee');
 
   $('#sidebar-name').textContent = name;
   $('#sidebar-role').textContent = roleText;
@@ -98,11 +99,12 @@ function buildNav() {
   $('#nav-primary').innerHTML = items.map((item) => {
     const isActive = currentPath === item.route.replace('#', '') ||
       (item.route !== '#/' && currentPath.startsWith(item.route.replace('#', '')));
+    const label = t(item.labelKey);
     return `
       <a class="nav-item${isActive ? ' is-active' : ''}" href="${attr(item.route)}"
-         data-nav="${attr(item.id)}" data-label="${attr(item.label)}">
+         data-nav="${attr(item.id)}" data-label="${attr(label)}">
         <i data-lucide="${attr(item.icon)}"></i>
-        <span class="nav-item__label">${esc(item.label)}</span>
+        <span class="nav-item__label">${esc(label)}</span>
         <span class="nav-item__badge" data-badge="${attr(item.id)}" hidden></span>
       </a>`;
   }).join('');
@@ -112,13 +114,13 @@ function buildNav() {
   if (can(session.claims, 'tasks.create')) {
     cta.innerHTML = `
       <button class="btn btn--primary btn--block" id="cta-new-task">
-        <i data-lucide="plus"></i> مهمة جديدة
+        <i data-lucide="plus"></i> ${esc(t('sidebar.newTask'))}
       </button>`;
     $('#cta-new-task').addEventListener('click', () => openQuickTask());
   } else {
     cta.innerHTML = `
       <button class="btn btn--secondary btn--block" id="cta-new-personal">
-        <i data-lucide="plus"></i> مهمة شخصية
+        <i data-lucide="plus"></i> ${esc(t('sidebar.personalTask'))}
       </button>`;
     $('#cta-new-personal').addEventListener('click', () => openQuickTask({ personal: true }));
   }
@@ -136,11 +138,11 @@ function onRouteChanged({ route, path }) {
     node.classList.toggle('is-active', !!item && node.dataset.nav === item.id);
   });
 
-  const title = route?.title || 'لوما';
+  const title = route?.titleKey ? t(route.titleKey) : (route?.title || t('app.brand'));
   $('#page-title').textContent = title;
-  document.title = `${title} · نظام إدارة لوما`;
+  document.title = `${title} · ${t('app.name')}`;
 
-  const crumbs = [['الرئيسية', '#/'], ...(route?.crumbs || [])];
+  const crumbs = [[t('nav.home'), '#/'], ...(route?.crumbKeys || []).map(([key, href]) => [t(key), href])];
   $('#breadcrumbs').innerHTML = crumbs
     .map(([label, href]) => `<a href="${attr(href)}">${esc(label)}</a>`)
     .concat(route && route.path !== '/' ? [`<span>${esc(title)}</span>`] : [])
@@ -237,9 +239,9 @@ function applyStoredSidebarState() {
 
 async function doLogout() {
   const ok = await confirmDialog({
-    title: 'تسجيل الخروج',
-    message: 'هل تريد إنهاء الجلسة الحالية والخروج من النظام؟',
-    confirmText: 'تسجيل الخروج',
+    title: t('logout.title'),
+    message: t('logout.message'),
+    confirmText: t('logout.confirm'),
     danger: true,
     icon: 'log-out'
   });
@@ -256,15 +258,14 @@ function mountStatusPill() {
 
   let timer = null;
   const paint = (state) => {
-    const meta = WORK_STATES[state.state] || WORK_STATES.offline;
     const onBreak = state.state === 'break';
     const elapsed = onBreak && state.breakStartedAt ? Date.now() - state.breakStartedAt : 0;
 
     host.innerHTML = `
       <button class="status-pill" data-state="${attr(state.state)}" id="status-btn"
-              title="اضغط لتغيير حالة العمل">
+              title="${attr(t('status.changeHint'))}">
         <span class="status-pill__dot"></span>
-        <span>${esc(meta.ar)}</span>
+        <span>${esc(t(`status.state.${state.state || 'offline'}`))}</span>
         ${onBreak ? `<span class="num" id="break-timer">${formatStopwatch(elapsed)}</span>` : ''}
       </button>`;
 
@@ -287,23 +288,23 @@ function mountStatusPill() {
 function openStatusMenu(anchor) {
   const onBreak = presence.state === 'break';
   dropdown(anchor, `
-    <div class="dropdown__header">حالة العمل</div>
+    <div class="dropdown__header">${esc(t('status.title'))}</div>
     ${onBreak
       ? `<button class="dropdown__item" data-act="end-break">
-           <i data-lucide="play"></i> إنهاء الاستراحة والعودة للعمل
+           <i data-lucide="play"></i> ${esc(t('status.endBreak'))}
          </button>`
       : `<button class="dropdown__item" data-act="start-break">
-           <i data-lucide="coffee"></i> بدء استراحة
+           <i data-lucide="coffee"></i> ${esc(t('status.startBreak'))}
          </button>
          <button class="dropdown__item" data-act="working">
-           <i data-lucide="activity"></i> تعيين الحالة: يعمل الآن
+           <i data-lucide="activity"></i> ${esc(t('status.setWorking'))}
          </button>
          <button class="dropdown__item" data-act="online">
-           <i data-lucide="circle"></i> تعيين الحالة: متصل
+           <i data-lucide="circle"></i> ${esc(t('status.setOnline'))}
          </button>`}
     <div class="dropdown__sep"></div>
     <div class="dropdown__header">
-      مجموع استراحات اليوم: ${esc(formatDuration(presence.todayBreakMs))}
+      ${esc(t('status.todayBreaks', { duration: formatDuration(presence.todayBreakMs) }))}
     </div>`,
     async (action, close) => {
       close();
@@ -350,14 +351,14 @@ function dropdown(anchor, html, onSelect) {
 function openProfileMenu(anchor) {
   dropdown(anchor, `
     <div class="dropdown__header">${esc(session.profile?.displayName || '')}</div>
-    <a class="dropdown__item" href="#/profile"><i data-lucide="user"></i> ملفي الشخصي</a>
-    <a class="dropdown__item" href="#/my-tasks"><i data-lucide="check-square"></i> مهامي</a>
-    <a class="dropdown__item" href="#/documents"><i data-lucide="file-text"></i> طلباتي</a>
-    <a class="dropdown__item" href="#/settings"><i data-lucide="settings"></i> الإعدادات</a>
+    <a class="dropdown__item" href="#/profile"><i data-lucide="user"></i> ${esc(t('profileMenu.myProfile'))}</a>
+    <a class="dropdown__item" href="#/my-tasks"><i data-lucide="check-square"></i> ${esc(t('profileMenu.myTasks'))}</a>
+    <a class="dropdown__item" href="#/documents"><i data-lucide="file-text"></i> ${esc(t('profileMenu.myRequests'))}</a>
+    <a class="dropdown__item" href="#/settings"><i data-lucide="settings"></i> ${esc(t('profileMenu.settings'))}</a>
     <div class="dropdown__sep"></div>
-    <button class="dropdown__item" data-act="password"><i data-lucide="key-round"></i> تغيير كلمة المرور</button>
+    <button class="dropdown__item" data-act="password"><i data-lucide="key-round"></i> ${esc(t('profileMenu.changePassword'))}</button>
     <button class="dropdown__item dropdown__item--danger" data-act="logout">
-      <i data-lucide="log-out"></i> تسجيل الخروج
+      <i data-lucide="log-out"></i> ${esc(t('profileMenu.logout'))}
     </button>`,
     async (action, close) => {
       close();
@@ -369,14 +370,14 @@ function openProfileMenu(anchor) {
 function openQuickAddMenu(anchor) {
   const claims = session.claims;
   dropdown(anchor, `
-    <div class="dropdown__header">إضافة سريعة</div>
-    <button class="dropdown__item" data-act="task"><i data-lucide="check-square"></i> مهمة جديدة</button>
+    <div class="dropdown__header">${esc(t('quickAdd.title'))}</div>
+    <button class="dropdown__item" data-act="task"><i data-lucide="check-square"></i> ${esc(t('quickAdd.task'))}</button>
     ${can(claims, 'clients.create')
-      ? '<button class="dropdown__item" data-act="client"><i data-lucide="briefcase"></i> عميل جديد</button>' : ''}
+      ? `<button class="dropdown__item" data-act="client"><i data-lucide="briefcase"></i> ${esc(t('quickAdd.client'))}</button>` : ''}
     ${can(claims, 'employees.create')
-      ? '<button class="dropdown__item" data-act="employee"><i data-lucide="user-plus"></i> موظف جديد</button>' : ''}
-    <button class="dropdown__item" data-act="request"><i data-lucide="file-plus"></i> طلب إداري</button>
-    <button class="dropdown__item" data-act="event"><i data-lucide="calendar-plus"></i> حدث في التقويم</button>`,
+      ? `<button class="dropdown__item" data-act="employee"><i data-lucide="user-plus"></i> ${esc(t('quickAdd.employee'))}</button>` : ''}
+    <button class="dropdown__item" data-act="request"><i data-lucide="file-plus"></i> ${esc(t('quickAdd.request'))}</button>
+    <button class="dropdown__item" data-act="event"><i data-lucide="calendar-plus"></i> ${esc(t('quickAdd.event'))}</button>`,
     async (action, close) => {
       close();
       try {
@@ -432,7 +433,7 @@ function watchNotifications() {
       if (Notification?.permission === 'granted') {
         arrivals.forEach((n) => {
           try {
-            new Notification(n.title || 'إشعار جديد', {
+            new Notification(n.title || t('common.newNotification'), {
               body: n.body || '',
               icon: 'assets/logo/favicon.png',
               tag: n.id
@@ -472,12 +473,12 @@ function wireSearch() {
     if (term.length < 2) { results.hidden = true; return; }
 
     results.hidden = false;
-    results.innerHTML = '<div class="search-results__group">جارٍ البحث…</div>';
+    results.innerHTML = `<div class="search-results__group">${esc(t('topbar.searching'))}</div>`;
 
     try {
       const groups = await globalSearch(term);
       if (!groups.length) {
-        results.innerHTML = `<div class="search-results__group">لا توجد نتائج لـ "${esc(term)}"</div>`;
+        results.innerHTML = `<div class="search-results__group">${esc(t('topbar.noResults', { term }))}</div>`;
         return;
       }
       results.innerHTML = groups.map((group) => `
@@ -490,7 +491,7 @@ function wireSearch() {
           </a>`).join('')}`).join('');
       refreshIcons(results);
     } catch (err) {
-      results.innerHTML = `<div class="search-results__group">تعذّر البحث: ${esc(err.message)}</div>`;
+      results.innerHTML = `<div class="search-results__group">${esc(t('topbar.searchFailed', { error: err.message }))}</div>`;
     }
   }, 300);
 
@@ -535,15 +536,15 @@ async function globalSearch(term) {
 
   if (taskRows.length) {
     groups.push({
-      label: 'المهام',
-      items: taskRows.map((t) => ({
-        title: t.title, href: `#/tasks/${t.id}`, icon: 'check-square', meta: t.clientName || ''
+      label: t('topbar.results.tasks'),
+      items: taskRows.map((row) => ({
+        title: row.title, href: `#/tasks/${row.id}`, icon: 'check-square', meta: row.clientName || ''
       }))
     });
   }
   if (peopleRows.length) {
     groups.push({
-      label: 'الموظفون',
+      label: t('topbar.results.employees'),
       items: peopleRows.map((u) => ({
         title: u.displayName, href: `#/employees/${u.id}`, icon: 'user', meta: rolesLabel(u.roles)
       }))
@@ -551,9 +552,10 @@ async function globalSearch(term) {
   }
   if (clientRows.length) {
     groups.push({
-      label: 'العملاء',
+      label: t('topbar.results.clients'),
       items: clientRows.map((c) => ({
-        title: c.name, href: `#/clients/${c.id}`, icon: 'briefcase', meta: c.status === 'active' ? 'نشط' : 'متوقف'
+        title: c.name, href: `#/clients/${c.id}`, icon: 'briefcase',
+        meta: c.status === 'active' ? t('topbar.client.active') : t('topbar.client.inactive')
       }))
     });
   }
@@ -562,8 +564,8 @@ async function globalSearch(term) {
   const pages = ROUTES
     .filter((r) => !r.path.includes(':') && r.title.includes(term))
     .slice(0, 3)
-    .map((r) => ({ title: r.title, href: `#${r.path}`, icon: 'arrow-left-circle' }));
-  if (pages.length) groups.push({ label: 'الصفحات', items: pages });
+    .map((r) => ({ title: r.titleKey ? t(r.titleKey) : r.title, href: `#${r.path}`, icon: 'arrow-left-circle' }));
+  if (pages.length) groups.push({ label: t('topbar.results.pages'), items: pages });
 
   return groups;
 }
@@ -584,20 +586,15 @@ function warmDirectory() {
 
 function openHelp() {
   openModal({
-    title: 'المساعدة واختصارات لوحة المفاتيح',
+    title: t('help.title'),
     size: 'sm',
     bodyHTML: `
-      <div class="kv"><span class="kv__k">بحث شامل</span><span class="kv__v">Ctrl + K</span></div>
-      <div class="kv"><span class="kv__k">إغلاق النوافذ</span><span class="kv__v">Esc</span></div>
+      <div class="kv"><span class="kv__k">${esc(t('help.globalSearch'))}</span><span class="kv__v">Ctrl + K</span></div>
+      <div class="kv"><span class="kv__k">${esc(t('help.closeWindows'))}</span><span class="kv__v">Esc</span></div>
       <div class="list-divider"></div>
-      <p class="fs-sm text-muted">
-        لعرض بيانات الرواتب أو البيانات البنكية أو خزنة بيانات العملاء تحتاج صلاحيات
-        خاصة يمنحها مدير النظام من صفحة الإعدادات ← مصفوفة الصلاحيات.
-      </p>
-      <p class="fs-sm text-muted">
-        جميع العمليات الحساسة تُسجَّل في سجل التدقيق مع اسم المنفّذ ووقت التنفيذ.
-      </p>`,
-    footerHTML: '<button class="btn btn--primary" data-modal-close>حسناً</button>'
+      <p class="fs-sm text-muted">${esc(t('help.permissionsNote'))}</p>
+      <p class="fs-sm text-muted">${esc(t('help.auditNote'))}</p>`,
+    footerHTML: `<button class="btn btn--primary" data-modal-close>${esc(t('help.ok'))}</button>`
   });
 }
 

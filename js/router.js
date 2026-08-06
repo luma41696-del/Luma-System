@@ -12,26 +12,32 @@ import { session } from './auth.js';
 import { canAny } from './permissions.js';
 import { render, refreshIcons, esc } from './utils/dom.js';
 
+/**
+ * `title`/`crumbs` stay Arabic — a page's own content isn't translated yet,
+ * and `title` also feeds the topbar search's page-name matching. `titleKey`/
+ * `crumbKeys` translate the chrome (topbar title, breadcrumbs, document.title)
+ * independently of that.
+ */
 const ROUTES = [
-  { path: '/',              title: 'الرئيسية',           module: () => import('./dashboard.js'),        crumbs: [] },
-  { path: '/my-tasks',      title: 'مهامي',              module: () => import('./tasks.js'),            crumbs: [['المهام', '#/my-tasks']] },
-  { path: '/tasks',         title: 'كل المهام',          module: () => import('./tasks.js'),            crumbs: [['المهام', '#/tasks']] },
-  { path: '/tasks/:id',     title: 'تفاصيل المهمة',      module: () => import('./tasks.js'),            crumbs: [['المهام', '#/tasks']] },
-  { path: '/calendar',      title: 'التقويم',            module: () => import('./calendar.js'),         crumbs: [] },
-  { path: '/team',          title: 'الفريق',             module: () => import('./team.js'),             crumbs: [] },
-  { path: '/employees',     title: 'الموظفون',           module: () => import('./employees.js'),        perm: ['employees.view'], crumbs: [] },
-  { path: '/employees/:id', title: 'ملف الموظف',         module: () => import('./employee-profile.js'), crumbs: [['الموظفون', '#/employees']] },
-  { path: '/clients',       title: 'العملاء',            module: () => import('./clients.js'),          perm: ['clients.view'], crumbs: [] },
-  { path: '/clients/:id',   title: 'ملف العميل',         module: () => import('./client-profile.js'),   perm: ['clients.view'], crumbs: [['العملاء', '#/clients']] },
-  { path: '/documents',     title: 'المستندات والطلبات', module: () => import('./documents.js'),        crumbs: [] },
-  { path: '/documents/:id', title: 'تفاصيل الطلب',       module: () => import('./documents.js'),        crumbs: [['المستندات والطلبات', '#/documents']] },
-  { path: '/chat',          title: 'الدردشة',            module: () => import('./chat.js'),             crumbs: [] },
-  { path: '/chat/:id',      title: 'الدردشة',            module: () => import('./chat.js'),             crumbs: [] },
-  { path: '/reports',       title: 'التقارير',           module: () => import('./reports.js'),          perm: ['reports.view'], crumbs: [] },
-  { path: '/notifications', title: 'الإشعارات',          module: () => import('./notifications.js'),    crumbs: [] },
-  { path: '/settings',      title: 'الإعدادات',          module: () => import('./settings.js'),         crumbs: [] },
-  { path: '/settings/:tab', title: 'الإعدادات',          module: () => import('./settings.js'),         crumbs: [['الإعدادات', '#/settings']] },
-  { path: '/profile',       title: 'ملفي الشخصي',        module: () => import('./employee-profile.js'), crumbs: [] }
+  { path: '/',              title: 'الرئيسية',           titleKey: 'route.home',            module: () => import('./dashboard.js'),        crumbs: [] },
+  { path: '/my-tasks',      title: 'مهامي',              titleKey: 'route.myTasks',         module: () => import('./tasks.js'),            crumbs: [['المهام', '#/my-tasks']], crumbKeys: [['nav.tasksSection', '#/my-tasks']] },
+  { path: '/tasks',         title: 'كل المهام',          titleKey: 'route.allTasks',        module: () => import('./tasks.js'),            crumbs: [['المهام', '#/tasks']], crumbKeys: [['nav.tasksSection', '#/tasks']] },
+  { path: '/tasks/:id',     title: 'تفاصيل المهمة',      titleKey: 'route.taskDetail',      module: () => import('./tasks.js'),            crumbs: [['المهام', '#/tasks']], crumbKeys: [['nav.tasksSection', '#/tasks']] },
+  { path: '/calendar',      title: 'التقويم',            titleKey: 'route.calendar',        module: () => import('./calendar.js'),         crumbs: [] },
+  { path: '/team',          title: 'الفريق',             titleKey: 'route.team',            module: () => import('./team.js'),             crumbs: [] },
+  { path: '/employees',     title: 'الموظفون',           titleKey: 'route.employees',       module: () => import('./employees.js'),        perm: ['employees.view'], crumbs: [] },
+  { path: '/employees/:id', title: 'ملف الموظف',         titleKey: 'route.employeeProfile', module: () => import('./employee-profile.js'), crumbs: [['الموظفون', '#/employees']], crumbKeys: [['nav.employees', '#/employees']] },
+  { path: '/clients',       title: 'العملاء',            titleKey: 'route.clients',         module: () => import('./clients.js'),          perm: ['clients.view'], crumbs: [] },
+  { path: '/clients/:id',   title: 'ملف العميل',         titleKey: 'route.clientProfile',   module: () => import('./client-profile.js'),   perm: ['clients.view'], crumbs: [['العملاء', '#/clients']], crumbKeys: [['nav.clients', '#/clients']] },
+  { path: '/documents',     title: 'المستندات والطلبات', titleKey: 'route.documents',       module: () => import('./documents.js'),        crumbs: [] },
+  { path: '/documents/:id', title: 'تفاصيل الطلب',       titleKey: 'route.documentDetail',  module: () => import('./documents.js'),        crumbs: [['المستندات والطلبات', '#/documents']], crumbKeys: [['nav.documents', '#/documents']] },
+  { path: '/chat',          title: 'الدردشة',            titleKey: 'route.chat',            module: () => import('./chat.js'),             crumbs: [] },
+  { path: '/chat/:id',      title: 'الدردشة',            titleKey: 'route.chat',            module: () => import('./chat.js'),             crumbs: [] },
+  { path: '/reports',       title: 'التقارير',           titleKey: 'route.reports',         module: () => import('./reports.js'),          perm: ['reports.view'], crumbs: [] },
+  { path: '/notifications', title: 'الإشعارات',          titleKey: 'route.notifications',   module: () => import('./notifications.js'),    crumbs: [] },
+  { path: '/settings',      title: 'الإعدادات',          titleKey: 'route.settings',        module: () => import('./settings.js'),         crumbs: [] },
+  { path: '/settings/:tab', title: 'الإعدادات',          titleKey: 'route.settings',        module: () => import('./settings.js'),         crumbs: [['الإعدادات', '#/settings']], crumbKeys: [['nav.settings', '#/settings']] },
+  { path: '/profile',       title: 'ملفي الشخصي',        titleKey: 'route.profile',         module: () => import('./employee-profile.js'), crumbs: [] }
 ];
 
 let container = null;
@@ -80,9 +86,9 @@ function notFound(path) {
     <div class="page__inner">
       <div class="empty-state">
         <div class="empty-state__icon"><i data-lucide="map-pin-off"></i></div>
-        <div class="empty-state__title">الصفحة غير موجودة</div>
-        <p class="empty-state__text">لا يوجد مسار بالاسم <code>${esc(path)}</code>.</p>
-        <a class="btn btn--primary" href="#/"><i data-lucide="home"></i> العودة للرئيسية</a>
+        <div class="empty-state__title">${esc(t('router.notFoundTitle'))}</div>
+        <p class="empty-state__text">${esc(t('router.notFoundText', { path: `“${path}”` }))}</p>
+        <a class="btn btn--primary" href="#/"><i data-lucide="home"></i> ${esc(t('router.backHome'))}</a>
       </div>
     </div>`);
 }
@@ -92,11 +98,9 @@ function forbidden() {
     <div class="page__inner">
       <div class="empty-state">
         <div class="empty-state__icon"><i data-lucide="shield-alert"></i></div>
-        <div class="empty-state__title">لا تملك صلاحية الوصول</div>
-        <p class="empty-state__text">
-          هذه الصفحة متاحة لأصحاب صلاحيات محددة فقط. تواصل مع مدير النظام إذا كنت تحتاج الوصول إليها.
-        </p>
-        <a class="btn btn--secondary" href="#/"><i data-lucide="home"></i> العودة للرئيسية</a>
+        <div class="empty-state__title">${esc(t('router.forbiddenTitle'))}</div>
+        <p class="empty-state__text">${esc(t('router.forbiddenText'))}</p>
+        <a class="btn btn--secondary" href="#/"><i data-lucide="home"></i> ${esc(t('router.backHome'))}</a>
       </div>
     </div>`);
 }
@@ -150,10 +154,10 @@ async function resolve() {
       <div class="page__inner">
         <div class="empty-state error-state">
           <div class="empty-state__icon"><i data-lucide="alert-triangle"></i></div>
-          <div class="empty-state__title">تعذّر تحميل الصفحة</div>
-          <p class="empty-state__text">${esc(err?.message || 'خطأ غير معروف')}</p>
+          <div class="empty-state__title">${esc(t('router.loadFailedTitle'))}</div>
+          <p class="empty-state__text">${esc(err?.message || t('router.unknownError'))}</p>
           <button class="btn btn--secondary" onclick="location.reload()">
-            <i data-lucide="rotate-cw"></i> إعادة التحميل
+            <i data-lucide="rotate-cw"></i> ${esc(t('boot.reload'))}
           </button>
         </div>
       </div>`);

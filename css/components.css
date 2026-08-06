@@ -641,6 +641,31 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .progress-ring__track { stroke: var(--bg-inset); fill: none; }
 .progress-ring__fill { stroke: var(--yellow); fill: none; stroke-linecap: round; transition: stroke-dashoffset var(--t-slow) var(--ease-out); }
 
+.ring-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; flex: none; }
+.ring-wrap__label {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.ring-wrap__value { font-size: var(--fs-xl); font-weight: 800; color: var(--text-primary); line-height: 1.1; }
+.ring-wrap__sub { font-size: var(--fs-2xs); color: var(--text-muted); margin-top: 2px; }
+
+/* Weekly activity columns — mirrors .progress but vertical, one bar per day. */
+.week-bars { display: flex; align-items: flex-end; gap: var(--sp-2); height: 148px; padding-top: var(--sp-5); }
+.week-bars__col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: var(--sp-2); min-width: 0; }
+.week-bars__count { font-size: var(--fs-2xs); font-weight: 700; color: var(--text-muted); height: 14px; }
+.week-bars__track {
+  width: 100%; max-width: 26px; height: 100%;
+  background: var(--bg-inset); border-radius: var(--radius-pill);
+  display: flex; align-items: flex-end; overflow: hidden;
+}
+.week-bars__fill { width: 100%; background: var(--yellow); border-radius: var(--radius-pill); transition: height var(--t-slow) var(--ease-out); min-height: 6px; }
+.week-bars__fill--today { background: var(--success); }
+.week-bars__label { font-size: var(--fs-2xs); color: var(--text-muted); }
+.week-bars__label.is-today { color: var(--text-primary); font-weight: 700; }
+
+/* Subtle brand wash behind the profile header — the avatar sits "in" it. */
+.profile-hero { background: radial-gradient(120% 160% at 12% 0%, var(--brand-soft), transparent 65%); }
+
 /* ============================================================== TASK CARD */
 .task-card {
   background: var(--bg-surface);

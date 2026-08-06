@@ -1,7 +1,9 @@
 #!/usr/bin/env node
 /**
- * Build the Luma app icon: the brand mark on a navy rounded square, with a warm
- * glow behind the star — the artwork the client supplied.
+ * Build the Luma app icon: a navy rounded square with a white sparkle (tight
+ * warm glow behind it), a circle, and a bar stacked underneath — the simplified
+ * mark the client chose over the full logotype, since the detailed swoosh in
+ * the original mark turns to mush at 16-32px (taskbar / favicon sizes).
  *
  * Produces
  *   assets/logo/app-icon.png     1024, the master
@@ -23,21 +25,14 @@ const { execFileSync } = require('child_process');
 
 const DESKTOP = __dirname;
 const ROOT = path.join(DESKTOP, '..');
-const MARK = path.join(ROOT, 'assets', 'logo', 'luma-mark-light.png');  // white mark, alpha
 const BUILD = path.join(DESKTOP, 'build');
 const LOGO_DIR = path.join(ROOT, 'assets', 'logo');
 
 const ICO_SIZES = [16, 24, 32, 48, 64, 128, 256];
 
-/**
- * Render one square icon.
- * The mark is 216x604 — tall and narrow — so it is fitted by height and centred,
- * never stretched.
- */
+/** Render one square icon: navy squircle + sparkle (glow) + circle + bar. */
 function render(size, destination) {
-  const radius = Math.round(size * 0.22);          // rounded-square corner
-  const glowY = Math.round(size * 0.255);          // centre of the star
-  const glowR = Math.round(size * 0.20);
+  const radius = Math.round(size * 0.22);   // rounded-square corner
 
   const script = `
 Add-Type -AssemblyName System.Drawing
@@ -60,31 +55,66 @@ $navy = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::FromArgb(25
 $g.FillPath($navy, $path)
 $g.SetClip($path)
 
-# warm glow behind the star — a true radial gradient, so there is no banding
-$gy = ${glowY}; $gr = ${glowR}
+$cx = $S / 2.0
+$white = New-Object System.Drawing.SolidBrush([System.Drawing.Color]::White)
+
+# --- sparkle, top ---
+$starCY = $S * 0.251
+$R = $S * 0.150
+$w = $R * 0.20
+
+# warm glow behind the sparkle only — a true radial gradient, so there is no banding
+$gr = $S * 0.195
 $gp = New-Object System.Drawing.Drawing2D.GraphicsPath
-$gp.AddEllipse(($S/2 - $gr), ($gy - $gr), (2*$gr), (2*$gr))
+$gp.AddEllipse(($cx - $gr), ($starCY - $gr), (2*$gr), (2*$gr))
 $pg = New-Object System.Drawing.Drawing2D.PathGradientBrush($gp)
-$pg.CenterColor = [System.Drawing.Color]::FromArgb(190, 255, 186, 88)
+$pg.CenterColor = [System.Drawing.Color]::FromArgb(210, 255, 190, 90)
 $pg.SurroundColors = @([System.Drawing.Color]::FromArgb(0, 255, 176, 60))
 $blend = New-Object System.Drawing.Drawing2D.Blend(3)
-$blend.Factors = @(0.0, 0.45, 1.0)
-$blend.Positions = @(0.0, 0.55, 1.0)
+$blend.Factors = @(0.0, 0.4, 1.0)
+$blend.Positions = @(0.0, 0.5, 1.0)
 $pg.Blend = $blend
 $g.FillPath($pg, $gp)
 $pg.Dispose(); $gp.Dispose()
 
-# the white mark, fitted by height
-$src = New-Object System.Drawing.Bitmap('${MARK.replace(/\\/g, '\\\\')}')
-$h = [int]($S * 0.62)
-$w = [int]($h * $src.Width / $src.Height)
-$x = [int](($S - $w) / 2)
-$y = [int](($S - $h) / 2)
-$g.DrawImage($src, $x, $y, $w, $h)
+$starPts = [System.Drawing.PointF[]]@(
+  (New-Object System.Drawing.PointF($cx, ($starCY - $R))),
+  (New-Object System.Drawing.PointF(($cx + $w), ($starCY - $w))),
+  (New-Object System.Drawing.PointF(($cx + $R), $starCY)),
+  (New-Object System.Drawing.PointF(($cx + $w), ($starCY + $w))),
+  (New-Object System.Drawing.PointF($cx, ($starCY + $R))),
+  (New-Object System.Drawing.PointF(($cx - $w), ($starCY + $w))),
+  (New-Object System.Drawing.PointF(($cx - $R), $starCY)),
+  (New-Object System.Drawing.PointF(($cx - $w), ($starCY - $w)))
+)
+$starPath = New-Object System.Drawing.Drawing2D.GraphicsPath
+$starPath.AddClosedCurve($starPts, 0.62)
+$g.FillPath($white, $starPath)
+$starPath.Dispose()
+
+# --- circle, middle ---
+$circR = $S * 0.150
+$circCY = $S * 0.576
+$g.FillEllipse($white, ($cx - $circR), ($circCY - $circR), (2*$circR), (2*$circR))
+
+# --- bar, bottom ---
+$barW = $S * 0.275
+$barH = $S * 0.108
+$barY = $S * 0.775
+$barX = $cx - $barW / 2.0
+$barR = $S * 0.022
+$barPath = New-Object System.Drawing.Drawing2D.GraphicsPath
+$barPath.AddArc($barX, $barY, 2*$barR, 2*$barR, 180, 90)
+$barPath.AddArc(($barX + $barW - 2*$barR), $barY, 2*$barR, 2*$barR, 270, 90)
+$barPath.AddArc(($barX + $barW - 2*$barR), ($barY + $barH - 2*$barR), 2*$barR, 2*$barR, 0, 90)
+$barPath.AddArc($barX, ($barY + $barH - 2*$barR), 2*$barR, 2*$barR, 90, 90)
+$barPath.CloseFigure()
+$g.FillPath($white, $barPath)
+$barPath.Dispose()
 
 $g.ResetClip(); $g.Dispose()
 $bmp.Save('${destination.replace(/\\/g, '\\\\')}', [System.Drawing.Imaging.ImageFormat]::Png)
-$bmp.Dispose(); $src.Dispose(); $navy.Dispose(); $path.Dispose()
+$bmp.Dispose(); $white.Dispose(); $navy.Dispose(); $path.Dispose()
 `;
   execFileSync('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script],
     { stdio: 'pipe' });
@@ -119,10 +149,6 @@ function buildIco(pngPaths, sizes) {
 }
 
 function main() {
-  if (!fs.existsSync(MARK)) {
-    console.error(`✗ brand mark not found: ${MARK}`);
-    process.exit(1);
-  }
   fs.mkdirSync(BUILD, { recursive: true });
 
   const temps = [];

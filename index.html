@@ -20,10 +20,20 @@
   <link rel="stylesheet" href="css/rtl.css">
   <link rel="stylesheet" href="css/responsive.css">
 
+  <!-- Restore the saved language before first paint to avoid a flash. -->
+  <script>
+    try {
+      if (localStorage.getItem('luma.lang') === 'en') {
+        document.documentElement.lang = 'en';
+        document.documentElement.dir = 'ltr';
+      }
+    } catch (e) {}
+  </script>
+
   <script src="https://unpkg.com/lucide@0.454.0/dist/umd/lucide.min.js" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#login-form">تخطّي إلى نموذج الدخول</a>
+  <a class="skip-link" href="#login-form" data-i18n="login.skipLink">تخطّي إلى نموذج الدخول</a>
 
   <main class="auth-page">
     <!-- ------------------------------------------------------------ hero -->
@@ -39,27 +49,27 @@
       </div>
 
       <div class="auth-hero__body">
-        <h2>نظام إدارة الوكالة<br>في مكان واحد</h2>
-        <p>المهام، الفريق، العملاء، الطلبات والتقارير — بتحديث لحظي وصلاحيات دقيقة لكل موظف.</p>
+        <h2 data-i18n-html="login.heroTitle">نظام إدارة الوكالة<br>في مكان واحد</h2>
+        <p data-i18n="login.heroSub">المهام، الفريق، العملاء، الطلبات والتقارير — بتحديث لحظي وصلاحيات دقيقة لكل موظف.</p>
 
         <div class="auth-hero__points">
           <div class="auth-hero__point">
-            <i data-lucide="check-square"></i><span>إدارة المهام وإسنادها ومتابعة الإنجاز</span>
+            <i data-lucide="check-square"></i><span data-i18n="login.point1">إدارة المهام وإسنادها ومتابعة الإنجاز</span>
           </div>
           <div class="auth-hero__point">
-            <i data-lucide="activity"></i><span>حالة العمل والاستراحات بشكل لحظي</span>
+            <i data-lucide="activity"></i><span data-i18n="login.point2">حالة العمل والاستراحات بشكل لحظي</span>
           </div>
           <div class="auth-hero__point">
-            <i data-lucide="shield-check"></i><span>صلاحيات دقيقة وسجل تدقيق للعمليات الحساسة</span>
+            <i data-lucide="shield-check"></i><span data-i18n="login.point3">صلاحيات دقيقة وسجل تدقيق للعمليات الحساسة</span>
           </div>
           <div class="auth-hero__point">
-            <i data-lucide="file-text"></i><span>طلبات إدارية وتصدير PDF عربي احترافي</span>
+            <i data-lucide="file-text"></i><span data-i18n="login.point4">طلبات إدارية وتصدير PDF عربي احترافي</span>
           </div>
         </div>
       </div>
 
       <div class="auth-hero__foot">
-        © <span id="year"></span> Luma Agency — جميع الحقوق محفوظة
+        © <span id="year"></span> Luma Agency — <span data-i18n="login.rights">جميع الحقوق محفوظة</span>
       </div>
     </section>
 
@@ -79,8 +89,8 @@
 
         <!-- ============================ step 1: sign in ============================ -->
         <div id="step-login">
-          <h1 class="auth-card__title">مرحباً بعودتك</h1>
-          <p class="auth-card__sub">سجّل الدخول للمتابعة إلى لوحة التحكم</p>
+          <h1 class="auth-card__title" data-i18n="login.welcomeTitle">مرحباً بعودتك</h1>
+          <p class="auth-card__sub" data-i18n="login.welcomeSub">سجّل الدخول للمتابعة إلى لوحة التحكم</p>
 
           <div class="card" id="login-alert" role="alert" hidden
                style="border-color:var(--danger);background:var(--danger-soft);padding:var(--sp-3) var(--sp-4);margin-bottom:var(--sp-4)">
@@ -92,7 +102,7 @@
 
           <form id="login-form" novalidate>
             <div class="field">
-              <label class="field__label" for="username">اسم المستخدم <span class="req">*</span></label>
+              <label class="field__label" for="username"><span data-i18n="login.username">اسم المستخدم</span> <span class="req">*</span></label>
               <div class="input-group input-group--icon">
                 <i data-lucide="user" class="input-group__icon"></i>
                 <input class="input ltr" id="username" name="username" type="text"
@@ -103,12 +113,12 @@
             </div>
 
             <div class="field">
-              <label class="field__label" for="password">كلمة المرور <span class="req">*</span></label>
+              <label class="field__label" for="password"><span data-i18n="login.password">كلمة المرور</span> <span class="req">*</span></label>
               <div class="input-group">
                 <input class="input" id="password" name="password" type="password"
                        autocomplete="current-password" required placeholder="••••••••••">
                 <button class="input-group__btn" type="button" id="toggle-password"
-                        aria-label="إظهار كلمة المرور">
+                        aria-label="إظهار كلمة المرور" data-i18n-aria-label="login.showPassword">
                   <i data-lucide="eye"></i>
                 </button>
               </div>
@@ -118,20 +128,20 @@
             <div class="flex items-center justify-between mb-4" style="flex-wrap:wrap;gap:var(--sp-2)">
               <label class="checkbox">
                 <input type="checkbox" id="remember" name="remember">
-                <span>تذكّر الجلسة على هذا الجهاز</span>
+                <span data-i18n="login.remember">تذكّر الجلسة على هذا الجهاز</span>
               </label>
-              <button type="button" class="fs-sm text-brand fw-500" id="forgot-link">
+              <button type="button" class="fs-sm text-brand fw-500" id="forgot-link" data-i18n="login.forgot">
                 نسيت كلمة المرور؟
               </button>
             </div>
 
             <button class="btn btn--primary btn--lg btn--block" type="submit" id="login-submit">
-              <i data-lucide="log-in"></i> تسجيل الدخول
+              <i data-lucide="log-in"></i> <span data-i18n="login.submit">تسجيل الدخول</span>
             </button>
           </form>
 
-          <div class="divider-label">الأمان أولاً</div>
-          <p class="fs-xs text-muted" style="line-height:1.7">
+          <div class="divider-label" data-i18n="login.securityFirst">الأمان أولاً</div>
+          <p class="fs-xs text-muted" style="line-height:1.7" data-i18n="login.securityNote">
             لا تشارك بيانات دخولك مع أي شخص. جميع العمليات الحساسة مسجّلة في سجل التدقيق.
             في حال نسيان كلمة المرور تواصل مع مدير النظام أو استخدم رابط الاستعادة.
           </p>
@@ -139,43 +149,43 @@
 
         <!-- ==================== step 2: forced password change ==================== -->
         <div id="step-change" hidden>
-          <h1 class="auth-card__title">تغيير كلمة المرور</h1>
-          <p class="auth-card__sub">
+          <h1 class="auth-card__title" data-i18n="login.changeTitle">تغيير كلمة المرور</h1>
+          <p class="auth-card__sub" data-i18n="login.changeSub">
             كلمة المرور الحالية مؤقتة. يجب تعيين كلمة مرور جديدة قبل الدخول إلى النظام.
           </p>
 
           <div class="security-note mb-4">
             <i data-lucide="shield-alert"></i>
-            <div>اختر كلمة مرور قوية لا تستخدمها في أي خدمة أخرى.</div>
+            <div data-i18n="login.changeNote">اختر كلمة مرور قوية لا تستخدمها في أي خدمة أخرى.</div>
           </div>
 
           <form id="change-form" novalidate>
             <div class="field">
-              <label class="field__label" for="current-password">كلمة المرور الحالية (المؤقتة)</label>
+              <label class="field__label" for="current-password" data-i18n="login.currentPassword">كلمة المرور الحالية (المؤقتة)</label>
               <input class="input" id="current-password" type="password" autocomplete="current-password" required>
             </div>
 
             <div class="field">
-              <label class="field__label" for="new-password">كلمة المرور الجديدة</label>
+              <label class="field__label" for="new-password" data-i18n="login.newPassword">كلمة المرور الجديدة</label>
               <div class="input-group">
                 <input class="input" id="new-password" type="password" autocomplete="new-password" required>
                 <button class="input-group__btn" type="button" data-toggle="new-password"
-                        aria-label="إظهار كلمة المرور"><i data-lucide="eye"></i></button>
+                        aria-label="إظهار كلمة المرور" data-i18n-aria-label="login.showPassword"><i data-lucide="eye"></i></button>
               </div>
               <div class="progress mt-2"><div class="progress__bar" id="pw-strength" style="width:0"></div></div>
               <ul class="field__hint" id="pw-rules" style="margin-top:8px;line-height:1.9"></ul>
             </div>
 
             <div class="field">
-              <label class="field__label" for="confirm-password">تأكيد كلمة المرور الجديدة</label>
+              <label class="field__label" for="confirm-password" data-i18n="login.confirmPassword">تأكيد كلمة المرور الجديدة</label>
               <input class="input" id="confirm-password" type="password" autocomplete="new-password" required>
               <div class="field__error" id="confirm-error" hidden></div>
             </div>
 
             <button class="btn btn--primary btn--lg btn--block" type="submit" id="change-submit">
-              <i data-lucide="key-round"></i> حفظ ومتابعة
+              <i data-lucide="key-round"></i> <span data-i18n="login.saveContinue">حفظ ومتابعة</span>
             </button>
-            <button class="btn btn--ghost btn--block mt-3" type="button" id="change-cancel">
+            <button class="btn btn--ghost btn--block mt-3" type="button" id="change-cancel" data-i18n="sidebar.logout">
               تسجيل الخروج
             </button>
           </form>
@@ -183,14 +193,14 @@
 
         <!-- ========================= step 3: forgot password ====================== -->
         <div id="step-forgot" hidden>
-          <h1 class="auth-card__title">استعادة كلمة المرور</h1>
-          <p class="auth-card__sub">
+          <h1 class="auth-card__title" data-i18n="login.forgotTitle">استعادة كلمة المرور</h1>
+          <p class="auth-card__sub" data-i18n="login.forgotSub">
             أدخل اسم المستخدم وسيتم إرسال رابط الاستعادة إلى البريد المسجّل لدى الإدارة.
           </p>
 
           <form id="forgot-form" novalidate>
             <div class="field">
-              <label class="field__label" for="forgot-username">اسم المستخدم</label>
+              <label class="field__label" for="forgot-username" data-i18n="login.username">اسم المستخدم</label>
               <div class="input-group input-group--icon">
                 <i data-lucide="user" class="input-group__icon"></i>
                 <input class="input ltr" id="forgot-username" type="text" required
@@ -198,10 +208,10 @@
               </div>
             </div>
             <button class="btn btn--primary btn--lg btn--block" type="submit" id="forgot-submit">
-              <i data-lucide="mail"></i> إرسال رابط الاستعادة
+              <i data-lucide="mail"></i> <span data-i18n="login.sendReset">إرسال رابط الاستعادة</span>
             </button>
             <button class="btn btn--ghost btn--block mt-3" type="button" id="forgot-back">
-              <i data-lucide="arrow-right"></i> العودة لتسجيل الدخول
+              <i data-lucide="arrow-right"></i> <span data-i18n="login.backToLogin">العودة لتسجيل الدخول</span>
             </button>
           </form>
         </div>

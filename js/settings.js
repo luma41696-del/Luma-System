@@ -18,34 +18,35 @@ import {
 import { formatDateTime, timeAgo, formatDate } from './utils/format.js';
 import { checkPassword } from './utils/sanitize.js';
 import { FCM_VAPID_KEY, APP_CHECK_SITE_KEY, TIMEZONE } from './firebase-config.js';
+import { t, getLang, setLang } from './utils/i18n.js';
 
 const TABS = [
-  { id: 'general',       label: 'عام',                icon: 'sliders-horizontal' },
-  { id: 'notifications', label: 'الإشعارات',          icon: 'bell' },
-  { id: 'security',      label: 'الأمان',             icon: 'shield' },
-  { id: 'permissions',   label: 'مصفوفة الصلاحيات',   icon: 'key-round', perm: 'settings.manage' },
-  { id: 'audit',         label: 'سجل التدقيق',        icon: 'scroll-text', perm: 'settings.manage' },
-  { id: 'system',        label: 'إعدادات النظام',     icon: 'server-cog', perm: 'settings.manage' }
+  { id: 'general',       labelKey: 'settings.tab.general',       icon: 'sliders-horizontal' },
+  { id: 'notifications', labelKey: 'settings.tab.notifications', icon: 'bell' },
+  { id: 'security',      labelKey: 'settings.tab.security',      icon: 'shield' },
+  { id: 'permissions',   labelKey: 'settings.tab.permissions',   icon: 'key-round', perm: 'settings.manage' },
+  { id: 'audit',         labelKey: 'settings.tab.audit',         icon: 'scroll-text', perm: 'settings.manage' },
+  { id: 'system',        labelKey: 'settings.tab.system',        icon: 'server-cog', perm: 'settings.manage' }
 ];
 
 export async function render(container, ctx) {
   const unsubs = [];
-  const tabs = TABS.filter((t) => !t.perm || can(session.claims, t.perm) || isAdmin(session.claims));
-  let active = ctx.params.tab && tabs.some((t) => t.id === ctx.params.tab) ? ctx.params.tab : tabs[0].id;
+  const tabs = TABS.filter((tab) => !tab.perm || can(session.claims, tab.perm) || isAdmin(session.claims));
+  let active = ctx.params.tab && tabs.some((tab) => tab.id === ctx.params.tab) ? ctx.params.tab : tabs[0].id;
 
   container.innerHTML = `
     <div class="page__inner">
       <div class="page-head">
         <div>
-          <div class="page-head__title">الإعدادات</div>
-          <div class="page-head__sub">تفضيلاتك الشخصية وإعدادات النظام</div>
+          <div class="page-head__title">${esc(t('settings.pageTitle'))}</div>
+          <div class="page-head__sub">${esc(t('settings.pageSub'))}</div>
         </div>
       </div>
 
       <div class="tabs" id="settings-tabs">
-        ${tabs.map((t) => `
-          <button class="tab" data-tab="${attr(t.id)}">
-            <i data-lucide="${attr(t.icon)}"></i> ${esc(t.label)}
+        ${tabs.map((tab) => `
+          <button class="tab" data-tab="${attr(tab.id)}">
+            <i data-lucide="${attr(tab.icon)}"></i> ${esc(t(tab.labelKey))}
           </button>`).join('')}
       </div>
 
@@ -63,7 +64,7 @@ export async function render(container, ctx) {
   });
 
   function paint() {
-    $$('#settings-tabs .tab').forEach((t) => t.classList.toggle('is-active', t.dataset.tab === active));
+    $$('#settings-tabs .tab').forEach((node) => node.classList.toggle('is-active', node.dataset.tab === active));
     const host = $('#settings-body');
     if (active === 'general') generalTab(host);
     else if (active === 'notifications') notificationsTab(host);
@@ -85,39 +86,37 @@ function generalTab(host) {
   host.innerHTML = `
     <div class="grid grid-2 mt-4">
       <div class="card">
-        <div class="card__head"><div class="card__title"><i data-lucide="palette"></i> المظهر</div></div>
+        <div class="card__head"><div class="card__title"><i data-lucide="palette"></i> ${esc(t('settings.appearance.title'))}</div></div>
         <label class="switch mb-4">
           <input type="checkbox" id="s-theme" ${theme === 'light' ? 'checked' : ''}>
           <span class="switch__track"></span>
-          <span>الوضع النهاري</span>
+          <span>${esc(t('settings.appearance.lightMode'))}</span>
         </label>
         <label class="switch">
           <input type="checkbox" id="s-collapsed"
             ${localStorage.getItem('luma.sidebarCollapsed') === '1' ? 'checked' : ''}>
           <span class="switch__track"></span>
-          <span>بدء القائمة الجانبية مطوية</span>
+          <span>${esc(t('settings.appearance.collapsedStart'))}</span>
         </label>
       </div>
 
       <div class="card">
-        <div class="card__head"><div class="card__title"><i data-lucide="languages"></i> اللغة والمنطقة</div></div>
+        <div class="card__head"><div class="card__title"><i data-lucide="languages"></i> ${esc(t('settings.language.title'))}</div></div>
         <div class="field">
-          <label class="field__label" for="s-lang">لغة الواجهة</label>
+          <label class="field__label" for="s-lang">${esc(t('settings.language.label'))}</label>
           <select class="select" id="s-lang">
-            <option value="ar" selected>العربية (RTL)</option>
-            <option value="en" disabled>English (LTR) — قريباً</option>
+            <option value="ar" ${getLang() === 'ar' ? 'selected' : ''}>${esc(t('settings.language.ar'))}</option>
+            <option value="en" ${getLang() === 'en' ? 'selected' : ''}>${esc(t('settings.language.en'))}</option>
           </select>
-          <div class="field__hint">
-            الواجهة مبنية بخصائص CSS المنطقية، لذا تفعيل الإنجليزية لاحقاً لا يتطلب إعادة تصميم.
-          </div>
+          <div class="field__hint">${esc(t('settings.language.hint'))}</div>
         </div>
-        <div class="kv"><span class="kv__k">المنطقة الزمنية</span>
+        <div class="kv"><span class="kv__k">${esc(t('settings.timezone'))}</span>
           <span class="kv__v ltr">${esc(TIMEZONE)}</span></div>
-        <div class="kv"><span class="kv__k">بداية الأسبوع</span><span class="kv__v">الأحد</span></div>
+        <div class="kv"><span class="kv__k">${esc(t('settings.weekStart'))}</span><span class="kv__v">${esc(t('settings.weekStart.sunday'))}</span></div>
       </div>
 
       <div class="card">
-        <div class="card__head"><div class="card__title"><i data-lucide="user"></i> حسابي</div></div>
+        <div class="card__head"><div class="card__title"><i data-lucide="user"></i> ${esc(t('settings.account.title'))}</div></div>
         <div class="flex gap-3 items-center mb-3">
           ${avatarHTML(session.profile || {}, 'lg')}
           <div>
@@ -125,23 +124,23 @@ function generalTab(host) {
             <div class="fs-xs text-muted ltr">@${esc(session.profile?.username || '')}</div>
           </div>
         </div>
-        <div class="kv"><span class="kv__k">نوع الحساب</span>
-          <span class="kv__v">${esc(ROLE_LABELS[session.claims?.role] || 'موظف')}</span></div>
-        <div class="kv"><span class="kv__k">المسميات</span>
+        <div class="kv"><span class="kv__k">${esc(t('settings.account.accountType'))}</span>
+          <span class="kv__v">${esc(ROLE_LABELS[session.claims?.role] || t('common.employee'))}</span></div>
+        <div class="kv"><span class="kv__k">${esc(t('settings.account.titles'))}</span>
           <span class="kv__v">${esc(rolesLabel(session.profile?.roles))}</span></div>
-        <div class="kv"><span class="kv__k">القسم</span>
+        <div class="kv"><span class="kv__k">${esc(t('settings.account.department'))}</span>
           <span class="kv__v">${esc(DEPARTMENTS[session.profile?.department] || '—')}</span></div>
         <a class="btn btn--secondary btn--block mt-3" href="#/profile">
-          <i data-lucide="pencil"></i> تعديل ملفي الشخصي</a>
+          <i data-lucide="pencil"></i> ${esc(t('settings.account.editProfile'))}</a>
       </div>
 
       <div class="card">
-        <div class="card__head"><div class="card__title"><i data-lucide="key-round"></i> صلاحياتي</div></div>
+        <div class="card__head"><div class="card__title"><i data-lucide="key-round"></i> ${esc(t('settings.permissions.title'))}</div></div>
         <div class="tag-list">
           ${isAdmin(session.claims)
-            ? '<span class="badge badge--brand">جميع الصلاحيات (مدير النظام)</span>'
+            ? `<span class="badge badge--brand">${esc(t('settings.permissions.allPermissions'))}</span>`
             : (session.permissions.map((p) => `<span class="badge">${esc(PERMISSIONS[p]?.ar || p)}</span>`).join('')
-               || '<span class="text-muted fs-sm">لا صلاحيات إضافية.</span>')}
+               || `<span class="text-muted fs-sm">${esc(t('settings.permissions.none'))}</span>`)}
         </div>
       </div>
     </div>`;
@@ -156,6 +155,13 @@ function generalTab(host) {
   $('#s-collapsed').addEventListener('change', (e) => {
     try { localStorage.setItem('luma.sidebarCollapsed', e.target.checked ? '1' : '0'); } catch {}
     document.getElementById('app-shell')?.classList.toggle('is-collapsed', e.target.checked);
+  });
+
+  $('#s-lang').addEventListener('change', (e) => {
+    const next = e.target.value;
+    if (next === getLang()) return;
+    toastSuccess(t('settings.language.changed'));
+    setTimeout(() => setLang(next), 400);
   });
 }
 
