@@ -146,7 +146,19 @@ async function resolve() {
     const mod = await route.module();
     if (currentPath !== path) return;              // user navigated away meanwhile
     const result = await mod.render(container, { params, query, route, path });
-    cleanup = typeof result === 'function' ? result : null;
+    const teardown = typeof result === 'function' ? result : null;
+
+    // A page module renders asynchronously and registers its listeners as it
+    // goes, so the user can navigate away before it finishes. By then this
+    // page's cleanup has already been called (with nothing registered yet), so
+    // holding on to it would strand every listener it went on to create — they
+    // keep firing against a DOM that no longer exists. Tear down immediately.
+    if (currentPath !== path) {
+      try { teardown?.(); } catch (err) { console.error('[luma] cleanup', err); }
+      return;
+    }
+
+    cleanup = teardown;
     refreshIcons(container);
   } catch (err) {
     console.error('[luma] route render failed', path, err);

@@ -77,12 +77,12 @@
 .btn:active:not(:disabled) { transform: translateY(1px); }
 
 .btn--primary {
-  background: var(--yellow);
+  background: var(--brand-gradient);
   color: var(--text-on-brand);
   font-weight: 700;
   box-shadow: 0 4px 14px rgba(64, 112, 200, 0.22);
 }
-.btn--primary:hover:not(:disabled) { background: var(--yellow-hover); }
+.btn--primary:hover:not(:disabled) { background: var(--brand-gradient-hover); }
 
 .btn--secondary {
   background: var(--bg-surface-2);
@@ -142,7 +142,7 @@
   transition: all var(--t-fast) var(--ease);
 }
 .btn-group button:hover { color: var(--text-primary); }
-.btn-group button.is-active { background: var(--yellow); color: var(--text-on-brand); font-weight: 700; }
+.btn-group button.is-active { background: var(--brand-gradient); color: var(--text-on-brand); font-weight: 700; }
 
 /* ================================================================== FORMS */
 .field { margin-bottom: var(--sp-4); }
@@ -309,7 +309,7 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 }
 .chip-toggle:hover { border-color: var(--border-strong); color: var(--text-primary); }
 .chip-toggle.is-on {
-  background: var(--yellow);
+  background: var(--brand-gradient);
   border-color: var(--yellow);
   color: var(--text-on-brand);
   font-weight: 700;
@@ -336,7 +336,7 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .badge--warning { background: var(--warning-soft); color: var(--warning); border-color: transparent; }
 .badge--info { background: var(--info-soft); color: var(--info); border-color: transparent; }
 .badge--purple { background: var(--purple-soft); color: var(--purple); border-color: transparent; }
-.badge--solid { background: var(--yellow); color: var(--text-on-brand); border-color: transparent; font-weight: 700; }
+.badge--solid { background: var(--brand-gradient); color: var(--text-on-brand); border-color: transparent; font-weight: 700; }
 .badge__dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
 /* ================================================================ AVATARS */
@@ -513,6 +513,11 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .dropdown {
   position: absolute;
   min-width: 210px;
+  /* Never wider than the screen on a small phone, and never taller than the
+     viewport — app.js positions it, this is the backstop. */
+  max-width: calc(100vw - 24px);
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
   background: var(--bg-elevated);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -629,7 +634,7 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 }
 .progress__bar {
   height: 100%;
-  background: var(--yellow);
+  background: var(--brand-gradient-x);
   border-radius: var(--radius-pill);
   transition: width var(--t-slow) var(--ease-out);
 }
@@ -658,13 +663,41 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
   background: var(--bg-inset); border-radius: var(--radius-pill);
   display: flex; align-items: flex-end; overflow: hidden;
 }
-.week-bars__fill { width: 100%; background: var(--yellow); border-radius: var(--radius-pill); transition: height var(--t-slow) var(--ease-out); min-height: 6px; }
+.week-bars__fill { width: 100%; background: var(--brand-gradient); border-radius: var(--radius-pill); transition: height var(--t-slow) var(--ease-out); min-height: 6px; }
 .week-bars__fill--today { background: var(--success); }
 .week-bars__label { font-size: var(--fs-2xs); color: var(--text-muted); }
 .week-bars__label.is-today { color: var(--text-primary); font-weight: 700; }
 
 /* Subtle brand wash behind the profile header — the avatar sits "in" it. */
 .profile-hero { background: radial-gradient(120% 160% at 12% 0%, var(--brand-soft), transparent 65%); }
+
+/* ============================================================ TASK GROUPS */
+/* "Today" vs "earlier" in the list view. The gap between groups is the
+   separation; the rule + label say what each group is. */
+.task-group + .task-group { margin-top: var(--sp-7); }
+.task-group__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-3);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+}
+.task-group__head [data-lucide] { width: 16px; height: 16px; }
+.task-group__title { font-weight: 700; }
+.task-group__count {
+  min-width: 20px;
+  padding: 1px 7px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-inset);
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+}
+/* Today's group is the one to notice first. */
+.task-group--today .task-group__head { color: var(--brand-light); border-bottom-color: var(--brand-soft); }
+.task-group--today .task-group__count { background: var(--brand-soft); color: var(--brand-light); }
 
 /* ============================================================== TASK CARD */
 .task-card {
@@ -802,7 +835,7 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .cal-cell:hover { background: var(--bg-hover); }
 .cal-cell.is-muted { opacity: 0.4; }
 .cal-cell.is-today .cal-cell__num {
-  background: var(--yellow);
+  background: var(--brand-gradient);
   color: var(--text-on-brand);
   border-radius: var(--radius-pill);
   min-width: 26px;

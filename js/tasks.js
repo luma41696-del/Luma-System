@@ -13,7 +13,7 @@ import { toastSuccess, toastError, reportError } from './utils/toast.js';
 import { openModal, confirmDialog, promptDialog, lightbox } from './utils/modal.js';
 import {
   col, ref, query, where, orderBy, limit, onSnapshot, getOne, getMany, getUsers,
-  getDirectory, addDoc, updateDoc, deleteDoc, setDoc, doc, ts, callFn
+  getDirectory, addDoc, updateDoc, deleteDoc, setDoc, doc, ts, callFn, arrayUnion
 } from './utils/api.js';
 import {
   TASK_STATUSES, PRIORITIES, BOARD_COLUMNS, summarize, sortTasks, filterTasks,
@@ -21,7 +21,8 @@ import {
   watchTasks
 } from './utils/task-model.js';
 import {
-  formatDate, formatDateTime, formatDuration, timeAgo, toMillis, toDateTimeInput, formatBytes
+  formatDate, formatDateTime, formatDuration, timeAgo, toMillis, toDateTimeInput, formatBytes,
+  dayKey
 } from './utils/format.js';
 import { sanitizeText, sanitizeMultiline, renderMessageBody } from './utils/sanitize.js';
 import { uploadFile, pickFiles, paths, deleteFile } from './utils/upload.js';
@@ -209,9 +210,36 @@ function statChip(icon, tone, value, label) {
 
 /* -------------------------------------------------------------- list view */
 
+/**
+ * Tasks created today are shown in their own group above the rest, so what
+ * landed today is obvious at a glance instead of being sorted in among older
+ * work. `dayKey` is timezone-aware (Asia/Amman), so "today" means the office's
+ * today, not the device's.
+ */
 function renderList(host, tasks, people) {
   const sorted = sortTasks(tasks);
-  host.innerHTML = `<div class="grid grid-auto">${sorted.map((t) => taskCard(t, people)).join('')}</div>`;
+  const today = dayKey();
+  const isToday = (t) => t.createdAt && dayKey(toMillis(t.createdAt)) === today;
+
+  const todays = sorted.filter(isToday);
+  const earlier = sorted.filter((t) => !isToday(t));
+
+  const group = (label, icon, items, extraClass = '') => `
+    <section class="task-group ${extraClass}">
+      <header class="task-group__head">
+        <i data-lucide="${attr(icon)}"></i>
+        <span class="task-group__title">${esc(label)}</span>
+        <span class="task-group__count num">${items.length}</span>
+      </header>
+      <div class="grid grid-auto">${items.map((t) => taskCard(t, people)).join('')}</div>
+    </section>`;
+
+  // With nothing new today, a lone "earlier" heading is just noise.
+  host.innerHTML = todays.length
+    ? group('مهام اليوم', 'sparkles', todays, 'task-group--today') +
+      (earlier.length ? group('مهام سابقة', 'history', earlier) : '')
+    : `<div class="grid grid-auto">${earlier.map((t) => taskCard(t, people)).join('')}</div>`;
+
   refreshIcons(host);
   bindCards(host);
 }
@@ -376,6 +404,11 @@ function renderTable(host, tasks, people) {
 
 async function renderDetail(container, taskId) {
   const unsubs = [];
+  // paintDetail subscribes to comments and activity, and it runs again on every
+  // change to the task document. Its listeners live in their own bucket that is
+  // torn down before each repaint, so they cannot stack up.
+  const paintUnsubs = [];
+
   container.innerHTML = `<div class="page__inner" id="task-detail">
     <div class="skeleton skeleton--title"></div>
     <div class="skeleton" style="height:300px;border-radius:var(--radius-lg)"></div>
@@ -388,13 +421,16 @@ async function renderDetail(container, taskId) {
       mount(root, emptyState({ icon: 'file-x', title: 'المهمة غير موجودة', text: 'ربما تم حذفها.' }));
       return;
     }
+    paintUnsubs.forEach((fn) => { try { fn(); } catch {} });
+    paintUnsubs.length = 0;
+
     const task = { id: snap.id, ...snap.data() };
-    await paintDetail(root, task, unsubs);
+    await paintDetail(root, task, paintUnsubs);
   }, (err) => {
     mount(root, emptyState({ icon: 'shield-alert', title: 'لا تملك صلاحية عرض هذه المهمة', text: err.message }));
   }));
 
-  return () => unsubs.forEach((fn) => { try { fn(); } catch {} });
+  return () => [...unsubs, ...paintUnsubs].forEach((fn) => { try { fn(); } catch {} });
 }
 
 async function paintDetail(root, task, unsubs) {
@@ -500,6 +536,13 @@ async function paintDetail(root, task, unsubs) {
                 <div class="list-row__sub">${esc((u.roles || []).map((r) => JOB_ROLES[r]?.ar || r).join(' + '))}</div>
               </div>
             </a>`).join('') : '<div class="text-muted fs-sm">لم يتم إسناد المهمة بعد.</div>'}
+        </div>
+
+        <div class="card">
+          <div class="card__head">
+            <div class="card__title"><i data-lucide="hammer"></i> من عمل على المهمة</div>
+          </div>
+          <div id="contributors">${'<div class="skeleton skeleton--row"></div>'.repeat(2)}</div>
         </div>
 
         ${canWork ? `
@@ -643,21 +686,67 @@ async function paintDetail(root, task, unsubs) {
     query(col('tasks', task.id, 'activity'), orderBy('at', 'desc'), limit(30)),
     async (snap) => {
       const events = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      const actors = await getUsers([...new Set(events.map((e) => e.actorId))]);
+
+      // `task.contributors` is authoritative and complete; the activity log is
+      // capped at 30 events, so it is only a fallback for tasks created before
+      // the field existed (and it can under-report on long-running ones).
+      const fromLog = [...new Set(events.map((e) => e.actorId).filter(Boolean))];
+      const contributorIds = task.contributors?.length ? task.contributors : fromLog;
+
+      const actors = await getUsers([...new Set([...contributorIds, ...fromLog])]);
       const byId = Object.fromEntries(actors.map((u) => [u.id, u]));
+
       const node = $('#activity');
-      if (!node) return;
-      node.innerHTML = events.length ? `<div class="timeline">${events.map((e) => `
-        <div class="timeline__item">
-          <span class="timeline__dot"></span>
-          <div class="timeline__text">
-            <strong>${esc(byId[e.actorId]?.displayName || 'مستخدم')}</strong> ${esc(e.text)}
-          </div>
-          <div class="timeline__time">${esc(timeAgo(e.at))}</div>
-        </div>`).join('')}</div>` : '<div class="text-muted fs-sm">لا يوجد سجل بعد.</div>';
+      if (node) {
+        node.innerHTML = events.length ? `<div class="timeline">${events.map((e) => `
+          <div class="timeline__item">
+            <span class="timeline__dot"></span>
+            <div class="timeline__text">
+              <strong>${esc(byId[e.actorId]?.displayName || 'مستخدم')}</strong> ${esc(e.text)}
+            </div>
+            <div class="timeline__time">${esc(timeAgo(e.at))}</div>
+          </div>`).join('')}</div>` : '<div class="text-muted fs-sm">لا يوجد سجل بعد.</div>';
+      }
+
+      paintContributors(contributorIds, byId, events);
     },
     () => {}
   ));
+
+  /**
+   * Everyone who actually did something on this task, newest contribution
+   * first, with what they last did — distinct from "المسؤولون", which is only
+   * who it was handed to.
+   */
+  function paintContributors(ids, byId, events) {
+    const node = $('#contributors');
+    if (!node) return;
+
+    const lastByActor = new Map();
+    for (const e of events) {                      // events arrive newest-first
+      if (e.actorId && !lastByActor.has(e.actorId)) lastByActor.set(e.actorId, e);
+    }
+
+    const rows = ids
+      .map((id) => ({ id, user: byId[id], last: lastByActor.get(id) }))
+      .filter((r) => r.user)
+      .sort((a, b) => toMillis(b.last?.at) - toMillis(a.last?.at));
+
+    node.innerHTML = rows.length ? rows.map((r) => `
+      <a class="list-row" href="#/employees/${attr(r.id)}">
+        ${avatarHTML(r.user)}
+        <div class="list-row__body">
+          <div class="list-row__title">${esc(r.user.displayName)}</div>
+          <div class="list-row__sub truncate">${
+            r.last ? esc(r.last.text) : esc((r.user.roles || []).map((x) => JOB_ROLES[x]?.ar || x).join(' + '))
+          }</div>
+        </div>
+        ${r.last ? `<span class="fs-2xs text-muted">${esc(timeAgo(r.last.at))}</span>` : ''}
+      </a>`).join('')
+      : '<div class="text-muted fs-sm">لم يعمل أحد على المهمة بعد.</div>';
+
+    refreshIcons(node);
+  }
 
   function paintChecklist(taskDoc, editable) {
     const host = $('#checklist');
@@ -757,7 +846,25 @@ async function logActivity(taskId, type, text) {
   } catch (err) {
     console.warn('[luma] activity log failed', err.code);
   }
+
+  // Anyone who acts on a task is a contributor, whether or not they were ever
+  // assigned to it. Kept on the task itself so the detail page can list them
+  // without paging through the whole activity log.
+  //
+  // arrayUnion is idempotent in content but still costs a write and still
+  // re-triggers every task listener, so a already-recorded actor is skipped.
+  const seenKey = `${taskId}:${session.uid}`;
+  if (recordedContributors.has(seenKey)) return;
+  try {
+    await updateDoc(ref('tasks', taskId), { contributors: arrayUnion(session.uid) });
+    recordedContributors.add(seenKey);
+  } catch (err) {
+    console.warn('[luma] contributor update failed', err.code);
+  }
 }
+
+/** `taskId:uid` pairs already written this session — see logActivity. */
+const recordedContributors = new Set();
 
 function openStatusPicker(task) {
   openModal({

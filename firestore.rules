@@ -182,6 +182,20 @@ service cloud.firestore {
     function canSeeTask() {
       return active() && (can('te') || can('dvc') || isAssignee() || isTaskOwner());
     }
+    /**
+     * `contributors` records who actually worked on a task, so a non-manager may
+     * only ever append themself: no adding colleagues, no removing anyone.
+     * It is display data — canSeeTask() never reads it — but it should still be
+     * a truthful record.
+     */
+    function contributorsAppendSelfOnly() {
+      return !touches(['contributors']) || (
+        request.resource.data.contributors.hasOnly(
+          resource.data.get('contributors', []).concat([uid()])
+        ) &&
+        resource.data.get('contributors', []).hasOnly(request.resource.data.contributors)
+      );
+    }
 
     match /tasks/{taskId} {
       allow read: if canSeeTask();
@@ -203,8 +217,9 @@ service cloud.firestore {
         can('te') ||
         ( (isAssignee() || isTaskOwner()) && onlyChanged([
             'status', 'progress', 'checklist', 'timeSpentMs', 'startedAt',
-            'completedAt', 'lastStatusAt', 'updatedAt', 'attachments', 'watchers'
-          ]) )
+            'completedAt', 'lastStatusAt', 'updatedAt', 'attachments', 'watchers',
+            'contributors'
+          ]) && contributorsAppendSelfOnly() )
       );
 
       allow delete: if can('tx');

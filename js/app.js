@@ -324,12 +324,28 @@ function dropdown(anchor, html, onSelect) {
   const menu = el('div', { class: 'dropdown', role: 'menu', html });
   document.body.append(menu);
 
+  // Position after the menu is in the DOM, so offsetWidth/Height are real.
+  // The menu is anchored to the button's near edge (right edge in RTL, left in
+  // LTR) and then clamped into the viewport, so it can never slide off-screen
+  // and get clipped.
+  const GAP = 8;
+  const EDGE = 12;
   const rect = anchor.getBoundingClientRect();
-  menu.style.top = `${rect.bottom + 8}px`;
-  const isRtl = document.documentElement.dir === 'rtl';
-  if (isRtl) menu.style.left = `${Math.max(12, window.innerWidth - rect.right)}px`;
-  else menu.style.left = `${Math.min(rect.left, window.innerWidth - menu.offsetWidth - 12)}px`;
   menu.style.position = 'fixed';
+
+  const width = menu.offsetWidth;
+  const height = menu.offsetHeight;
+
+  const left = document.documentElement.dir === 'rtl'
+    ? rect.right - width          // align right edges
+    : rect.left;                  // align left edges
+  menu.style.left = `${Math.max(EDGE, Math.min(left, window.innerWidth - width - EDGE))}px`;
+
+  // Flip above the anchor when there is no room below it.
+  const below = rect.bottom + GAP;
+  menu.style.top = below + height > window.innerHeight - EDGE && rect.top - GAP - height > EDGE
+    ? `${rect.top - GAP - height}px`
+    : `${Math.min(below, Math.max(EDGE, window.innerHeight - height - EDGE))}px`;
 
   refreshIcons(menu);
 

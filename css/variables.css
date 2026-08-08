@@ -108,6 +108,15 @@
   --brand-soft: rgba(64, 112, 200, 0.16);
   --brand-glow: rgba(64, 112, 200, 0.28);
 
+  /* Filled brand surfaces (primary buttons, active nav) use the gradient;
+     borders, text and icons keep the flat --brand so they stay crisp.
+     135deg runs top-start → bottom-end, and flips with the page direction. */
+  --brand-gradient: linear-gradient(135deg, var(--brand-light) 0%, var(--brand) 55%, var(--brand-hover) 100%);
+  --brand-gradient-hover: linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 60%, #2C4E90 100%);
+  /* Horizontal variant for wide, short fills (progress bars) where a 135deg
+     ramp would be too steep to read across a 7px height. */
+  --brand-gradient-x: linear-gradient(to right, var(--brand-light), var(--brand) 70%, var(--brand-hover));
+
   /* Kept as aliases so the whole stylesheet did not have to be rewritten when
      the accent moved from yellow to the brand blue. Prefer --brand in new code. */
   --yellow: var(--brand);

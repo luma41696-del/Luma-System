@@ -137,7 +137,7 @@
 }
 .nav-item:hover { background: var(--bg-hover); color: var(--text-primary); }
 .nav-item.is-active {
-  background: var(--yellow);
+  background: var(--brand-gradient);
   color: var(--text-on-brand);
   font-weight: 700;
   box-shadow: 0 4px 14px rgba(64, 112, 200, 0.22);
@@ -481,7 +481,7 @@
   inset-inline-end: 22px;
   width: 56px; height: 56px;
   border-radius: 50%;
-  background: var(--yellow);
+  background: var(--brand-gradient);
   color: var(--text-on-brand);
   box-shadow: var(--shadow-lg);
   place-items: center;
