@@ -31,7 +31,8 @@
   padding: var(--sp-2) var(--sp-2) var(--sp-4);
   min-height: 56px;
 }
-.sidebar__brand .logo-mark { width: 26px; height: 72px; }
+/* Width comes from the logo's aspect ratio — only height is set. */
+.sidebar__brand .logo-mark { height: 64px; }
 .sidebar__brand-text { display: flex; flex-direction: column; min-width: 0; }
 .sidebar__brand-name {
   font-size: var(--fs-lg);
@@ -444,7 +445,6 @@
   pointer-events: none;
 }
 .auth-hero__logo { display: flex; align-items: center; gap: var(--sp-4); position: relative; }
-.auth-hero__logo .logo-mark { width: 44px; height: 122px; background-color: var(--yellow); }
 .auth-hero__brand { font-size: var(--fs-2xl); font-weight: 800; }
 .auth-hero__tag { color: rgba(248, 250, 252, 0.6); font-size: var(--fs-sm); letter-spacing: 0.05em; }
 .auth-hero__body { position: relative; max-width: 460px; }
