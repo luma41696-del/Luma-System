@@ -19,8 +19,11 @@ export const TASK_STATUSES = {
   cancelled:  { ar: 'ملغاة',        color: 'var(--gray)',    badge: '',        icon: 'x-circle' }
 };
 
-/** Board column order (overdue is derived, not stored). */
-export const BOARD_COLUMNS = ['new', 'assigned', 'inprogress', 'waiting', 'review', 'completed'];
+/**
+ * Board column order (overdue is derived, not stored).
+ * Completed leads the board so finished work is the first thing on screen.
+ */
+export const BOARD_COLUMNS = ['completed', 'new', 'assigned', 'inprogress', 'waiting', 'review'];
 
 export const PRIORITIES = {
   urgent: { ar: 'عاجلة',  color: 'var(--danger)',  badge: 'danger',  weight: 4 },

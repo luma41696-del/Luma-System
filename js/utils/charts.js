@@ -101,6 +101,18 @@ export function makeChart(canvasId, config) {
   };
   if (config.type === 'doughnut' || config.type === 'pie') {
     delete merged.options.scales;
+
+    // The shared defaults are built for cartesian charts: `mode: 'index'` with
+    // `intersect: false` makes a circular chart show a tooltip for whatever is
+    // "nearest" even when the pointer is in the empty middle, so it hangs over
+    // the ring with nothing under the cursor. Circular charts should only
+    // respond to the pointer actually being on a segment.
+    merged.options.interaction = { mode: 'nearest', intersect: true };
+    merged.options.plugins.tooltip = {
+      ...merged.options.plugins.tooltip,
+      mode: 'nearest',
+      intersect: true
+    };
   }
 
   const chart = new window.Chart(canvas.getContext('2d'), merged);

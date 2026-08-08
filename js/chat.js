@@ -25,7 +25,7 @@ import {
 import { formatTime, formatDate, timeAgo, toMillis, isToday, formatBytes } from './utils/format.js';
 import { renderMessageBody, sanitizeText, sanitizeMultiline, extractFirstLink, linkHost, safeUrl }
   from './utils/sanitize.js';
-import { uploadFile, compressImage, pickFiles, paths } from './utils/upload.js';
+import { uploadFile, compressImage, pickFiles, paths, deleteFile } from './utils/upload.js';
 import { uploadsEnabled } from './features.js';
 import { watchAllPresence, setTyping, watchTyping, WORK_STATES } from './utils/presence.js';
 
@@ -365,12 +365,31 @@ export async function render(container, ctx) {
     }));
 
     $$('[data-del]', host).forEach((b) => b.addEventListener('click', async () => {
+      const message = messages.find((m) => m.id === b.dataset.del);
+      const hasFile = !!message?.attachment;
+
       if (!(await confirmDialog({
-        title: 'حذف الرسالة', message: 'سيتم إخفاء محتوى الرسالة للجميع.', danger: true
+        title: hasFile ? 'حذف الرسالة والمرفق' : 'حذف الرسالة',
+        message: hasFile
+          ? 'سيتم حذف الرسالة والصورة/الملف المرفق بها للجميع. لا يمكن التراجع.'
+          : 'سيتم إخفاء محتوى الرسالة للجميع.',
+        danger: true
       }))) return;
-      await updateDoc(ref('chats', chat.id, 'messages', b.dataset.del), {
-        deleted: true, body: '', deletedAt: ts()
-      });
+
+      try {
+        // Clear the attachment too, otherwise a "deleted" message keeps
+        // showing its image to everyone in the room.
+        await updateDoc(ref('chats', chat.id, 'messages', message.id), {
+          deleted: true, body: '', attachment: null, deletedAt: ts()
+        });
+        // Then drop the stored object. Inline images live on the document
+        // itself and have no path, so there is nothing to clean up for those.
+        if (message.attachment?.path) {
+          await deleteFile(message.attachment.path).catch(() => {});
+        }
+      } catch (err) {
+        reportError(err, 'delete-message');
+      }
     }));
   }
 

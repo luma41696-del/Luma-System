@@ -117,6 +117,12 @@
      ramp would be too steep to read across a 7px height. */
   --brand-gradient-x: linear-gradient(to right, var(--brand-light), var(--brand) 70%, var(--brand-hover));
 
+  /* Matching ramps for the semantic bar colours, so a completed bar reads as
+     richly as a brand one instead of a flat block of colour. */
+  --success-gradient-x: linear-gradient(to right, #5EEAD4, var(--success) 55%, #14B8A6);
+  --danger-gradient-x: linear-gradient(to right, #FCA5A5, var(--danger) 60%, #DC2626);
+  --info-gradient-x: linear-gradient(to right, #93C5FD, var(--info) 60%, #3B82F6);
+
   /* Kept as aliases so the whole stylesheet did not have to be rewritten when
      the accent moved from yellow to the brand blue. Prefer --brand in new code. */
   --yellow: var(--brand);

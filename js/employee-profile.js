@@ -31,7 +31,7 @@ import {
 } from './utils/format.js';
 import { watchAllPresence, breakHistory, WORK_STATES } from './utils/presence.js';
 import { barChart, lineChart, doughnutChart, destroyAllCharts } from './utils/charts.js';
-import { uploadFile, compressImage, pickFiles, paths } from './utils/upload.js';
+import { uploadFile, compressImage, pickFiles, paths, deleteFile } from './utils/upload.js';
 import { uploadsEnabled } from './features.js';
 import { sanitizeText, isValidEmail, isValidPhone, isValidIBAN, isValidCliq } from './utils/sanitize.js';
 
@@ -136,9 +136,31 @@ export async function render(container, ctx) {
         const uploaded = await uploadFile(compressed, paths.avatar(uid, compressed), {
           maxMB: 3, kinds: ['image']
         });
-        await updateDoc(ref('users', uid), { photoURL: uploaded.url, updatedAt: ts() });
+        const previous = profile.photoPath;
+        // photoPath is kept so the object can be removed later; an inline
+        // (data-URL) image has no path and needs no cleanup.
+        await updateDoc(ref('users', uid), {
+          photoURL: uploaded.url, photoPath: uploaded.path || '', updatedAt: ts()
+        });
+        if (previous && previous !== uploaded.path) await deleteFile(previous).catch(() => {});
         toastSuccess('تم تحديث الصورة الشخصية.');
       } catch (err) { reportError(err, 'avatar'); }
+    });
+
+    $('#remove-avatar')?.addEventListener('click', async () => {
+      const ok = await confirmDialog({
+        title: 'حذف الصورة الشخصية',
+        message: 'سيتم حذف صورتك وستظهر الأحرف الأولى من اسمك بدلاً منها.',
+        confirmText: 'حذف',
+        danger: true
+      });
+      if (!ok) return;
+      try {
+        const previous = profile.photoPath;      // absent for inline images
+        await updateDoc(ref('users', uid), { photoURL: '', photoPath: '', updatedAt: ts() });
+        if (previous) await deleteFile(previous).catch(() => {});
+        toastSuccess('تم حذف الصورة الشخصية.');
+      } catch (err) { reportError(err, 'remove-avatar'); }
     });
 
     $('#edit-profile')?.addEventListener('click', () => openProfileEditor(profile, isSelf));
@@ -162,9 +184,13 @@ function headerHTML(profile, state, isSelf) {
           ${avatarHTML(profile, 'xl')}
           ${!isSelf ? `<span class="presence presence--${attr(state)}" id="avatar-presence-dot"></span>` : ''}
           ${isSelf && uploadsEnabled() ? `<button class="icon-btn" id="change-avatar"
-            style="position:absolute;bottom:-4px;inset-inline-end:-4px;background:var(--yellow);
+            style="position:absolute;bottom:-4px;inset-inline-end:-4px;background:var(--brand-gradient);
                    color:var(--text-on-brand);border-radius:50%;width:30px;height:30px"
-            aria-label="تغيير الصورة"><i data-lucide="camera" class="icon-sm"></i></button>` : ''}
+            aria-label="تغيير الصورة" title="تغيير الصورة"><i data-lucide="camera" class="icon-sm"></i></button>` : ''}
+          ${isSelf && profile.photoURL ? `<button class="icon-btn" id="remove-avatar"
+            style="position:absolute;bottom:-4px;inset-inline-start:-4px;background:var(--danger);
+                   color:#fff;border-radius:50%;width:30px;height:30px"
+            aria-label="حذف الصورة" title="حذف الصورة"><i data-lucide="trash-2" class="icon-sm"></i></button>` : ''}
         </div>
 
         <div class="flex-1" style="min-width:220px">

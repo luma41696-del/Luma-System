@@ -195,9 +195,18 @@
 .app-shell.is-collapsed .nav-item__badge,
 .app-shell.is-collapsed .sidebar__cta { display: none; }
 .app-shell.is-collapsed .sidebar__profile { justify-content: center; padding: var(--sp-2); }
-.app-shell.is-collapsed .nav-item { justify-content: center; padding-inline: 0; }
+/* Square, evenly-padded hit area so the icon sits in the middle of its
+   highlight rather than filling it edge to edge. */
+.app-shell.is-collapsed .nav-item {
+  justify-content: center;
+  padding-inline: 0;
+  width: 42px;
+  height: 42px;
+  margin-inline: auto;
+  margin-bottom: var(--sp-2);
+}
 .app-shell.is-collapsed .nav-section { margin-bottom: var(--sp-3); }
-.app-shell.is-collapsed .sidebar__tools { flex-direction: column; }
+.app-shell.is-collapsed .sidebar__tools { flex-direction: column; gap: var(--sp-2); }
 
 /* Tooltip for collapsed nav labels */
 .app-shell.is-collapsed .nav-item::after {

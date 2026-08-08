@@ -74,7 +74,7 @@ service cloud.firestore {
       // An employee may maintain a small set of their own profile fields.
       allow update: if active() && uid() == userId
         && onlyChanged([
-             'phone', 'personalEmail', 'photoURL', 'personalNotes',
+             'phone', 'personalEmail', 'photoURL', 'photoPath', 'personalNotes',
              'birthday', 'notifPrefs', 'theme', 'updatedAt'
            ])
         && notLarger('personalNotes', 2000)
@@ -310,8 +310,11 @@ service cloud.firestore {
           && request.resource.data.get('deleted', false) == false;
         // Authors may edit or soft-delete their own message; moderators may remove.
         allow update: if isMemberOfChat(chatId) && (
+          // `attachment` is included so deleting a message can also drop the
+          // image/file it carried — otherwise a "deleted" message keeps
+          // displaying its picture to the whole room.
           ( resource.data.senderId == uid() &&
-            onlyChanged(['body', 'editedAt', 'deleted', 'deletedAt', 'readBy']) ) ||
+            onlyChanged(['body', 'editedAt', 'deleted', 'deletedAt', 'readBy', 'attachment']) ) ||
           ( onlyChanged(['readBy']) ) ||
           can('cm')
         );

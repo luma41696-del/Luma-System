@@ -250,6 +250,11 @@ function taskCard(task, people) {
   const progress = progressOf(task);
   const assignees = (task.assignees || []).map((id) => people[id]).filter(Boolean);
 
+  // Who actually worked on it — not the same as who it was handed to.
+  const workers = (task.contributors || [])
+    .map((id) => people[id]?.displayName)
+    .filter(Boolean);
+
   return `
     <article class="task-card${overdue ? ' is-overdue' : ''}" data-priority="${attr(task.priority)}"
              data-task="${attr(task.id)}" tabindex="0">
@@ -276,6 +281,12 @@ function taskCard(task, people) {
         ${task.commentCount ? `<span><i data-lucide="message-square" class="icon-sm"></i> ${task.commentCount}</span>` : ''}
         ${task.attachments?.length ? `<span><i data-lucide="paperclip" class="icon-sm"></i> ${task.attachments.length}</span>` : ''}
       </div>
+
+      ${workers.length ? `
+        <div class="task-card__workers" title="${attr(workers.join('، '))}">
+          <i data-lucide="hammer" class="icon-sm"></i>
+          <span class="truncate">${esc(workers.join('، '))}</span>
+        </div>` : ''}
 
       <div class="task-card__foot">
         ${avatarStack(assignees, 3)}
@@ -318,6 +329,151 @@ function renderKanban(host, tasks, people) {
   refreshIcons(host);
   bindCards(host);
   enableDragAndDrop(host);
+  enableBoardPanning($('.kanban', host));
+}
+
+/**
+ * Horizontal navigation for the board:
+ *   ← / →            scroll one column at a time
+ *   Home / End       jump to either end
+ *   space + drag     grab and pan, like the hand tool in a design app
+ *
+ * Space is only hijacked while the pointer is over the board and the user is
+ * not typing, so it never swallows a space in the search box.
+ */
+const BOARD_STEP = 320;                     // ≈ one column plus its gap
+let boardKeysBound = false;                 // document listeners are bound once
+let boardSpaceHeld = false;
+
+/** The board currently on screen, looked up fresh so a repaint cannot strand us. */
+function currentBoard() {
+  return document.querySelector('.kanban');
+}
+
+function isTypingTarget(el) {
+  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+}
+
+/**
+ * Animate a horizontal scroll.
+ *
+ * `scrollTo({behavior:'smooth'})` is a no-op in some Chromium builds (notably
+ * the desktop shell this app also ships in), which would leave the keyboard
+ * shortcuts doing nothing at all. Tweening it by hand behaves identically
+ * everywhere and respects a reduced-motion preference.
+ */
+let boardScrollAnim = null;
+function smoothScrollTo(el, target) {
+  const max = el.scrollWidth - el.clientWidth;
+  // RTL containers scroll from 0 down to -max; LTR from 0 up to +max.
+  const rtl = getComputedStyle(el).direction === 'rtl';
+  const clamped = rtl ? Math.min(0, Math.max(-max, target)) : Math.max(0, Math.min(max, target));
+
+  if (boardScrollAnim) cancelAnimationFrame(boardScrollAnim);
+
+  // A hidden document produces no animation frames, so a tween would never
+  // advance and the scroll would silently never happen. Jump straight there.
+  if (document.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    el.scrollLeft = clamped;
+    return;
+  }
+
+  const from = el.scrollLeft;
+  const distance = clamped - from;
+  if (!distance) return;
+
+  const DURATION = 260;
+  const started = performance.now();
+  const step = (now) => {
+    const p = Math.min(1, (now - started) / DURATION);
+    const eased = 1 - (1 - p) ** 3;                  // ease-out cubic
+    el.scrollLeft = from + distance * eased;
+    if (p < 1) boardScrollAnim = requestAnimationFrame(step);
+  };
+  boardScrollAnim = requestAnimationFrame(step);
+}
+
+/**
+ * Bound once for the lifetime of the page. Re-rendering the board replaces the
+ * element, so the handlers resolve it at event time instead of closing over a
+ * particular one — otherwise every repaint would silently orphan the shortcuts.
+ */
+function bindBoardKeys() {
+  if (boardKeysBound) return;
+  boardKeysBound = true;
+
+  document.addEventListener('keydown', (e) => {
+    const board = currentBoard();
+    if (!board || isTypingTarget(document.activeElement)) return;
+
+    // Only act when the board has focus or the pointer is over it, so arrows
+    // still behave normally everywhere else on the page.
+    if (!board.contains(document.activeElement) && !board.matches(':hover')) return;
+
+    if (e.key === 'ArrowRight') { smoothScrollTo(board, board.scrollLeft + BOARD_STEP); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { smoothScrollTo(board, board.scrollLeft - BOARD_STEP); e.preventDefault(); }
+    else if (e.key === 'Home') { smoothScrollTo(board, 0); e.preventDefault(); }
+    else if (e.key === 'End') {
+      // smoothScrollTo clamps to whichever end this direction uses.
+      const rtl = getComputedStyle(board).direction === 'rtl';
+      smoothScrollTo(board, rtl ? -board.scrollWidth : board.scrollWidth);
+      e.preventDefault();
+    } else if (e.code === 'Space' && !boardSpaceHeld) {
+      boardSpaceHeld = true;
+      board.classList.add('is-grabbable');
+      e.preventDefault();                   // stop the page scrolling under us
+    }
+  });
+
+  const releaseSpace = () => {
+    boardSpaceHeld = false;
+    currentBoard()?.classList.remove('is-grabbable', 'is-grabbing');
+  };
+  document.addEventListener('keyup', (e) => { if (e.code === 'Space') releaseSpace(); });
+  // Releasing space in another tab would otherwise leave it stuck on.
+  window.addEventListener('blur', releaseSpace);
+}
+
+/**
+ * Horizontal navigation for the board:
+ *   ← / →            scroll one column at a time
+ *   Home / End       jump to either end
+ *   space + drag     grab and pan, like the hand tool in a design app
+ */
+function enableBoardPanning(board) {
+  if (!board) return;
+
+  board.tabIndex = 0;                       // focusable, so it can take arrow keys
+  board.setAttribute('role', 'group');
+  board.setAttribute('aria-label', 'لوحة المهام — الأسهم للتنقل، أو مسافة + سحب بالفأرة');
+
+  bindBoardKeys();
+
+  // Pointer handlers live on the element itself, so they die with it.
+  let panning = false;
+  let startX = 0;
+  let startScroll = 0;
+
+  board.addEventListener('pointerdown', (e) => {
+    if (!boardSpaceHeld || e.button !== 0) return;
+    panning = true;
+    startX = e.clientX;
+    startScroll = board.scrollLeft;
+    board.classList.add('is-grabbing');
+    board.setPointerCapture?.(e.pointerId);
+    e.preventDefault();
+  });
+
+  board.addEventListener('pointermove', (e) => {
+    if (!panning) return;
+    // Follow the pointer 1:1 — drag left, content goes left.
+    board.scrollLeft = startScroll - (e.clientX - startX);
+    e.preventDefault();
+  });
+
+  const endPan = () => { panning = false; board.classList.remove('is-grabbing'); };
+  board.addEventListener('pointerup', endPan);
+  board.addEventListener('pointercancel', endPan);
 }
 
 function enableDragAndDrop(host) {

@@ -133,14 +133,22 @@
   border-radius: var(--radius-md);
 }
 .btn-group button {
-  height: 32px;
+  /* Flex so the icon and its label are properly centred with a real gap
+     between them, instead of sitting on a collapsing inline whitespace. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  height: 34px;
   padding: 0 var(--sp-4);
   border-radius: var(--radius-xs);
   font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-muted);
+  white-space: nowrap;
   transition: all var(--t-fast) var(--ease);
 }
+.btn-group button [data-lucide] { width: 16px; height: 16px; flex: none; }
 .btn-group button:hover { color: var(--text-primary); }
 .btn-group button.is-active { background: var(--brand-gradient); color: var(--text-on-brand); font-weight: 700; }
 
@@ -638,9 +646,9 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
   border-radius: var(--radius-pill);
   transition: width var(--t-slow) var(--ease-out);
 }
-.progress__bar--success { background: var(--success); }
-.progress__bar--danger { background: var(--danger); }
-.progress__bar--info { background: var(--info); }
+.progress__bar--success { background: var(--success-gradient-x); }
+.progress__bar--danger { background: var(--danger-gradient-x); }
+.progress__bar--info { background: var(--info-gradient-x); }
 
 .progress-ring { transform: rotate(-90deg); }
 .progress-ring__track { stroke: var(--bg-inset); fill: none; }
@@ -722,6 +730,17 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .task-card__meta { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; font-size: var(--fs-xs); color: var(--text-muted); }
 .task-card__meta span { display: inline-flex; align-items: center; gap: 4px; }
 .task-card__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+/* Who worked on the task — one quiet line, truncated rather than wrapped so a
+   long list can never push the card out of shape. */
+.task-card__workers {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+}
+.task-card__workers [data-lucide] { flex: none; color: var(--brand-light); }
 .task-card.is-overdue { border-inline-start-color: var(--danger); background: linear-gradient(180deg, var(--danger-soft), transparent 60%), var(--bg-surface); }
 
 /* ================================================================= KANBAN */
@@ -762,6 +781,13 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 }
 .kanban__list { display: flex; flex-direction: column; gap: var(--sp-2); min-height: 60px; }
 .task-card.is-dragging { opacity: 0.45; }
+
+/* Space-to-pan: the cursor tells the user the board is grabbable, and text
+   selection is suppressed so a drag pans instead of highlighting cards. */
+.kanban:focus-visible { outline: 2px solid var(--brand); outline-offset: 3px; }
+.kanban.is-grabbable { cursor: grab; user-select: none; }
+.kanban.is-grabbing { cursor: grabbing; scroll-behavior: auto; }
+.kanban.is-grabbable .task-card { cursor: grab; }
 
 /* =============================================================== CALENDAR */
 .cal-toolbar {
