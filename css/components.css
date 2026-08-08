@@ -679,6 +679,19 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 /* Subtle brand wash behind the profile header — the avatar sits "in" it. */
 .profile-hero { background: radial-gradient(120% 160% at 12% 0%, var(--brand-soft), transparent 65%); }
 
+/* ============================================================== LOAD MORE */
+/* Footer for progressively-loaded lists. Also acts as the infinite-scroll
+   sentinel, so it needs real height even when the button is mid-request. */
+.load-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-5) 0 var(--sp-3);
+  grid-column: 1 / -1;          /* span the full width inside a grid list */
+}
+.load-more__count { font-size: var(--fs-2xs); color: var(--text-muted); }
+
 /* ============================================================ TASK GROUPS */
 /* "Today" vs "earlier" in the list view. The gap between groups is the
    separation; the rule + label say what each group is. */

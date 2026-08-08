@@ -22,6 +22,7 @@ import { sanitizeText, sanitizeMultiline } from './utils/sanitize.js';
 import { uploadFile, pickFiles, paths } from './utils/upload.js';
 import { uploadsEnabled } from './features.js';
 import { buildRequestSheet, downloadPdf, printSheet } from './utils/pdf.js';
+import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 
 export const REQUEST_TYPES = {
   leave:     { ar: 'طلب إجازة',              icon: 'palmtree',    color: 'var(--purple)' },
@@ -126,30 +127,42 @@ async function renderList(container, ctx) {
     paint();
   }));
 
-  let currentUnsub = null;
-  function subscribe() {
-    currentUnsub?.();
-    const q = scope === 'mine'
-      ? query(col('requests'), where('employeeId', '==', session.uid), orderBy('createdAt', 'desc'), limit(100))
-      : query(col('requests'), orderBy('createdAt', 'desc'), limit(150));
+  // Requests accumulate indefinitely, so the archive is paged rather than
+  // pulled in one read; switching scope rebuilds the feed from page one.
+  let feed = null;
+  let detachLoadMore = null;
 
-    currentUnsub = onSnapshot(q,
-      (snap) => { requests = snap.docs.map((d) => ({ id: d.id, ...d.data() })); paint(); },
-      (err) => mount($('#req-list'), emptyState({
+  function subscribe() {
+    feed?.stop();
+    feed = createPagedFeed({
+      pageSize: 25,
+      buildQuery: (max) => (scope === 'mine'
+        ? query(col('requests'), where('employeeId', '==', session.uid), orderBy('createdAt', 'desc'), limit(max))
+        : query(col('requests'), orderBy('createdAt', 'desc'), limit(max))),
+      subscribe: (q, onRows, onErr) => onSnapshot(q,
+        (snap) => onRows(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onErr),
+      onData: (rows) => { requests = rows; paint(); },
+      onError: (err) => mount($('#req-list'), emptyState({
         icon: 'shield-alert', title: 'تعذّر تحميل الطلبات', text: err.message
-      })));
-    unsubs.push(currentUnsub);
+      }))
+    });
+    unsubs.push(() => feed?.stop());
   }
   subscribe();
 
   function paint() {
+    // A listener can still deliver after the route has been torn down.
+    if (!$('#req-count')) return;
+    detachLoadMore?.();
     const rows = requests.filter((r) => {
       if (filters.status !== 'all' && r.status !== filters.status) return false;
       if (filters.type !== 'all' && r.type !== filters.type) return false;
       return true;
     });
 
-    $('#req-count').textContent = `${rows.length} طلب`;
+    $('#req-count').textContent = feed.state.hasMore
+      ? `${rows.length} من ${requests.length} محمّلة — انزل لتحميل المزيد`
+      : `${rows.length} طلب`;
 
     const pending = requests.filter((r) => ['submitted', 'review'].includes(r.status)).length;
     $('#req-stats').innerHTML = `
@@ -164,6 +177,7 @@ async function renderList(container, ctx) {
       mount(host, emptyState({
         icon: 'file-text', title: 'لا توجد طلبات', text: 'اختر نوع الطلب أعلاه للبدء.'
       }));
+      detachLoadMore = mountLoadMore(host, feed);
       return;
     }
 
@@ -192,9 +206,13 @@ async function renderList(container, ctx) {
         </a>`;
     }).join('')}</div>`;
     refreshIcons(host);
+    detachLoadMore = mountLoadMore(host, feed);
   }
 
-  return () => unsubs.forEach((fn) => { try { fn(); } catch {} });
+  return () => {
+    detachLoadMore?.();
+    unsubs.forEach((fn) => { try { fn(); } catch {} });
+  };
 }
 
 /* ========================================================================== */

@@ -27,6 +27,7 @@ import {
 import { sanitizeText, sanitizeMultiline, renderMessageBody } from './utils/sanitize.js';
 import { uploadFile, pickFiles, paths, deleteFile } from './utils/upload.js';
 import { uploadsEnabled, UPLOADS_DISABLED_MSG } from './features.js';
+import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 
 const VIEW_KEY = 'luma.taskView';
 
@@ -156,20 +157,33 @@ async function renderBoard(container, ctx) {
   });
 
   /* ----------------------------------------------------------- data */
-  const q = scopeMine || !canSeeAll ? myTasksQuery(session.uid) : allTasksQuery();
-  unsubs.push(watchTasks(q, (rows) => {
-    tasks = rows.filter((t) => !t.deleted);
-    paint();
-  }, (err) => {
-    mount($('#task-view'), `<div class="card">${esc(err.message)}</div>`);
-  }));
+  // Declared before the feed: Firestore can deliver a cached first page
+  // synchronously, so paint() may run during createPagedFeed().
+  let detachLoadMore = null;
+
+  // Loaded a page at a time rather than in one large read, so the first paint
+  // is fast on a big board and the rest arrives as the user scrolls.
+  const feed = createPagedFeed({
+    pageSize: 30,
+    buildQuery: (max) => (scopeMine || !canSeeAll ? myTasksQuery(session.uid, max) : allTasksQuery(max)),
+    subscribe: (q, onRows, onErr) => watchTasks(q, onRows, onErr),
+    onData: (rows) => { tasks = rows.filter((t) => !t.deleted); paint(); },
+    onError: (err) => mount($('#task-view'), `<div class="card">${esc(err.message)}</div>`)
+  });
+  unsubs.push(feed.stop);
 
   function paint() {
+    // A listener can still deliver after the route has been torn down.
+    if (!$('#task-count')) return;
+    detachLoadMore?.();
     const filtered = filterTasks(tasks, filters);
     const stats = summarize(filtered);
 
-    $('#task-count').textContent =
-      `${filtered.length} مهمة معروضة من أصل ${tasks.length}`;
+    // Counts describe what is loaded, not the whole collection — the rest has
+    // not been read yet, so claiming a total here would be a guess.
+    $('#task-count').textContent = feed.state.hasMore
+      ? `${filtered.length} من ${tasks.length} محمّلة — انزل لتحميل المزيد`
+      : `${filtered.length} مهمة معروضة من أصل ${tasks.length}`;
 
     $('#task-stats').innerHTML = `
       ${statChip('list-todo', 'info', stats.open, 'مفتوحة')}
@@ -183,15 +197,24 @@ async function renderBoard(container, ctx) {
       mount(host, emptyState({
         icon: 'clipboard-list',
         title: 'لا توجد مهام',
-        text: 'لم يتم العثور على مهام مطابقة للتصفية الحالية.',
+        text: feed.state.hasMore
+          ? 'لا توجد مهام مطابقة ضمن المحمّل حتى الآن — حمّل المزيد للبحث أعمق.'
+          : 'لم يتم العثور على مهام مطابقة للتصفية الحالية.',
         action: '<button class="btn btn--primary" onclick="document.getElementById(\'new-task\').click()">إنشاء مهمة</button>'
       }));
+      // Filtering happens over the loaded window, so a filter that matches
+      // nothing yet still needs a way to reach further back.
+      detachLoadMore = mountLoadMore(host, feed);
       return;
     }
 
     if (view === 'board') renderKanban(host, filtered, people);
     else if (view === 'table') renderTable(host, filtered, people);
     else renderList(host, filtered, people);
+
+    // The board scrolls sideways, so an intersection sentinel at the bottom
+    // would never come into view — it gets an explicit button instead.
+    detachLoadMore = mountLoadMore(host, feed, { autoLoad: view !== 'board' });
   }
 
   return () => unsubs.forEach((fn) => { try { fn(); } catch {} });

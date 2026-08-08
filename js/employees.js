@@ -19,6 +19,7 @@ import {
   col, query, orderBy, limit, onSnapshot, getDirectory, invalidateDirectory, callFn
 } from './utils/api.js';
 import { watchAllPresence, WORK_STATES } from './utils/presence.js';
+import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 import { formatDate, formatNumber } from './utils/format.js';
 import {
   sanitizeText, isValidEmail, isValidPhone, isValidUsername, normalizeUsername
@@ -85,17 +86,30 @@ export async function render(container) {
   $('#f-search').addEventListener('input', debounce(applyFilters, 220));
   ['#f-role', '#f-dept', '#f-status'].forEach((s) => $(s).addEventListener('change', applyFilters));
 
-  unsubs.push(onSnapshot(
-    query(col('users'), orderBy('displayName'), limit(300)),
-    (snap) => { employees = snap.docs.map((d) => ({ id: d.id, ...d.data() })); paint(); },
-    (err) => mount($('#emp-list'), emptyState({
+  // Declared before the feed: Firestore can deliver a cached first page
+  // synchronously, so paint() may run during createPagedFeed().
+  let detachLoadMore = null;
+
+  // Directory pages grow with headcount; load a page at a time so the first
+  // paint does not wait on the whole company.
+  const feed = createPagedFeed({
+    pageSize: 25,
+    buildQuery: (max) => query(col('users'), orderBy('displayName'), limit(max)),
+    subscribe: (q, onRows, onErr) => onSnapshot(q,
+      (snap) => onRows(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onErr),
+    onData: (rows) => { employees = rows; paint(); },
+    onError: (err) => mount($('#emp-list'), emptyState({
       icon: 'shield-alert', title: 'لا تملك صلاحية عرض الموظفين', text: err.message
     }))
-  ));
+  });
+  unsubs.push(feed.stop);
 
   unsubs.push(watchAllPresence((value) => { statuses = value; paint(); }));
 
   function paint() {
+    // Presence and the feed can both deliver after the route is torn down.
+    if (!$('#emp-count')) return;
+    detachLoadMore?.();
     const rows = employees.filter((u) => {
       if (filters.search) {
         const hay = `${u.displayName} ${u.username} ${u.personalEmail || ''}`.toLowerCase();
@@ -107,7 +121,9 @@ export async function render(container) {
       return true;
     });
 
-    $('#emp-count').textContent = `${rows.length} موظف من أصل ${employees.length}`;
+    $('#emp-count').textContent = feed.state.hasMore
+      ? `${rows.length} من ${employees.length} محمّلة — انزل لتحميل المزيد`
+      : `${rows.length} موظف من أصل ${employees.length}`;
 
     const online = employees.filter((u) => ['working', 'online'].includes(statuses[u.id]?.state)).length;
     const onBreak = employees.filter((u) => statuses[u.id]?.state === 'break').length;
@@ -121,6 +137,7 @@ export async function render(container) {
     const host = $('#emp-list');
     if (!rows.length) {
       mount(host, emptyState({ icon: 'users', title: 'لا يوجد موظفون مطابقون' }));
+      detachLoadMore = mountLoadMore(host, feed);
       return;
     }
 
@@ -152,9 +169,13 @@ export async function render(container) {
         </a>`;
     }).join('')}</div>`;
     refreshIcons(host);
+    detachLoadMore = mountLoadMore(host, feed);
   }
 
-  return () => unsubs.forEach((fn) => { try { fn(); } catch {} });
+  return () => {
+    detachLoadMore?.();
+    unsubs.forEach((fn) => { try { fn(); } catch {} });
+  };
 }
 
 function chip(icon, tone, value, label) {
