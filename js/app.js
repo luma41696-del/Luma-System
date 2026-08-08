@@ -22,6 +22,7 @@ import {
   col, query, where, orderBy, limit, onSnapshot, getMany, updateDoc, ref, callFn, getDirectory
 } from './utils/api.js';
 import { t, applyStaticI18n } from './utils/i18n.js';
+import { showBrowserNotification } from './utils/browser-notify.js';
 
 /* -------------------------------------------------------------- elements */
 
@@ -446,17 +447,14 @@ function watchNotifications() {
       // messaging app rather than beeping at someone already reading the screen.
       if (isAway()) playNotificationSound();
 
-      if (Notification?.permission === 'granted') {
-        arrivals.forEach((n) => {
-          try {
-            new Notification(n.title || t('common.newNotification'), {
-              body: n.body || '',
-              icon: 'assets/logo/favicon.png',
-              tag: n.id
-            });
-          } catch { /* not supported in this context */ }
-        });
-      }
+      // No-ops unless the user has granted permission, which they can only do
+      // from the banner on the notifications page or from Settings.
+      arrivals.forEach((n) => showBrowserNotification({
+        title: n.title || t('common.newNotification'),
+        body: n.body || '',
+        tag: n.id,
+        link: n.link || ''
+      }));
     }
 
     window.dispatchEvent(new CustomEvent('luma:notifications', { detail: items }));
@@ -592,12 +590,16 @@ function warmDirectory() {
   // Pre-fetch the employee directory once — pickers across the app reuse it.
   getDirectory().catch((err) => console.warn('[luma] directory prefetch', err.code || err.message));
 
-  // Ask for browser notification permission at a calm moment, once.
-  if ('Notification' in window && Notification.permission === 'default') {
-    setTimeout(() => {
-      try { Notification.requestPermission(); } catch {}
-    }, 12_000);
-  }
+  // Browser notification permission is deliberately NOT requested here.
+  //
+  // It used to be asked for from a timer a few seconds after load. A prompt
+  // that arrives without the user having asked for anything gets dismissed,
+  // and browsers treat repeated dismissals as a denial — after which the
+  // permission is stuck at "denied" and the app can never prompt again, so
+  // desktop notifications silently stop working for good.
+  //
+  // It is now requested only from a real click: the banner on the
+  // notifications page and the button in Settings → الإشعارات.
 }
 
 function openHelp() {

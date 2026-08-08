@@ -19,6 +19,7 @@ import { formatDateTime, timeAgo, formatDate } from './utils/format.js';
 import { checkPassword } from './utils/sanitize.js';
 import { FCM_VAPID_KEY, APP_CHECK_SITE_KEY, TIMEZONE } from './firebase-config.js';
 import { t, getLang, setLang } from './utils/i18n.js';
+import { notifyPermission, requestNotifyPermission, permissionLabel } from './utils/browser-notify.js';
 
 const TABS = [
   { id: 'general',       labelKey: 'settings.tab.general',       icon: 'sliders-horizontal' },
@@ -181,7 +182,7 @@ function notificationsTab(host) {
     ['clientUpdated', 'تحديث بيانات عميل']
   ];
 
-  const permission = 'Notification' in window ? Notification.permission : 'unsupported';
+  const permission = notifyPermission();
 
   host.innerHTML = `
     <div class="grid grid-main mt-4">
@@ -219,15 +220,21 @@ function notificationsTab(host) {
 
       <div class="card">
         <div class="card__head"><div class="card__title"><i data-lucide="monitor-smartphone"></i> إشعارات المتصفح</div></div>
-        <div class="kv"><span class="kv__k">الحالة</span><span class="kv__v">${
-          permission === 'granted' ? 'مفعّلة' :
-          permission === 'denied' ? 'محظورة من المتصفح' :
-          permission === 'unsupported' ? 'غير مدعومة' : 'لم تُطلب بعد'
-        }</span></div>
+        <div class="kv"><span class="kv__k">الحالة</span>
+          <span class="kv__v" style="color:${
+            permission === 'granted' ? 'var(--success)' : permission === 'denied' ? 'var(--warning)' : 'inherit'
+          }">${esc(permissionLabel(permission))}</span></div>
         ${permission === 'default'
-          ? '<button class="btn btn--secondary btn--block mt-3" id="ask-perm">تفعيل إشعارات المتصفح</button>' : ''}
-        ${permission === 'denied'
-          ? '<p class="fs-xs text-muted mt-3">لتفعيلها، اسمح بالإشعارات من إعدادات الموقع في المتصفح.</p>' : ''}
+          ? '<button class="btn btn--primary btn--block mt-3" id="ask-perm"><i data-lucide="bell"></i> تفعيل إشعارات المتصفح</button>' : ''}
+        ${permission === 'denied' ? `
+          <p class="fs-xs text-muted mt-3" style="line-height:1.9">
+            المتصفح هو من يحجبها، ولا يستطيع الموقع إعادة طلب الإذن بعد الحظر.
+            لإلغاء الحظر: اضغط أيقونة القفل بجانب عنوان الموقع ← إعدادات الموقع ←
+            الإشعارات ← السماح، ثم أعد تحميل الصفحة.
+          </p>
+          <button class="btn btn--secondary btn--block mt-3" onclick="location.reload()">
+            <i data-lucide="rotate-cw"></i> أعدت السماح — حدّث الصفحة
+          </button>` : ''}
         <div class="list-divider"></div>
         <div class="kv"><span class="kv__k">Web Push (FCM)</span>
           <span class="kv__v">${FCM_VAPID_KEY ? 'مُعدّ' : 'غير مُعدّ'}</span></div>
@@ -262,9 +269,9 @@ function notificationsTab(host) {
   }
 
   $('#ask-perm')?.addEventListener('click', async () => {
-    const result = await Notification.requestPermission();
+    const result = await requestNotifyPermission();
     if (result === 'granted') toastSuccess('تم تفعيل إشعارات المتصفح.');
-    else toastError('لم يتم منح الإذن.');
+    else if (result === 'denied') toastError('تم رفض الإذن. يمكنك السماح به من إعدادات المتصفح.');
     notificationsTab(host);
     refreshIcons(host);
   });

@@ -2,7 +2,8 @@
 
 import { session } from './auth.js';
 import { $, $$, esc, attr, refreshIcons, render as mount, emptyState } from './utils/dom.js';
-import { toastSuccess, reportError } from './utils/toast.js';
+import { toastSuccess, toastError, reportError } from './utils/toast.js';
+import { notifyPermission, requestNotifyPermission } from './utils/browser-notify.js';
 import { confirmDialog } from './utils/modal.js';
 import {
   col, ref, query, where, orderBy, limit, onSnapshot, updateDoc, deleteDoc, ts
@@ -40,6 +41,8 @@ export async function render(container) {
         </div>
       </div>
 
+      <div id="perm-banner"></div>
+
       <div class="filter-bar">
         <div class="btn-group" id="notif-filter">
           <button data-filter="all" class="is-active">الكل</button>
@@ -54,6 +57,66 @@ export async function render(container) {
     </div>`;
 
   refreshIcons(container);
+  paintPermissionBanner();
+
+  /**
+   * Desktop notifications are the part people actually notice missing, and a
+   * blocked permission is invisible otherwise — the app just goes quiet. Say
+   * so here, and give the one thing that can fix it: a real click to prompt.
+   */
+  function paintPermissionBanner() {
+    const host = $('#perm-banner');
+    if (!host) return;
+
+    const permission = notifyPermission();
+    if (permission === 'granted') { host.innerHTML = ''; return; }
+
+    if (permission === 'denied') {
+      host.innerHTML = `
+        <div class="security-note mb-4" style="background:var(--warning-soft);border-color:rgba(251,191,36,.35)">
+          <i data-lucide="bell-off" style="color:var(--warning)"></i>
+          <div>
+            <strong>إشعارات المتصفح محظورة.</strong>
+            لن تصلك تنبيهات على سطح المكتب وأنت خارج الموقع.
+            <div class="fs-xs text-muted mt-2">
+              المتصفح وحده يستطيع إلغاء الحظر: اضغط على أيقونة القفل بجانب عنوان الموقع ←
+              إعدادات الموقع ← الإشعارات ← السماح، ثم أعد تحميل الصفحة.
+            </div>
+          </div>
+        </div>`;
+    } else if (permission === 'unsupported') {
+      host.innerHTML = `
+        <div class="security-note mb-4">
+          <i data-lucide="monitor-x"></i>
+          <div>هذا المتصفح لا يدعم إشعارات سطح المكتب. ستبقى الإشعارات داخل الموقع تعمل كالمعتاد.</div>
+        </div>`;
+    } else {
+      host.innerHTML = `
+        <div class="security-note mb-4">
+          <i data-lucide="bell-ring" style="color:var(--brand-light)"></i>
+          <div class="flex-1">
+            <strong>فعّل إشعارات سطح المكتب</strong>
+            <div class="fs-xs text-muted mt-1">
+              لتصلك المهام والرسائل الجديدة حتى وأنت في تبويب آخر — مثل واتساب.
+            </div>
+          </div>
+          <button class="btn btn--primary btn--sm" id="enable-perm">
+            <i data-lucide="bell"></i> تفعيل
+          </button>
+        </div>`;
+
+      // Requested straight from the click, with nothing awaited first, so the
+      // browser still counts it as a user gesture.
+      $('#enable-perm')?.addEventListener('click', async () => {
+        const result = await requestNotifyPermission();
+        paintPermissionBanner();
+        refreshIcons($('#perm-banner'));
+        if (result === 'granted') toastSuccess('تم تفعيل إشعارات المتصفح.');
+        else if (result === 'denied') toastError('تم رفض الإذن. يمكنك السماح به لاحقاً من إعدادات المتصفح.');
+      });
+    }
+    refreshIcons(host);
+  }
 
   $('#notif-filter').addEventListener('click', (e) => {
     const button = e.target.closest('[data-filter]');
