@@ -1287,12 +1287,10 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
   gap: var(--sp-4);
   color: var(--text-primary);
 }
-/* The lockup is the large, ceremonial placement — it gets the full glow. */
 .logo-lockup .logo-mark {
-  background-image: url("../assets/logo/luma-logo.png");
-  aspect-ratio: 420 / 886;
   width: var(--lockup-mark, 52px);
-  height: calc(var(--lockup-mark, 52px) * 886 / 420);
+  height: calc(var(--lockup-mark, 52px) * 604 / 216);
+  background-color: currentColor;
 }
 .logo-lockup__word {
   display: flex;

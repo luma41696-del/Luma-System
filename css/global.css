@@ -201,16 +201,12 @@ svg.lucide {
 .icon-sm[data-lucide], svg.lucide.icon-sm, .icon-sm > svg { width: 15px; height: 15px; }
 .icon-lg[data-lucide], svg.lucide.icon-lg, .icon-lg > svg { width: 22px; height: 22px; }
 
-/* The brand logo as supplied: metal lettering with the warm sparkle above it.
-   It is a full-colour image rather than a recoloured mask, because the metal
-   gradient and the glow are the mark — flattening them to one colour loses it.
-   Height is the sizing handle; the width follows from the aspect ratio.
-
-   This is the compact cut, with the sparkle on a tight halo. Small placements
-   (the sidebar) use it so the lettering keeps its size; the full-glow cut is
-   reserved for the large lockup, where the halo has room to be seen. */
+/* The brand mark is a single alpha PNG recoloured through a CSS mask, so a
+   dark / light / monochrome version is derived without editing the artwork. */
 .logo-mark {
-  background: url("../assets/logo/luma-mark-color.png") center / contain no-repeat;
-  aspect-ratio: 420 / 752;
+  -webkit-mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
+  mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
+  background-color: var(--yellow);
+  aspect-ratio: 216 / 604;
   flex: none;
 }

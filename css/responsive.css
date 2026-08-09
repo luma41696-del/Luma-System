@@ -65,6 +65,7 @@
     gap: var(--sp-3);
     margin-bottom: var(--sp-6);
   }
+  .auth-mobile-logo .logo-mark { width: 30px; height: 84px; }
 
   .form-grid { grid-template-columns: minmax(0, 1fr); }
   .cal-cell { min-height: 84px; }
