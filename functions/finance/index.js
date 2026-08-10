@@ -24,51 +24,11 @@ const { requireAuth, requirePermission } = require('../lib/permissions');
 const { assert, str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 
+const {
+  money, nextNumber, statusFor, PAYMENT_METHODS, BILLING_CYCLES
+} = require('./helpers');
+
 const opts = { region: REGION, cors: true };
-
-const PAYMENT_METHODS = ['cash', 'bank', 'cliq', 'cheque', 'other'];
-const BILLING_CYCLES = ['monthly', 'quarterly', 'yearly', 'one_time'];
-
-/* ---------------------------------------------------------------- helpers */
-
-/** Whole minor units. Rejects NaN, negatives and fractional piastres. */
-function money(value, { field = 'المبلغ', required = true, min = 0 } = {}) {
-  if (value === undefined || value === null || value === '') {
-    if (required) throw new HttpsError('invalid-argument', `${field} مطلوب.`);
-    return 0;
-  }
-  const amount = Math.round(Number(value));
-  if (!Number.isFinite(amount)) throw new HttpsError('invalid-argument', `${field} غير صالح.`);
-  if (amount < min) throw new HttpsError('invalid-argument', `${field} لا يمكن أن يكون أقل من ${min}.`);
-  if (amount > 1_000_000_000) throw new HttpsError('invalid-argument', `${field} كبير بشكل غير معقول.`);
-  return amount;
-}
-
-/**
- * Next number in a series, allocated inside the caller's transaction so two
- * concurrent invoices can never take the same one.
- */
-async function nextNumber(tx, series, prefix) {
-  const ref = db.collection('counters').doc(series);
-  const snap = await tx.get(ref);
-  const year = new Date().getFullYear();
-  // The sequence restarts each year, which is what the printed number implies.
-  const current = snap.exists && snap.data().year === year ? (snap.data().value || 0) : 0;
-  const value = current + 1;
-  tx.set(ref, { year, value, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  return { value, formatted: `${prefix}-${year}-${String(value).padStart(4, '0')}` };
-}
-
-/** Status implied by what has been paid, unless the invoice was cancelled. */
-function statusFor({ total, paid, dueDate, cancelled }) {
-  if (cancelled) return 'cancelled';
-  if (paid <= 0) {
-    return dueDate && new Date(dueDate) < new Date(new Date().toDateString())
-      ? 'overdue' : 'unpaid';
-  }
-  if (paid >= total) return 'paid';
-  return 'partial';
-}
 
 /* ========================================================================== */
 /* Invoices                                                                   */

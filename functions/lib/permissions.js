@@ -34,6 +34,8 @@ const PERMISSION_CODES = {
   'finance.view': 'fv',
   'finance.manage': 'fm',
   'finance.void': 'fx',
+  'finance.approve': 'fa',
+  'finance.ai': 'fai',
   'settings.manage': 'sm'
 };
 

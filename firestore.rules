@@ -402,6 +402,32 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // An expense only counts once approved, so status and the approval fields
+    // are set by decideExpense — never from a browser.
+    match /expenses/{expenseId} {
+      allow read: if active() && can('fv');
+      allow create, update, delete: if false;
+    }
+
+    // Client advertising money. `spent` is advanced only by recordAdSpend,
+    // inside a transaction that refuses to overspend what the client provided.
+    match /adBudgets/{budgetId} {
+      allow read: if active() && can('fv');
+      allow create, update, delete: if false;
+
+      match /entries/{entryId} {
+        allow read: if active() && can('fv');
+        allow write: if false;
+      }
+    }
+
+    // Per-user AI rate-limit counters. Written only by the callable; a client
+    // that could edit these could lift its own limit.
+    match /aiUsage/{userId} {
+      allow read: if active() && uid() == userId;
+      allow write: if false;
+    }
+
     // --------------------------------------------------------------- reports
     match /reports/{reportId} {
       allow read: if can('rv');

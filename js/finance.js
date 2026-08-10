@@ -25,8 +25,36 @@ import {
 } from './utils/format.js';
 import { sanitizeText } from './utils/sanitize.js';
 import { createPagedFeed, mountLoadMore } from './utils/paging.js';
+import { mountAssistant } from './ai-assistant.js';
 
 const VIEW_KEY = 'luma.financeTab';
+
+export const EXPENSE_CATEGORIES = {
+  rent:          'إيجار',
+  subscriptions: 'اشتراكات',
+  tools:         'أدوات وبرامج',
+  transport:     'مواصلات',
+  office:        'مصاريف مكتبية',
+  salaries:      'رواتب',
+  marketing:     'تسويق',
+  freelancers:   'فريلانسرز وموردون',
+  other:         'أخرى'
+};
+
+export const EXPENSE_STATUS = {
+  pending:  { ar: 'بانتظار الاعتماد', badge: 'warning' },
+  approved: { ar: 'معتمد',            badge: 'success' },
+  rejected: { ar: 'مرفوض',            badge: 'danger' }
+};
+
+export const AD_PLATFORMS = {
+  meta:     'Meta',
+  google:   'Google',
+  tiktok:   'TikTok',
+  snapchat: 'Snapchat',
+  linkedin: 'LinkedIn',
+  other:    'أخرى'
+};
 
 export const INVOICE_STATUS = {
   unpaid:    { ar: 'غير مدفوعة', badge: 'warning' },
@@ -80,6 +108,7 @@ async function renderBoard(container, ctx) {
         </div>
         <div class="page-head__actions">
           ${canManage ? `
+            <button class="btn btn--ghost" id="new-expense"><i data-lucide="trending-down"></i> مصروف</button>
             <button class="btn btn--secondary" id="new-contract"><i data-lucide="file-signature"></i> عقد جديد</button>
             <button class="btn btn--primary" id="new-invoice"><i data-lucide="receipt"></i> فاتورة جديدة</button>` : ''}
         </div>
@@ -91,6 +120,8 @@ async function renderBoard(container, ctx) {
         <button class="tab" data-tab="invoices"><i data-lucide="receipt"></i> الفواتير</button>
         <button class="tab" data-tab="contracts"><i data-lucide="file-signature"></i> العقود</button>
         <button class="tab" data-tab="receipts"><i data-lucide="hand-coins"></i> سندات القبض</button>
+        <button class="tab" data-tab="expenses"><i data-lucide="trending-down"></i> المصاريف</button>
+        <button class="tab" data-tab="ads"><i data-lucide="megaphone"></i> ميزانيات الإعلانات</button>
       </div>
 
       <div id="fin-body"></div>
@@ -100,6 +131,7 @@ async function renderBoard(container, ctx) {
 
   $('#new-invoice')?.addEventListener('click', () => openInvoiceModal(clients));
   $('#new-contract')?.addEventListener('click', () => openContractModal(clients));
+  $('#new-expense')?.addEventListener('click', () => openExpenseModal(clients));
 
   $('#fin-tabs').addEventListener('click', (e) => {
     const button = e.target.closest('[data-tab]');
@@ -151,11 +183,21 @@ async function renderBoard(container, ctx) {
 
     if (tab === 'invoices') paintInvoices(host, unsubs, () => statusFilter, (v) => { statusFilter = v; });
     else if (tab === 'contracts') paintContracts(host, unsubs, clients, canManage);
-    else paintReceipts(host, unsubs);
+    else if (tab === 'receipts') paintReceipts(host, unsubs);
+    else if (tab === 'expenses') paintExpenses(host, unsubs, clients, canManage);
+    else paintAdBudgets(host, unsubs, clients, canManage);
   }
 
   paintTab();
-  return () => unsubs.forEach((fn) => { try { fn(); } catch {} });
+
+  // The assistant lives with the finance section and is removed when the
+  // route is torn down, so it cannot follow the user onto other pages.
+  const unmountAssistant = mountAssistant(container);
+
+  return () => {
+    unmountAssistant();
+    unsubs.forEach((fn) => { try { fn(); } catch {} });
+  };
 }
 
 /* ------------------------------------------------------------- invoices */
@@ -361,6 +403,337 @@ function paintReceipts(host, unsubs) {
       icon: 'shield-alert', title: 'تعذّر تحميل السندات', text: err.message
     }))
   ));
+}
+
+/* ------------------------------------------------------------- expenses */
+
+function paintExpenses(host, unsubs, clients, canManage) {
+  const canApprove = can(session.claims, 'finance.approve');
+  host.innerHTML = `<div id="exp-list" class="mt-4">
+    ${'<div class="skeleton skeleton--row"></div>'.repeat(3)}</div>`;
+
+  unsubs.push(onSnapshot(
+    query(col('expenses'), orderBy('spentAt', 'desc'), limit(200)),
+    (snap) => {
+      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const list = $('#exp-list');
+      if (!list) return;
+
+      if (!rows.length) {
+        mount(list, emptyState({
+          icon: 'trending-down', title: 'لا توجد مصاريف',
+          text: 'سجّل مصاريف الوكالة ليتم احتسابها في صافي الربح بعد اعتمادها.'
+        }));
+        return;
+      }
+
+      const approved = rows.filter((r) => r.status === 'approved');
+      const pending = rows.filter((r) => r.status === 'pending');
+
+      list.innerHTML = `
+        <div class="grid grid-3 mb-4">
+          ${stat('check-circle-2', 'success', formatMinor(approved.reduce((s, r) => s + r.amount, 0)), 'مصاريف معتمدة')}
+          ${stat('clock', 'warning', formatMinor(pending.reduce((s, r) => s + r.amount, 0)), 'بانتظار الاعتماد')}
+          ${stat('hash', 'brand', String(rows.length), 'عدد القيود')}
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr>
+              <th>الرقم</th><th>الوصف</th><th>التصنيف</th><th>العميل</th>
+              <th>التاريخ</th><th>المبلغ</th><th>الحالة</th>${canApprove ? '<th></th>' : ''}
+            </tr></thead>
+            <tbody>${rows.map((e) => `
+              <tr>
+                <td class="ltr">${esc(e.expenseNo || '—')}</td>
+                <td class="is-strong">${esc(e.description)}</td>
+                <td>${esc(EXPENSE_CATEGORIES[e.category] || e.category)}</td>
+                <td>${esc(e.clientName || '—')}</td>
+                <td class="num">${esc(e.spentAt)}</td>
+                <td class="num fw-700">${esc(formatMinor(e.amount))}</td>
+                <td><span class="badge badge--${attr(EXPENSE_STATUS[e.status]?.badge || '')}">
+                  ${esc(EXPENSE_STATUS[e.status]?.ar || e.status)}</span></td>
+                ${canApprove ? `<td>${e.status === 'pending' ? `
+                  <div class="flex gap-1">
+                    <button class="btn btn--success btn--sm" data-approve="${attr(e.id)}">اعتماد</button>
+                    <button class="btn btn--ghost btn--sm" data-reject="${attr(e.id)}">رفض</button>
+                  </div>` : ''}</td>` : ''}
+              </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>`;
+
+      refreshIcons(list);
+
+      const decide = async (expenseId, decision) => {
+        try {
+          await callFn('decideExpense', { expenseId, decision });
+          toastSuccess(decision === 'approved' ? 'تم اعتماد المصروف.' : 'تم رفض المصروف.');
+        } catch (err) { reportError(err, 'decide-expense'); }
+      };
+      on(list, 'click', '[data-approve]', (e, node) => decide(node.dataset.approve, 'approved'));
+      on(list, 'click', '[data-reject]', (e, node) => decide(node.dataset.reject, 'rejected'));
+    },
+    (err) => mount($('#exp-list'), emptyState({
+      icon: 'shield-alert', title: 'تعذّر تحميل المصاريف', text: err.message
+    }))
+  ));
+}
+
+function openExpenseModal(clients) {
+  openModal({
+    title: 'تسجيل مصروف',
+    size: 'lg',
+    bodyHTML: `
+      <div class="form-grid">
+        <div class="field">
+          <label class="field__label" for="e-desc">الوصف <span class="req">*</span></label>
+          <input class="input" id="e-desc" maxlength="300" placeholder="اشتراك Adobe لشهر آب">
+        </div>
+        <div class="field">
+          <label class="field__label" for="e-amount">المبلغ (د.أ) <span class="req">*</span></label>
+          <input class="input ltr" id="e-amount" type="number" min="0.01" step="0.01">
+        </div>
+        <div class="field">
+          <label class="field__label" for="e-category">التصنيف <span class="req">*</span></label>
+          <select class="select" id="e-category">
+            ${Object.entries(EXPENSE_CATEGORIES).map(([k, v]) =>
+              `<option value="${k}">${esc(v)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label class="field__label" for="e-date">التاريخ <span class="req">*</span></label>
+          <input class="input" id="e-date" type="date" value="${toDateInput(new Date())}">
+        </div>
+        <div class="field">
+          <label class="field__label" for="e-vendor">الجهة / المورد</label>
+          <input class="input" id="e-vendor" maxlength="160">
+        </div>
+        <div class="field">
+          <label class="field__label" for="e-client">مرتبط بعميل (اختياري)</label>
+          <select class="select" id="e-client">
+            <option value="">— مصروف عام —</option>
+            ${clients.map((c) => `<option value="${attr(c.id)}">${esc(c.name)}</option>`).join('')}
+          </select>
+          <div class="field__hint">ربط المصروف بعميل يجعله جزءاً من حساب ربحية ذلك العميل.</div>
+        </div>
+        <div class="field field--full">
+          <label class="field__label" for="e-notes">ملاحظات</label>
+          <textarea class="textarea" id="e-notes" rows="2" maxlength="2000"></textarea>
+        </div>
+      </div>
+      <div class="security-note">
+        <i data-lucide="info"></i>
+        <div>يُسجَّل المصروف بحالة «بانتظار الاعتماد» ولا يُحتسب في صافي الربح حتى يعتمده المسؤول.</div>
+      </div>`,
+    footerHTML: `
+      <button class="btn btn--ghost" data-modal-close>إلغاء</button>
+      <button class="btn btn--primary" id="e-save"><i data-lucide="check"></i> تسجيل</button>`,
+    onMount: (api) => {
+      refreshIcons(api.root);
+      api.$('#e-save').addEventListener('click', async () => {
+        const description = sanitizeText(api.$('#e-desc').value, 300);
+        const amount = toMinor(api.$('#e-amount').value);
+        if (!description) return toastError('وصف المصروف مطلوب.');
+        if (!(amount > 0)) return toastError('أدخل مبلغاً صحيحاً.');
+
+        const button = api.$('#e-save');
+        setBusy(button, true);
+        try {
+          await callFn('saveExpense', {
+            description, amount,
+            category: api.$('#e-category').value,
+            spentAt: api.$('#e-date').value,
+            vendor: sanitizeText(api.$('#e-vendor').value, 160),
+            clientId: api.$('#e-client').value,
+            notes: sanitizeText(api.$('#e-notes').value, 2000)
+          });
+          toastSuccess('تم تسجيل المصروف — بانتظار الاعتماد.');
+          api.close();
+        } catch (err) { reportError(err, 'save-expense'); }
+        finally { setBusy(button, false); }
+      });
+    }
+  });
+}
+
+/* ---------------------------------------------------------- ad budgets */
+
+function paintAdBudgets(host, unsubs, clients, canManage) {
+  host.innerHTML = `
+    <div class="security-note mt-4">
+      <i data-lucide="info"></i>
+      <div>
+        ميزانية الإعلانات هي <strong>أموال العميل</strong> تمرّ عبر الوكالة —
+        لا تُحتسب ضمن إيرادات الوكالة ولا أرباحها، ويظل المتبقي منها حقاً للعميل.
+      </div>
+    </div>
+    ${canManage ? '<button class="btn btn--secondary mt-4" id="new-budget"><i data-lucide="plus"></i> ميزانية إعلانات</button>' : ''}
+    <div id="ad-list" class="mt-4">${'<div class="skeleton skeleton--row"></div>'.repeat(3)}</div>`;
+  refreshIcons(host);
+
+  $('#new-budget')?.addEventListener('click', () => openAdBudgetModal(clients));
+
+  unsubs.push(onSnapshot(
+    query(col('adBudgets'), orderBy('period', 'desc'), limit(200)),
+    (snap) => {
+      const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      const list = $('#ad-list');
+      if (!list) return;
+
+      if (!rows.length) {
+        mount(list, emptyState({
+          icon: 'megaphone', title: 'لا توجد ميزانيات إعلانات',
+          text: 'سجّل المبلغ الذي استلمته من العميل لإعلاناته، وتابع المصروف والمتبقي.'
+        }));
+        return;
+      }
+
+      const received = rows.reduce((s, b) => s + (b.received || 0), 0);
+      const spent = rows.reduce((s, b) => s + (b.spent || 0), 0);
+
+      list.innerHTML = `
+        <div class="grid grid-3 mb-4">
+          ${stat('download', 'info', formatMinor(received), 'إجمالي المستلم')}
+          ${stat('upload', 'warning', formatMinor(spent), 'إجمالي المصروف')}
+          ${stat('wallet', 'success', formatMinor(received - spent), 'المتبقي للعملاء')}
+        </div>
+        <div class="grid grid-auto">${rows.map((b) => {
+          const remaining = (b.received || 0) - (b.spent || 0);
+          const pct = b.received ? Math.round(((b.spent || 0) / b.received) * 100) : 0;
+          return `
+            <div class="card">
+              <div class="flex justify-between items-start gap-2">
+                <div style="min-width:0">
+                  <div class="fw-700 truncate">${esc(b.clientName || '')}</div>
+                  <div class="fs-xs text-muted">${esc(AD_PLATFORMS[b.platform] || b.platform)} · ${esc(b.period)}</div>
+                </div>
+                <span class="badge badge--${remaining > 0 ? 'success' : ''}">${pct}%</span>
+              </div>
+              <div class="progress mt-3"><div class="progress__bar" style="width:${Math.min(pct, 100)}%"></div></div>
+              <div class="kv mt-3"><span class="kv__k">المستلم</span>
+                <span class="kv__v num">${esc(formatMinor(b.received))}</span></div>
+              <div class="kv"><span class="kv__k">المصروف</span>
+                <span class="kv__v num">${esc(formatMinor(b.spent || 0))}</span></div>
+              <div class="kv"><span class="kv__k fw-700">المتبقي</span>
+                <span class="kv__v num fw-700">${esc(formatMinor(remaining))}</span></div>
+              ${canManage && remaining > 0 ? `
+                <button class="btn btn--secondary btn--block btn--sm mt-3" data-spend="${attr(b.id)}">
+                  <i data-lucide="minus-circle"></i> تسجيل صرف</button>` : ''}
+            </div>`;
+        }).join('')}</div>`;
+
+      refreshIcons(list);
+      on(list, 'click', '[data-spend]', (e, node) => {
+        const budget = rows.find((r) => r.id === node.dataset.spend);
+        if (budget) openAdSpendModal(budget);
+      });
+    },
+    (err) => mount($('#ad-list'), emptyState({
+      icon: 'shield-alert', title: 'تعذّر تحميل الميزانيات', text: err.message
+    }))
+  ));
+}
+
+function openAdBudgetModal(clients) {
+  const now = new Date();
+  const period = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  openModal({
+    title: 'ميزانية إعلانات',
+    size: 'sm',
+    bodyHTML: `
+      <div class="field">
+        <label class="field__label" for="b-client">العميل <span class="req">*</span></label>
+        <select class="select" id="b-client">
+          <option value="">— اختر العميل —</option>
+          ${clients.map((c) => `<option value="${attr(c.id)}">${esc(c.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="b-platform">المنصة <span class="req">*</span></label>
+        <select class="select" id="b-platform">
+          ${Object.entries(AD_PLATFORMS).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label class="field__label" for="b-period">الشهر <span class="req">*</span></label>
+        <input class="input ltr" id="b-period" type="month" value="${period}">
+      </div>
+      <div class="field">
+        <label class="field__label" for="b-received">المبلغ المستلم من العميل (د.أ) <span class="req">*</span></label>
+        <input class="input ltr" id="b-received" type="number" min="0" step="0.01">
+      </div>
+      <div class="field">
+        <label class="field__label" for="b-notes">ملاحظات</label>
+        <textarea class="textarea" id="b-notes" rows="2" maxlength="1000"></textarea>
+      </div>`,
+    footerHTML: `
+      <button class="btn btn--ghost" data-modal-close>إلغاء</button>
+      <button class="btn btn--primary" id="b-save"><i data-lucide="check"></i> حفظ</button>`,
+    onMount: (api) => {
+      refreshIcons(api.root);
+      api.$('#b-save').addEventListener('click', async () => {
+        const clientId = api.$('#b-client').value;
+        const received = toMinor(api.$('#b-received').value);
+        if (!clientId) return toastError('اختر العميل.');
+        if (!(received >= 0)) return toastError('أدخل مبلغاً صحيحاً.');
+
+        const button = api.$('#b-save');
+        setBusy(button, true);
+        try {
+          await callFn('saveAdBudget', {
+            clientId, received,
+            platform: api.$('#b-platform').value,
+            period: api.$('#b-period').value,
+            notes: sanitizeText(api.$('#b-notes').value, 1000)
+          });
+          toastSuccess('تم حفظ ميزانية الإعلانات.');
+          api.close();
+        } catch (err) { reportError(err, 'save-ad-budget'); }
+        finally { setBusy(button, false); }
+      });
+    }
+  });
+}
+
+function openAdSpendModal(budget) {
+  const remaining = (budget.received || 0) - (budget.spent || 0);
+  openModal({
+    title: 'تسجيل صرف إعلاني',
+    subtitle: `${budget.clientName} — المتبقي ${formatMinor(remaining)}`,
+    size: 'sm',
+    bodyHTML: `
+      <div class="field">
+        <label class="field__label" for="s-amount">المبلغ المصروف (د.أ) <span class="req">*</span></label>
+        <input class="input ltr" id="s-amount" type="number" min="0.01" step="0.01"
+               max="${(remaining / 100).toFixed(2)}">
+        <div class="field__hint">لا يمكن أن يتجاوز الرصيد المتبقي في الميزانية.</div>
+      </div>
+      <div class="field">
+        <label class="field__label" for="s-note">ملاحظة</label>
+        <input class="input" id="s-note" maxlength="300" placeholder="حملة العرض الصيفي">
+      </div>`,
+    footerHTML: `
+      <button class="btn btn--ghost" data-modal-close>إلغاء</button>
+      <button class="btn btn--primary" id="s-save">تسجيل</button>`,
+    onMount: (api) => {
+      api.$('#s-save').addEventListener('click', async () => {
+        const amount = toMinor(api.$('#s-amount').value);
+        if (!(amount > 0)) return toastError('أدخل مبلغاً صحيحاً.');
+        if (amount > remaining) return toastError('المبلغ يتجاوز الرصيد المتبقي.');
+
+        const button = api.$('#s-save');
+        setBusy(button, true);
+        try {
+          await callFn('recordAdSpend', {
+            budgetId: budget.id, amount, note: sanitizeText(api.$('#s-note').value, 300)
+          });
+          toastSuccess('تم تسجيل الصرف.');
+          api.close();
+        } catch (err) { reportError(err, 'ad-spend'); }
+        finally { setBusy(button, false); }
+      });
+    }
+  });
 }
 
 /* ========================================================================== */

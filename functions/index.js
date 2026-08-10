@@ -54,12 +54,22 @@ exports.vaultReveal = vault.vaultReveal;
 
 /* --------------------------------------------------------------- finance */
 const finance = require('./finance');
+const financeExpenses = require('./finance/expenses');
 
 exports.createInvoice = finance.createInvoice;
 exports.recordPayment = finance.recordPayment;
 exports.voidPayment = finance.voidPayment;
 exports.cancelInvoice = finance.cancelInvoice;
 exports.saveContract = finance.saveContract;
+exports.saveExpense = financeExpenses.saveExpense;
+exports.decideExpense = financeExpenses.decideExpense;
+exports.saveAdBudget = financeExpenses.saveAdBudget;
+exports.recordAdSpend = financeExpenses.recordAdSpend;
+
+/* ------------------------------------------------------ AI accountant */
+const ai = require('./ai');
+
+exports.askAccountant = ai.askAccountant;
 
 /* --------------------------------------------------------- notifications */
 const notifications = require('./notifications');

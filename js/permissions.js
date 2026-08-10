@@ -67,6 +67,8 @@ export const PERMISSIONS = {
   'finance.view':           { code: 'fv',  ar: 'عرض القسم المالي',                  group: 'finance' },
   'finance.manage':         { code: 'fm',  ar: 'إدارة العقود والفواتير والسندات',   group: 'finance' },
   'finance.void':           { code: 'fx',  ar: 'إلغاء الفواتير والسندات',           group: 'finance' },
+  'finance.approve':        { code: 'fa',  ar: 'اعتماد المصاريف',                    group: 'finance' },
+  'finance.ai':             { code: 'fai', ar: 'استخدام المساعد المالي الذكي',       group: 'finance' },
 
   'settings.manage':        { code: 'sm',  ar: 'إدارة إعدادات النظام',              group: 'settings' }
 };
@@ -118,7 +120,7 @@ export const PERMISSION_PRESETS = {
       // The finance section, plus the client and contract data it bills against.
       // No employee-salary access: that is a separate permission the manager
       // grants deliberately, not something the role carries by default.
-      'finance.view', 'finance.manage', 'finance.void',
+      'finance.view', 'finance.manage', 'finance.void', 'finance.ai',
       'clients.view', 'clients.edit',
       'employees.view',
       'reports.view', 'reports.export',

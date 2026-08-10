@@ -33,7 +33,12 @@ const modules = [
   require('../../functions/auth'),
   require('../../functions/encryption'),
   require('../../functions/deletion'),
-  require('../../functions/pdf')
+  require('../../functions/pdf'),
+  // Static paths only — esbuild bundles what it can see, and a computed
+  // require() would leave these out of the deployed function.
+  require('../../functions/finance'),
+  require('../../functions/finance/expenses'),
+  require('../../functions/ai')
 ];
 
 /** name -> onCall handler */
