@@ -69,6 +69,8 @@ export const PERMISSIONS = {
   'finance.void':           { code: 'fx',  ar: 'إلغاء الفواتير والسندات',           group: 'finance' },
   'finance.approve':        { code: 'fa',  ar: 'اعتماد المصاريف',                    group: 'finance' },
   'finance.ai':             { code: 'fai', ar: 'استخدام المساعد المالي الذكي',       group: 'finance' },
+  'finance.treasury':       { code: 'ft',  ar: 'إدارة الصندوق والبنوك',              group: 'finance' },
+  'finance.payroll':        { code: 'fp',  ar: 'إعداد وصرف كشوف الرواتب',            group: 'finance' },
 
   'settings.manage':        { code: 'sm',  ar: 'إدارة إعدادات النظام',              group: 'settings' }
 };
@@ -121,6 +123,7 @@ export const PERMISSION_PRESETS = {
       // No employee-salary access: that is a separate permission the manager
       // grants deliberately, not something the role carries by default.
       'finance.view', 'finance.manage', 'finance.void', 'finance.ai',
+      'finance.treasury', 'finance.payroll',
       'clients.view', 'clients.edit',
       'employees.view',
       'reports.view', 'reports.export',

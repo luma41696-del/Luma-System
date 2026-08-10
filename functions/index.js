@@ -66,6 +66,20 @@ exports.decideExpense = financeExpenses.decideExpense;
 exports.saveAdBudget = financeExpenses.saveAdBudget;
 exports.recordAdSpend = financeExpenses.recordAdSpend;
 
+const treasury = require('./finance/treasury');
+const payroll = require('./finance/payroll');
+
+exports.saveAccount = treasury.saveAccount;
+exports.recordTransaction = treasury.recordTransaction;
+exports.transferFunds = treasury.transferFunds;
+exports.reverseTransaction = treasury.reverseTransaction;
+exports.reconcileTransactions = treasury.reconcileTransactions;
+
+exports.createPayrollRun = payroll.createPayrollRun;
+exports.updatePayrollLine = payroll.updatePayrollLine;
+exports.approvePayrollRun = payroll.approvePayrollRun;
+exports.payPayrollRun = payroll.payPayrollRun;
+
 /* ------------------------------------------------------ AI accountant */
 const ai = require('./ai');
 

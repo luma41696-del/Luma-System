@@ -428,6 +428,33 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Cash and bank accounts. `balance` moves only through postTransaction,
+    // inside the same transaction that writes the movement explaining it.
+    match /accounts/{accountId} {
+      allow read: if active() && can('ft');
+      allow create, update, delete: if false;
+    }
+
+    // The cash ledger. Immutable once posted — a mistake is corrected by a
+    // reversal, which is itself an entry, so the trail stays complete.
+    match /transactions/{transactionId} {
+      allow read: if active() && can('ft');
+      allow create, update, delete: if false;
+    }
+
+    // Payroll carries every salary in the company, so it sits behind its own
+    // permission rather than the general finance one.
+    match /payrollRuns/{runId} {
+      allow read: if active() && can('fp');
+      allow create, update, delete: if false;
+
+      match /lines/{employeeId} {
+        // An employee may read their own line; the whole sheet needs `fp`.
+        allow read: if active() && (can('fp') || uid() == employeeId);
+        allow write: if false;
+      }
+    }
+
     // --------------------------------------------------------------- reports
     match /reports/{reportId} {
       allow read: if can('rv');

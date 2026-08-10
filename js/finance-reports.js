@@ -70,7 +70,7 @@ const PERIODS = [
  * would double the reads for no benefit.
  */
 function watchFinanceData(unsubs, onChange) {
-  const data = { invoices: [], payments: [], expenses: [], contracts: [], adBudgets: [] };
+  const data = { invoices: [], payments: [], expenses: [], contracts: [], adBudgets: [], accounts: [] };
   let ready = 0;
 
   const sub = (name, q) => unsubs.push(onSnapshot(q,
@@ -87,6 +87,9 @@ function watchFinanceData(unsubs, onChange) {
   sub('expenses', query(col('expenses'), orderBy('spentAt', 'desc'), limit(2000)));
   sub('contracts', query(col('contracts'), orderBy('endDate', 'asc'), limit(500)));
   sub('adBudgets', query(col('adBudgets'), orderBy('period', 'desc'), limit(500)));
+  // Treasury may be denied for a user without `ft`; the listener's error path
+  // leaves accounts empty and the cash card simply does not render.
+  sub('accounts', query(col('accounts'), orderBy('name'), limit(100)));
   return data;
 }
 
@@ -226,6 +229,17 @@ export function paintOverview(host, unsubs) {
         ${kpi('receipt', 'purple', formatMinor(s.tax), 'الضريبة المحصّلة')}
         ${kpi('megaphone', 'info', formatMinor(adReceived - adSpent), 'رصيد إعلانات العملاء')}
       </div>
+
+      ${data.accounts.length ? `
+        <div class="grid grid-auto mt-4">
+          ${data.accounts.map((a) => kpi(
+            a.type === 'bank' ? 'landmark' : 'wallet',
+            a.type === 'bank' ? 'info' : 'success',
+            formatMinor(a.balance), a.name)).join('')}
+          ${kpi('layers', 'brand',
+            formatMinor(data.accounts.reduce((t, a) => t + (a.balance || 0), 0)),
+            'إجمالي السيولة')}
+        </div>` : ''}
 
       <div class="grid grid-2 mt-4">
         <div class="card">
@@ -480,8 +494,8 @@ export function paintReports(host, unsubs) {
           ميزانيات إعلانات العملاء مستثناة من كل أرقام الإيرادات والأرباح أعلاه،
           لأنها أموال العميل لا دخل الوكالة.
           <div class="fs-xs text-muted mt-2">
-            تقارير الرواتب والعمولات وأرصدة الصندوق والبنوك تحتاج وحدتَي «الموظفون والمستحقات»
-            و«الصندوق والبنوك» — لم تُبنَ بعد.
+            الرواتب والعمولات تظهر ضمن المصروفات فور صرف كشف الرواتب من الصندوق،
+            وأرصدة الحسابات معروضة في لوحة التحكم وتبويب «الصندوق والبنوك».
           </div>
         </div>
       </div>`;

@@ -27,6 +27,8 @@ import { sanitizeText } from './utils/sanitize.js';
 import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 import { initAssistant, toggleAssistant, assistantAvailable } from './ai-assistant.js';
 import { paintOverview, paintReports } from './finance-reports.js';
+import { paintTreasury } from './finance-treasury.js';
+import { paintPayroll } from './finance-payroll.js';
 import { destroyAllCharts } from './utils/charts.js';
 
 const VIEW_KEY = 'luma.financeTab';
@@ -147,6 +149,8 @@ async function renderBoard(container, ctx) {
         <button class="tab" data-tab="receipts"><i data-lucide="hand-coins"></i> سندات القبض</button>
         <button class="tab" data-tab="expenses"><i data-lucide="trending-down"></i> المصاريف</button>
         <button class="tab" data-tab="ads"><i data-lucide="megaphone"></i> ميزانيات الإعلانات</button>
+        <button class="tab" data-tab="treasury"><i data-lucide="landmark"></i> الصندوق والبنوك</button>
+        <button class="tab" data-tab="payroll"><i data-lucide="users"></i> الرواتب</button>
         <button class="tab" data-tab="reports"><i data-lucide="bar-chart-3"></i> التقارير المالية</button>
       </div>
 
@@ -213,6 +217,8 @@ async function renderBoard(container, ctx) {
 
     if (tab === 'overview') paintOverview(host, unsubs);
     else if (tab === 'reports') paintReports(host, unsubs);
+    else if (tab === 'treasury') paintTreasury(host, unsubs);
+    else if (tab === 'payroll') paintPayroll(host, unsubs);
     else if (tab === 'invoices') paintInvoices(host, unsubs, () => statusFilter, (v) => { statusFilter = v; });
     else if (tab === 'contracts') paintContracts(host, unsubs, clients, canManage);
     else if (tab === 'receipts') paintReceipts(host, unsubs);

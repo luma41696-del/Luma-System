@@ -38,6 +38,8 @@ const modules = [
   // require() would leave these out of the deployed function.
   require('../../functions/finance'),
   require('../../functions/finance/expenses'),
+  require('../../functions/finance/treasury'),
+  require('../../functions/finance/payroll'),
   require('../../functions/ai')
 ];
 
