@@ -239,29 +239,58 @@ function statChip(icon, tone, value, label) {
  * work. `dayKey` is timezone-aware (Asia/Amman), so "today" means the office's
  * today, not the device's.
  */
+/**
+ * The list is split into one section per creation date, newest day first, so
+ * the day's work is separated from everything before it instead of running
+ * together. `dayKey` is timezone-aware (Asia/Amman), so a day boundary is the
+ * office's, not the device's.
+ */
 function renderList(host, tasks, people) {
   const sorted = sortTasks(tasks);
   const today = dayKey();
-  const isToday = (t) => t.createdAt && dayKey(toMillis(t.createdAt)) === today;
+  const yesterday = dayKey(Date.now() - 86_400_000);
 
-  const todays = sorted.filter(isToday);
-  const earlier = sorted.filter((t) => !isToday(t));
+  // Group by creation day, keeping sortTasks' ordering *within* each day.
+  // The days themselves are then ordered newest-first: sortTasks ranks by
+  // priority and due date, so insertion order would interleave the dates.
+  const byDay = new Map();
+  for (const task of sorted) {
+    const key = task.createdAt ? dayKey(toMillis(task.createdAt)) : 'unknown';
+    if (!byDay.has(key)) byDay.set(key, []);
+    byDay.get(key).push(task);
+  }
 
-  const group = (label, icon, items, extraClass = '') => `
-    <section class="task-group ${extraClass}">
-      <header class="task-group__head">
-        <i data-lucide="${attr(icon)}"></i>
-        <span class="task-group__title">${esc(label)}</span>
-        <span class="task-group__count num">${items.length}</span>
-      </header>
-      <div class="grid grid-auto">${items.map((t) => taskCard(t, people)).join('')}</div>
-    </section>`;
+  const days = [...byDay.keys()].sort((a, b) => {
+    if (a === 'unknown') return 1;          // undated tasks sink to the bottom
+    if (b === 'unknown') return -1;
+    return b.localeCompare(a);              // dayKey is YYYY-MM-DD, so this is chronological
+  });
 
-  // With nothing new today, a lone "earlier" heading is just noise.
-  host.innerHTML = todays.length
-    ? group('مهام اليوم', 'sparkles', todays, 'task-group--today') +
-      (earlier.length ? group('مهام سابقة', 'history', earlier) : '')
-    : `<div class="grid grid-auto">${earlier.map((t) => taskCard(t, people)).join('')}</div>`;
+  const heading = (key) => {
+    if (key === today) return { label: 'مهام اليوم', icon: 'sparkles', cls: 'task-group--today' };
+    if (key === yesterday) return { label: 'أمس', icon: 'history', cls: '' };
+    if (key === 'unknown') return { label: 'بدون تاريخ', icon: 'calendar-off', cls: '' };
+    return { label: formatDate(new Date(`${key}T12:00:00`)), icon: 'calendar', cls: '' };
+  };
+
+  // A single day needs no heading — there is nothing to separate it from.
+  if (byDay.size <= 1) {
+    host.innerHTML = `<div class="grid grid-auto">${sorted.map((t) => taskCard(t, people)).join('')}</div>`;
+  } else {
+    host.innerHTML = days.map((key) => {
+      const items = byDay.get(key);
+      const { label, icon, cls } = heading(key);
+      return `
+        <section class="task-group ${cls}">
+          <header class="task-group__head">
+            <i data-lucide="${attr(icon)}"></i>
+            <span class="task-group__title">${esc(label)}</span>
+            <span class="task-group__count num">${items.length}</span>
+          </header>
+          <div class="grid grid-auto">${items.map((t) => taskCard(t, people)).join('')}</div>
+        </section>`;
+    }).join('');
+  }
 
   refreshIcons(host);
   bindCards(host);

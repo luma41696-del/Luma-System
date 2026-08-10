@@ -27,6 +27,7 @@ import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 export const REQUEST_TYPES = {
   leave:     { ar: 'طلب إجازة',              icon: 'palmtree',    color: 'var(--purple)' },
   departure: { ar: 'طلب مغادرة / خروج مبكر', icon: 'log-out',     color: 'var(--info)' },
+  late:      { ar: 'إذن تأخير عن الدوام',    icon: 'alarm-clock', color: 'var(--warning)' },
   advance:   { ar: 'طلب سلفة على الراتب',    icon: 'wallet',      color: 'var(--yellow)' },
   sick:      { ar: 'طلب إجازة مرضية',        icon: 'stethoscope', color: 'var(--danger)' }
 };
@@ -569,6 +570,24 @@ export function openRequestModal({ type = 'leave' } = {}) {
           </div>
         </div>`;
     }
+    if (kind === 'late') {
+      return `
+        <div class="form-grid">
+          <div class="field">
+            <label class="field__label" for="r-date">التاريخ <span class="req">*</span></label>
+            <input class="input" id="r-date" type="date" value="${toDateInput(new Date())}">
+          </div>
+          <div class="field">
+            <label class="field__label" for="r-to-time">وقت الوصول المتوقع <span class="req">*</span></label>
+            <input class="input" id="r-to-time" type="time" value="10:00">
+          </div>
+          <div class="field field--full">
+            <div class="fs-xs text-muted">
+              يُسجَّل الإذن على يوم الدوام المحدد، ويظهر للإدارة ضمن الطلبات بانتظار القرار.
+            </div>
+          </div>
+        </div>`;
+    }
     if (kind === 'advance') {
       return `
         <div class="form-grid">
@@ -709,6 +728,14 @@ export function openRequestModal({ type = 'leave' } = {}) {
           payload.toDate = date;
           payload.fromTime = api.$('#r-from-time').value;
           payload.toTime = api.$('#r-to-time').value;
+        } else if (currentType === 'late') {
+          const date = api.$('#r-date').value;
+          const arriveAt = api.$('#r-to-time').value;
+          if (!date) return toastError('حدد التاريخ.');
+          if (!arriveAt) return toastError('حدد وقت الوصول المتوقع.');
+          payload.fromDate = date;
+          payload.toDate = date;
+          payload.toTime = arriveAt;      // expected arrival
         } else if (currentType === 'advance') {
           const amount = Number(api.$('#r-amount').value);
           if (!(amount > 0)) return toastError('أدخل مبلغاً صحيحاً.');

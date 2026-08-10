@@ -251,7 +251,7 @@ service cloud.firestore {
 
       allow create: if active()
         && request.resource.data.employeeId == uid()
-        && request.resource.data.type in ['leave', 'departure', 'advance', 'sick']
+        && request.resource.data.type in ['leave', 'departure', 'late', 'advance', 'sick']
         && request.resource.data.status in ['draft', 'submitted']
         && notLarger('reason', 3000);
 
