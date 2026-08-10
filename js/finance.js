@@ -25,7 +25,7 @@ import {
 } from './utils/format.js';
 import { sanitizeText } from './utils/sanitize.js';
 import { createPagedFeed, mountLoadMore } from './utils/paging.js';
-import { mountAssistant } from './ai-assistant.js';
+import { initAssistant, toggleAssistant, assistantAvailable } from './ai-assistant.js';
 
 const VIEW_KEY = 'luma.financeTab';
 
@@ -82,6 +82,24 @@ export const BILLING_CYCLES = {
 /** Days before expiry at which a contract starts warning. */
 const RENEWAL_WINDOW = 30;
 
+/**
+ * Firestore denies any read with no matching rule, which is what happens when
+ * the finance collections are queried against a ruleset that predates them.
+ * The raw message ("Missing or insufficient permissions") sends people looking
+ * at user permissions, which is the wrong place — so say what it actually is.
+ */
+function readError(err, what) {
+  const denied = err?.code === 'permission-denied'
+    || /insufficient permissions/i.test(err?.message || '');
+  return emptyState({
+    icon: 'shield-alert',
+    title: `تعذّر تحميل ${what}`,
+    text: denied
+      ? 'قواعد الحماية على الخادم لا تعرف بعد مجموعات القسم المالي. انشر القواعد والفهارس: firebase deploy --only firestore:rules,firestore:indexes'
+      : (err?.message || 'خطأ غير معروف')
+  });
+}
+
 export async function render(container, ctx) {
   if (ctx.params.id) return renderInvoice(container, ctx.params.id);
   return renderBoard(container, ctx);
@@ -107,6 +125,10 @@ async function renderBoard(container, ctx) {
           <div class="page-head__sub" id="fin-sub">العقود والفواتير وسندات القبض</div>
         </div>
         <div class="page-head__actions">
+          ${assistantAvailable()
+            ? `<button class="btn btn--ai" id="ai-assistant-btn">
+                 <i data-lucide="sparkles"></i> AI Accountant
+               </button>` : ''}
           ${canManage ? `
             <button class="btn btn--ghost" id="new-expense"><i data-lucide="trending-down"></i> مصروف</button>
             <button class="btn btn--secondary" id="new-contract"><i data-lucide="file-signature"></i> عقد جديد</button>
@@ -132,6 +154,7 @@ async function renderBoard(container, ctx) {
   $('#new-invoice')?.addEventListener('click', () => openInvoiceModal(clients));
   $('#new-contract')?.addEventListener('click', () => openContractModal(clients));
   $('#new-expense')?.addEventListener('click', () => openExpenseModal(clients));
+  $('#ai-assistant-btn')?.addEventListener('click', () => toggleAssistant());
 
   $('#fin-tabs').addEventListener('click', (e) => {
     const button = e.target.closest('[data-tab]');
@@ -190,9 +213,9 @@ async function renderBoard(container, ctx) {
 
   paintTab();
 
-  // The assistant lives with the finance section and is removed when the
-  // route is torn down, so it cannot follow the user onto other pages.
-  const unmountAssistant = mountAssistant(container);
+  // The assistant lives with the finance section and is torn down with the
+  // route, so its panel cannot follow the user onto another page.
+  const unmountAssistant = initAssistant();
 
   return () => {
     unmountAssistant();
@@ -227,9 +250,7 @@ function paintInvoices(host, unsubs, getFilter, setFilter) {
     subscribe: (q, onRows, onErr) => onSnapshot(q,
       (snap) => onRows(snap.docs.map((d) => ({ id: d.id, ...d.data() }))), onErr),
     onData: (data) => { rows = data; paint(); },
-    onError: (err) => mount($('#inv-list'), emptyState({
-      icon: 'shield-alert', title: 'تعذّر تحميل الفواتير', text: err.message
-    }))
+    onError: (err) => mount($('#inv-list'), readError(err, 'الفواتير'))
   });
   unsubs.push(feed.stop);
 
@@ -349,9 +370,7 @@ function paintContracts(host, unsubs, clients, canManage) {
         if (contract) openInvoiceModal(clients, contract);
       });
     },
-    (err) => mount($('#con-list'), emptyState({
-      icon: 'shield-alert', title: 'تعذّر تحميل العقود', text: err.message
-    }))
+    (err) => mount($('#con-list'), readError(err, 'العقود'))
   ));
 }
 
@@ -399,9 +418,7 @@ function paintReceipts(host, unsubs) {
           </table>
         </div>`;
     },
-    (err) => mount($('#rec-list'), emptyState({
-      icon: 'shield-alert', title: 'تعذّر تحميل السندات', text: err.message
-    }))
+    (err) => mount($('#rec-list'), readError(err, 'سندات القبض'))
   ));
 }
 
@@ -473,9 +490,7 @@ function paintExpenses(host, unsubs, clients, canManage) {
       on(list, 'click', '[data-approve]', (e, node) => decide(node.dataset.approve, 'approved'));
       on(list, 'click', '[data-reject]', (e, node) => decide(node.dataset.reject, 'rejected'));
     },
-    (err) => mount($('#exp-list'), emptyState({
-      icon: 'shield-alert', title: 'تعذّر تحميل المصاريف', text: err.message
-    }))
+    (err) => mount($('#exp-list'), readError(err, 'المصاريف'))
   ));
 }
 
@@ -628,9 +643,7 @@ function paintAdBudgets(host, unsubs, clients, canManage) {
         if (budget) openAdSpendModal(budget);
       });
     },
-    (err) => mount($('#ad-list'), emptyState({
-      icon: 'shield-alert', title: 'تعذّر تحميل الميزانيات', text: err.message
-    }))
+    (err) => mount($('#ad-list'), readError(err, 'ميزانيات الإعلانات'))
   ));
 }
 

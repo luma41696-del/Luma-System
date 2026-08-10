@@ -1343,27 +1343,28 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 /* ========================================================= AI ACCOUNTANT */
 /* Floating launcher + side panel. Uses the same tokens as the rest of the
    system, and logical properties so it mirrors with the page direction. */
-.ai-launcher {
-  position: fixed;
-  inset-block-end: 22px;
-  inset-inline-start: 22px;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-2);
-  height: 48px;
-  padding: 0 var(--sp-5);
-  border-radius: var(--radius-pill);
-  background: var(--brand-gradient);
-  color: var(--text-on-brand);
+/* The trigger sits with the other page-head actions. It is a normal button:
+   an earlier version faded it out while the panel was open, which left it
+   invisible and unclickable if the panel closed by any other route. */
+.btn--ai {
+  background: var(--brand-soft);
+  color: var(--brand-light);
+  border-color: var(--brand-soft);
   font-weight: 700;
-  font-size: var(--fs-md);
-  box-shadow: 0 8px 24px rgba(64, 112, 200, 0.34);
-  z-index: var(--z-dropdown);
-  transition: transform var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease);
 }
-.ai-launcher:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(64, 112, 200, 0.42); }
-.ai-launcher.is-active { opacity: 0; pointer-events: none; }
-.ai-launcher [data-lucide] { width: 18px; height: 18px; }
+.btn--ai:hover:not(:disabled) { background: var(--brand); color: var(--text-on-brand); }
+.btn--ai.is-on { background: var(--brand-gradient); color: var(--text-on-brand); }
+.btn--ai [data-lucide] { width: 16px; height: 16px; }
+
+.ai-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(3, 10, 20, 0.5);
+  opacity: 0;
+  transition: opacity var(--t-base) var(--ease);
+  z-index: calc(var(--z-modal) - 1);
+}
+.ai-backdrop.is-open { opacity: 1; }
 
 .ai-panel {
   position: fixed;
@@ -1551,7 +1552,4 @@ html[dir="rtl"] .ai-panel { transform: translateX(100%); }
 
 @media (max-width: 640px) {
   .ai-panel { width: 100vw; }
-  .ai-launcher { inset-block-end: 84px; inset-inline-start: 16px; padding: 0 var(--sp-4); }
-  .ai-launcher span { display: none; }
-  .ai-launcher { width: 48px; justify-content: center; }
 }

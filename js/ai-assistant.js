@@ -32,27 +32,35 @@ const SUGGESTIONS = [
   'قارن مع الشهر الماضي'
 ];
 
-/** Mount the launcher. Called by the finance page; no-op without permission. */
-export function mountAssistant(host) {
-  if (!can(session.claims, 'finance.ai')) return () => {};
-  if (document.getElementById('ai-launcher')) return () => {};
+/** True when the signed-in user may use the assistant at all. */
+export function assistantAvailable() {
+  return can(session.claims, 'finance.ai');
+}
 
-  const launcher = document.createElement('button');
-  launcher.id = 'ai-launcher';
-  launcher.className = 'ai-launcher';
-  launcher.innerHTML = `<i data-lucide="sparkles"></i><span>AI Accountant</span>`;
-  launcher.setAttribute('aria-label', 'المساعد المالي الذكي');
-  document.body.append(launcher);
-  refreshIcons(launcher);
-
-  launcher.addEventListener('click', togglePanel);
+/**
+ * Prepare the assistant for this page and hand back a teardown.
+ *
+ * The trigger lives in the page header, rendered by the finance page itself,
+ * so it sits with the other actions instead of floating over the content.
+ */
+export function initAssistant() {
+  if (!assistantAvailable()) return () => {};
   restore();
-
+  document.addEventListener('keydown', onEscape);
   return () => {
-    launcher.remove();
-    panel?.remove();
-    panel = null;
+    document.removeEventListener('keydown', onEscape);
+    destroyPanel();
   };
+}
+
+/** Open (or close) the panel. Safe to call when the assistant is unavailable. */
+export function toggleAssistant() {
+  if (!assistantAvailable()) return;
+  togglePanel();
+}
+
+function onEscape(e) {
+  if (e.key === 'Escape' && panel) closePanel();
 }
 
 /* ------------------------------------------------------------- storage */
@@ -78,11 +86,32 @@ function togglePanel() {
 }
 
 function closePanel() {
-  panel?.classList.remove('is-open');
   const node = panel;
   panel = null;
+  node?.classList.remove('is-open');
+  document.querySelector('.ai-backdrop')?.remove();
   setTimeout(() => node?.remove(), 200);
-  document.getElementById('ai-launcher')?.classList.remove('is-active');
+  syncTrigger(false);
+}
+
+/** Remove immediately, without the transition — used on route teardown. */
+function destroyPanel() {
+  panel?.remove();
+  panel = null;
+  document.querySelector('.ai-backdrop')?.remove();
+  syncTrigger(false);
+}
+
+/**
+ * Reflect open/closed on the header button.
+ *
+ * The trigger is never hidden: an earlier version faded it out while the panel
+ * was open, so anything that closed the panel without going through this code
+ * left a button that was invisible and unclickable.
+ */
+function syncTrigger(open) {
+  const button = document.getElementById('ai-assistant-btn');
+  if (button) button.classList.toggle('is-on', open);
 }
 
 function openPanel() {
@@ -117,10 +146,19 @@ function openPanel() {
       </button>
     </form>`;
 
+  // A backdrop gives an obvious way out on touch, where there is no Escape.
+  const backdrop = document.createElement('div');
+  backdrop.className = 'ai-backdrop';
+  backdrop.addEventListener('click', closePanel);
+  document.body.append(backdrop);
+
   document.body.append(panel);
   refreshIcons(panel);
-  requestAnimationFrame(() => panel.classList.add('is-open'));
-  document.getElementById('ai-launcher')?.classList.add('is-active');
+  requestAnimationFrame(() => {
+    panel.classList.add('is-open');
+    backdrop.classList.add('is-open');
+  });
+  syncTrigger(true);
 
   $('#ai-close', panel).addEventListener('click', closePanel);
   $('#ai-new', panel).addEventListener('click', () => {
