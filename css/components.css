@@ -1381,6 +1381,11 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
   transition: transform var(--t-slow) var(--ease-out);
 }
 html[dir="rtl"] .ai-panel { transform: translateX(100%); }
+/* The open state must out-rank the direction rule above it. `html[dir] .x`
+   scores higher than `.x.y`, so a bare `.ai-panel.is-open` loses in RTL and
+   the panel stays parked off-screen — open, but invisible. */
+html[dir="rtl"] .ai-panel.is-open,
+html[dir="ltr"] .ai-panel.is-open,
 .ai-panel.is-open { transform: none; }
 
 .ai-panel__head {

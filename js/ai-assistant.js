@@ -154,10 +154,14 @@ function openPanel() {
 
   document.body.append(panel);
   refreshIcons(panel);
-  requestAnimationFrame(() => {
-    panel.classList.add('is-open');
-    backdrop.classList.add('is-open');
-  });
+
+  // Flush layout so the transition has a starting value, then reveal.
+  // requestAnimationFrame would be the usual place for this, but it does not
+  // run while the page is not compositing (background tab, occluded window),
+  // which would leave the panel mounted and permanently off-screen.
+  void panel.offsetWidth;
+  panel.classList.add('is-open');
+  backdrop.classList.add('is-open');
   syncTrigger(true);
 
   $('#ai-close', panel).addEventListener('click', closePanel);
