@@ -19,7 +19,8 @@ export const JOB_ROLES = {
   photographer:     { ar: 'مصور',        en: 'Photographer',     color: 'var(--accent-4)' },
   video_editor:     { ar: 'مونتير',      en: 'Video Editor',     color: 'var(--accent-5)' },
   programmer:       { ar: 'مبرمج',       en: 'Programmer',       color: 'var(--accent-6)' },
-  sales:            { ar: 'مبيعات',      en: 'Sales',            color: 'var(--info)' }
+  sales:            { ar: 'مبيعات',      en: 'Sales',            color: 'var(--info)' },
+  accountant:       { ar: 'محاسب',       en: 'Accountant',       color: 'var(--success)' }
 };
 
 export const DEPARTMENTS = {
@@ -63,6 +64,10 @@ export const PERMISSIONS = {
   'reports.view':           { code: 'rv',  ar: 'عرض التقارير',                      group: 'reports' },
   'reports.export':         { code: 'rx',  ar: 'تصدير التقارير',                    group: 'reports' },
 
+  'finance.view':           { code: 'fv',  ar: 'عرض القسم المالي',                  group: 'finance' },
+  'finance.manage':         { code: 'fm',  ar: 'إدارة العقود والفواتير والسندات',   group: 'finance' },
+  'finance.void':           { code: 'fx',  ar: 'إلغاء الفواتير والسندات',           group: 'finance' },
+
   'settings.manage':        { code: 'sm',  ar: 'إدارة إعدادات النظام',              group: 'settings' }
 };
 
@@ -74,6 +79,7 @@ export const PERMISSION_GROUPS = {
   requests:  'الطلبات',
   chat:      'الدردشة',
   reports:   'التقارير',
+  finance:   'المالية',
   settings:  'الإعدادات'
 };
 
@@ -103,6 +109,20 @@ export const PERMISSION_PRESETS = {
       'clients.view', 'clients.create', 'clients.edit', 'clients.viewCredentials',
       'tasks.create', 'tasks.assign', 'tasks.editAll', 'tasks.delete',
       'requests.approve', 'chat.manage', 'reports.view', 'reports.export'
+    ]
+  },
+  accountant: {
+    ar: 'محاسب',
+    role: 'manager',
+    perms: [
+      // The finance section, plus the client and contract data it bills against.
+      // No employee-salary access: that is a separate permission the manager
+      // grants deliberately, not something the role carries by default.
+      'finance.view', 'finance.manage', 'finance.void',
+      'clients.view', 'clients.edit',
+      'employees.view',
+      'reports.view', 'reports.export',
+      'requests.approve'
     ]
   },
   team_lead: {
@@ -195,6 +215,8 @@ export const NAV_ITEMS = [
     perm: ['employees.view'] },
   { id: 'clients',     route: '#/clients',    labelKey: 'nav.clients',     icon: 'briefcase',
     perm: ['clients.view'] },
+  { id: 'finance',     route: '#/finance',    labelKey: 'nav.finance',     icon: 'receipt',
+    perm: ['finance.view'] },
   { id: 'documents',   route: '#/documents',  labelKey: 'nav.documents',   icon: 'file-text' },
   { id: 'chat',        route: '#/chat',       labelKey: 'nav.chat',        icon: 'message-circle' },
   { id: 'reports',     route: '#/reports',    labelKey: 'nav.reports',     icon: 'bar-chart-3',

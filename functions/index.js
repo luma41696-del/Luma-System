@@ -52,6 +52,15 @@ exports.vaultUpdate = vault.vaultUpdate;
 exports.vaultDelete = vault.vaultDelete;
 exports.vaultReveal = vault.vaultReveal;
 
+/* --------------------------------------------------------------- finance */
+const finance = require('./finance');
+
+exports.createInvoice = finance.createInvoice;
+exports.recordPayment = finance.recordPayment;
+exports.voidPayment = finance.voidPayment;
+exports.cancelInvoice = finance.cancelInvoice;
+exports.saveContract = finance.saveContract;
+
 /* --------------------------------------------------------- notifications */
 const notifications = require('./notifications');
 

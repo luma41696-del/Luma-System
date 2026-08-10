@@ -252,6 +252,19 @@ export function formatMoney(value, currency = 'JOD') {
     .format(amount)} ${currency === 'JOD' ? 'د.أ' : currency}`;
 }
 
+/**
+ * Finance figures are stored as integer minor units (piastres) so totals never
+ * drift the way binary floats do. These two convert at the edges: `formatMinor`
+ * for display, `toMinor` for anything typed into a form.
+ */
+export function formatMinor(minor, currency = 'JOD') {
+  return formatMoney((Number(minor) || 0) / 100, currency);
+}
+
+export function toMinor(value) {
+  return Math.round((Number(value) || 0) * 100);
+}
+
 export function formatPercent(value) {
   return `${Math.round(Number(value) || 0)}%`;
 }

@@ -367,6 +367,41 @@ service cloud.firestore {
       allow delete: if active() && resource.data.userId == uid();
     }
 
+    // --------------------------------------------------------------- finance
+    //
+    // Contracts, invoices, receipts. Everything that moves money is written by
+    // Cloud Functions: numbers have to be allocated without collisions, and an
+    // invoice's paid total has to stay in step with its receipts. The client
+    // may read, and may edit only the descriptive parts of a contract.
+    match /contracts/{contractId} {
+      allow read: if active() && can('fv');
+      allow create: if false;                 // saveContract allocates the number
+      allow update: if active() && can('fm')
+        && onlyChanged(['notes', 'status', 'attachment', 'updatedAt']);
+      allow delete: if false;                 // contracts are ended, not erased
+    }
+
+    match /invoices/{invoiceId} {
+      allow read: if active() && can('fv');
+      // createInvoice / recordPayment / cancelInvoice own every field that
+      // carries a figure, so none of them can be written from a browser.
+      allow create, update, delete: if false;
+    }
+
+    match /payments/{paymentId} {
+      allow read: if active() && can('fv');
+      // Receipts are immutable once issued; a correction is a voidPayment,
+      // which is itself recorded.
+      allow create, update, delete: if false;
+    }
+
+    // Number series for invoices, receipts and contracts. Allocated inside the
+    // transactions above; nothing may touch them directly.
+    match /counters/{series} {
+      allow read: if active() && can('fv');
+      allow write: if false;
+    }
+
     // --------------------------------------------------------------- reports
     match /reports/{reportId} {
       allow read: if can('rv');

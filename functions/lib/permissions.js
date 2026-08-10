@@ -31,6 +31,9 @@ const PERMISSION_CODES = {
   'chat.manage': 'cm',
   'reports.view': 'rv',
   'reports.export': 'rx',
+  'finance.view': 'fv',
+  'finance.manage': 'fm',
+  'finance.void': 'fx',
   'settings.manage': 'sm'
 };
 
@@ -43,7 +46,7 @@ const ACCOUNT_ROLES = ['admin', 'manager', 'employee'];
 
 const JOB_ROLES = [
   'graphic_designer', 'it', 'account_manager',
-  'photographer', 'video_editor', 'programmer', 'sales'
+  'photographer', 'video_editor', 'programmer', 'sales', 'accountant'
 ];
 
 const DEPARTMENTS = ['creative', 'tech', 'accounts', 'media', 'sales', 'admin'];
