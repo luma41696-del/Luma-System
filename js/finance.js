@@ -26,6 +26,8 @@ import {
 import { sanitizeText } from './utils/sanitize.js';
 import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 import { initAssistant, toggleAssistant, assistantAvailable } from './ai-assistant.js';
+import { paintOverview, paintReports } from './finance-reports.js';
+import { destroyAllCharts } from './utils/charts.js';
 
 const VIEW_KEY = 'luma.financeTab';
 
@@ -112,7 +114,7 @@ export async function render(container, ctx) {
 async function renderBoard(container, ctx) {
   const unsubs = [];
   const canManage = can(session.claims, 'finance.manage');
-  let tab = ctx.query.tab || localStorage.getItem(VIEW_KEY) || 'invoices';
+  let tab = ctx.query.tab || localStorage.getItem(VIEW_KEY) || 'overview';
   let statusFilter = 'all';
 
   const clients = await getMany(query(col('clients'), orderBy('name'), limit(300))).catch(() => []);
@@ -139,11 +141,13 @@ async function renderBoard(container, ctx) {
       <div class="grid grid-4" id="fin-stats"></div>
 
       <div class="tabs mt-4" id="fin-tabs">
+        <button class="tab" data-tab="overview"><i data-lucide="layout-dashboard"></i> لوحة التحكم</button>
         <button class="tab" data-tab="invoices"><i data-lucide="receipt"></i> الفواتير</button>
         <button class="tab" data-tab="contracts"><i data-lucide="file-signature"></i> العقود</button>
         <button class="tab" data-tab="receipts"><i data-lucide="hand-coins"></i> سندات القبض</button>
         <button class="tab" data-tab="expenses"><i data-lucide="trending-down"></i> المصاريف</button>
         <button class="tab" data-tab="ads"><i data-lucide="megaphone"></i> ميزانيات الإعلانات</button>
+        <button class="tab" data-tab="reports"><i data-lucide="bar-chart-3"></i> التقارير المالية</button>
       </div>
 
       <div id="fin-body"></div>
@@ -194,6 +198,9 @@ async function renderBoard(container, ctx) {
   function paintTab() {
     $$('#fin-tabs .tab').forEach((t) => t.classList.toggle('is-active', t.dataset.tab === tab));
     const host = $('#fin-body');
+    // Chart.js keeps its own registry; leaving a tab must release it or the
+    // canvases leak and re-rendering throws on a reused id.
+    destroyAllCharts();
     unsubs.forEach((fn) => { try { fn(); } catch {} });
     unsubs.length = 0;
 
@@ -204,7 +211,9 @@ async function renderBoard(container, ctx) {
       () => {}
     ));
 
-    if (tab === 'invoices') paintInvoices(host, unsubs, () => statusFilter, (v) => { statusFilter = v; });
+    if (tab === 'overview') paintOverview(host, unsubs);
+    else if (tab === 'reports') paintReports(host, unsubs);
+    else if (tab === 'invoices') paintInvoices(host, unsubs, () => statusFilter, (v) => { statusFilter = v; });
     else if (tab === 'contracts') paintContracts(host, unsubs, clients, canManage);
     else if (tab === 'receipts') paintReceipts(host, unsubs);
     else if (tab === 'expenses') paintExpenses(host, unsubs, clients, canManage);
@@ -219,6 +228,7 @@ async function renderBoard(container, ctx) {
 
   return () => {
     unmountAssistant();
+    destroyAllCharts();
     unsubs.forEach((fn) => { try { fn(); } catch {} });
   };
 }
