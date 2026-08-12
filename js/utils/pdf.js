@@ -14,7 +14,7 @@
  */
 
 import { esc } from './dom.js';
-import { formatDate, formatDateTime, formatDuration } from './format.js';
+import { formatDate, formatDateTime, formatDuration, formatMinor } from './format.js';
 import { toastError, toastInfo } from './toast.js';
 
 const A4 = { width: 794, height: 1123 }; // px @96dpi
@@ -179,6 +179,202 @@ export function buildReportSheet({ title, subtitle, periodLabel, employee = {}, 
           </table>
         </div>`).join('')}
       ${sheetFooter('تقرير آلي — البيانات مستخرجة من قاعدة بيانات النظام')}
+    </div>`;
+}
+
+/** Finance status pill → the four tones `doc-status` supports. */
+const TONE_CLASS = { success: 'approved', danger: 'rejected', warning: 'pending', neutral: 'neutral' };
+const toneClass = (tone) => TONE_CLASS[tone] || 'neutral';
+
+/** Invoice — items, totals, and the balance still owed. */
+export function buildInvoiceSheet(invoice, { statusLabel, statusTone } = {}) {
+  const balance = invoice.balance ?? (invoice.total - (invoice.paid || 0));
+  return `
+    <div class="doc-sheet">
+      ${sheetHeader('فاتورة', invoice.clientName, invoice.invoiceNo)}
+
+      <div class="doc-section">
+        <div class="doc-grid">
+          ${row('العميل', invoice.clientName)}
+          ${row('تاريخ الإصدار', formatDate(invoice.issueDate))}
+          ${row('تاريخ الاستحقاق', invoice.dueDate ? formatDate(invoice.dueDate) : '—')}
+        </div>
+        ${statusLabel ? `<span class="doc-status doc-status--${toneClass(statusTone)}" style="margin-top:10px;display:inline-block">${esc(statusLabel)}</span>` : ''}
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-section__title">البنود</div>
+        <table class="doc-table">
+          <thead><tr><th>الوصف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
+          <tbody>${(invoice.items || []).map((it) => `
+            <tr>
+              <td>${esc(it.description)}</td>
+              <td>${esc(String(it.quantity))}</td>
+              <td>${esc(formatMinor(it.unitPrice))}</td>
+              <td>${esc(formatMinor(it.total))}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-grid">
+          ${row('المجموع الفرعي', formatMinor(invoice.subtotal))}
+          ${invoice.discount ? row('الخصم', `− ${formatMinor(invoice.discount)}`) : ''}
+          ${invoice.tax ? row(`الضريبة (${invoice.taxRate}%)`, formatMinor(invoice.tax)) : ''}
+          ${row('الإجمالي', formatMinor(invoice.total))}
+          ${row('المحصّل', formatMinor(invoice.paid || 0))}
+          ${row('المتبقي', formatMinor(balance))}
+        </div>
+      </div>
+
+      ${invoice.notes ? `
+      <div class="doc-section">
+        <div class="doc-section__title">ملاحظات</div>
+        <div class="doc-box">${esc(invoice.notes)}</div>
+      </div>` : ''}
+
+      <div class="doc-signatures">
+        <div class="doc-sign"><div class="doc-sign__line"></div><div class="doc-sign__label">توقيع الوكالة</div></div>
+        <div class="doc-sign"><div class="doc-sign__line"></div><div class="doc-sign__label">توقيع العميل</div></div>
+      </div>
+      ${sheetFooter()}
+    </div>`;
+}
+
+/** Service contract — value, cycle, term and the services it covers. */
+export function buildContractSheet(contract, { billingCycleLabel } = {}) {
+  return `
+    <div class="doc-sheet">
+      ${sheetHeader('عقد خدمات', contract.clientName, contract.contractNo)}
+
+      <div class="doc-section">
+        <div class="doc-grid">
+          ${row('العميل', contract.clientName)}
+          ${row('اسم الباقة', contract.title)}
+          ${row('قيمة الباقة', formatMinor(contract.value))}
+          ${row('دورة الدفع', billingCycleLabel || contract.billingCycle)}
+          ${row('تاريخ البداية', formatDate(contract.startDate))}
+          ${row('تاريخ النهاية', formatDate(contract.endDate))}
+        </div>
+      </div>
+
+      ${contract.services?.length ? `
+      <div class="doc-section">
+        <div class="doc-section__title">الخدمات المشمولة</div>
+        <div class="doc-box">${esc(contract.services.join('، '))}</div>
+      </div>` : ''}
+
+      ${contract.notes ? `
+      <div class="doc-section">
+        <div class="doc-section__title">ملاحظات</div>
+        <div class="doc-box">${esc(contract.notes)}</div>
+      </div>` : ''}
+
+      <div class="doc-signatures">
+        <div class="doc-sign"><div class="doc-sign__line"></div><div class="doc-sign__label">توقيع الوكالة</div></div>
+        <div class="doc-sign"><div class="doc-sign__line"></div><div class="doc-sign__label">توقيع العميل</div></div>
+      </div>
+      ${sheetFooter()}
+    </div>`;
+}
+
+/** Expense record — what for, how much, and its approval state. */
+export function buildExpenseSheet(expense, { categoryLabel, statusLabel, statusTone } = {}) {
+  return `
+    <div class="doc-sheet">
+      ${sheetHeader('سند صرف / مصروف', expense.description, expense.expenseNo)}
+
+      <div class="doc-section">
+        <div class="doc-grid">
+          ${row('الوصف', expense.description)}
+          ${row('المبلغ', formatMinor(expense.amount))}
+          ${row('التصنيف', categoryLabel || expense.category)}
+          ${row('التاريخ', formatDate(expense.spentAt))}
+          ${row('الجهة / المورد', expense.vendor)}
+          ${row('العميل المرتبط', expense.clientName || 'مصروف عام')}
+        </div>
+        ${statusLabel ? `<span class="doc-status doc-status--${toneClass(statusTone)}" style="margin-top:10px;display:inline-block">${esc(statusLabel)}</span>` : ''}
+      </div>
+
+      ${expense.notes ? `
+      <div class="doc-section">
+        <div class="doc-section__title">ملاحظات</div>
+        <div class="doc-box">${esc(expense.notes)}</div>
+      </div>` : ''}
+
+      <div class="doc-signatures">
+        <div class="doc-sign"><div class="doc-sign__line"></div><div class="doc-sign__label">اعتماد المحاسب</div></div>
+        <div class="doc-sign"><div class="doc-sign__line"></div><div class="doc-sign__label">اعتماد الإدارة</div></div>
+      </div>
+      ${sheetFooter()}
+    </div>`;
+}
+
+/** Receipt voucher — proof a payment against an invoice was collected. */
+export function buildReceiptSheet(payment, { methodLabel } = {}) {
+  return `
+    <div class="doc-sheet">
+      ${sheetHeader('سند قبض', payment.clientName, payment.receiptNo)}
+
+      <div class="doc-section">
+        <div class="doc-grid">
+          ${row('العميل', payment.clientName)}
+          ${row('الفاتورة', payment.invoiceNo)}
+          ${row('المبلغ المستلم', formatMinor(payment.amount))}
+          ${row('طريقة الدفع', methodLabel || payment.method)}
+          ${row('تاريخ الاستلام', formatDate(payment.paidAt))}
+          ${row('المرجع', payment.reference, true)}
+        </div>
+        ${payment.voided ? '<span class="doc-status doc-status--rejected" style="margin-top:10px;display:inline-block">سند ملغى</span>' : ''}
+      </div>
+
+      ${payment.notes ? `
+      <div class="doc-section">
+        <div class="doc-section__title">ملاحظات</div>
+        <div class="doc-box">${esc(payment.notes)}</div>
+      </div>` : ''}
+
+      <div class="doc-signatures">
+        <div class="doc-sign"><div class="doc-sign__line"></div><div class="doc-sign__label">استلم المبلغ</div></div>
+        <div class="doc-sign"><div class="doc-sign__line"></div><div class="doc-sign__label">دفع المبلغ (العميل)</div></div>
+      </div>
+      ${sheetFooter()}
+    </div>`;
+}
+
+/** Ad budget statement — received / spent / remaining for one client & month. */
+export function buildAdBudgetSheet(budget, { platformLabel } = {}) {
+  const remaining = (budget.received || 0) - (budget.spent || 0);
+  return `
+    <div class="doc-sheet">
+      ${sheetHeader('كشف ميزانية إعلانات', budget.clientName, budget.period)}
+
+      <div class="doc-section">
+        <div class="doc-grid">
+          ${row('العميل', budget.clientName)}
+          ${row('المنصة', platformLabel || budget.platform)}
+          ${row('الشهر', budget.period)}
+          ${row('المستلم من العميل', formatMinor(budget.received))}
+          ${row('المصروف على الإعلانات', formatMinor(budget.spent || 0))}
+          ${row('المتبقي', formatMinor(remaining))}
+        </div>
+      </div>
+
+      <div class="doc-section">
+        <div class="doc-box">
+          هذا المبلغ أموال العميل تمرّ عبر الوكالة لتغطية تكاليف الإعلانات على المنصة أعلاه،
+          ولا تُحتسب ضمن إيرادات الوكالة أو أرباحها.
+        </div>
+      </div>
+
+      ${budget.notes ? `
+      <div class="doc-section">
+        <div class="doc-section__title">ملاحظات</div>
+        <div class="doc-box">${esc(budget.notes)}</div>
+      </div>` : ''}
+
+      ${sheetFooter()}
     </div>`;
 }
 

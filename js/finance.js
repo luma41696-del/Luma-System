@@ -26,6 +26,10 @@ import {
 import { sanitizeText } from './utils/sanitize.js';
 import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 import { initAssistant, toggleAssistant, assistantAvailable } from './ai-assistant.js';
+import {
+  buildInvoiceSheet, buildContractSheet, buildExpenseSheet, buildReceiptSheet, buildAdBudgetSheet,
+  downloadPdf, printSheet
+} from './utils/pdf.js';
 import { paintOverview, paintReports } from './finance-reports.js';
 import { paintTreasury } from './finance-treasury.js';
 import { paintPayroll } from './finance-payroll.js';
@@ -323,6 +327,10 @@ function paintContracts(host, unsubs, clients, canManage) {
   host.innerHTML = `<div id="con-list" class="mt-4">
     ${'<div class="skeleton skeleton--row"></div>'.repeat(3)}</div>`;
 
+  const contractSheet = (c) => buildContractSheet(c, {
+    billingCycleLabel: BILLING_CYCLES[c.billingCycle] || c.billingCycle
+  });
+
   unsubs.push(onSnapshot(
     query(col('contracts'), orderBy('startDate', 'desc'), limit(200)),
     (snap) => {
@@ -365,13 +373,17 @@ function paintContracts(host, unsubs, clients, canManage) {
             ${c.services?.length ? `<div class="tag-list mt-3">
               ${c.services.slice(0, 6).map((s) => `<span class="badge">${esc(s)}</span>`).join('')}
             </div>` : ''}
-            ${canManage ? `
-              <div class="flex gap-2 mt-3">
+            <div class="flex gap-2 mt-3">
+              <button class="btn btn--ghost btn--icon btn--sm" data-print-contract="${attr(c.id)}" title="طباعة">
+                <i data-lucide="printer"></i></button>
+              <button class="btn btn--ghost btn--icon btn--sm" data-pdf-contract="${attr(c.id)}" title="تصدير PDF">
+                <i data-lucide="file-down"></i></button>
+              ${canManage ? `
                 <button class="btn btn--secondary btn--sm flex-1" data-edit-contract="${attr(c.id)}">
                   <i data-lucide="pencil"></i> تعديل</button>
                 <button class="btn btn--primary btn--sm flex-1" data-bill-contract="${attr(c.id)}">
-                  <i data-lucide="receipt"></i> إصدار فاتورة</button>
-              </div>` : ''}
+                  <i data-lucide="receipt"></i> إصدار فاتورة</button>` : ''}
+            </div>
           </div>`;
       }).join('')}</div>`;
 
@@ -384,6 +396,18 @@ function paintContracts(host, unsubs, clients, canManage) {
       on(list, 'click', '[data-bill-contract]', (e, node) => {
         const contract = rows.find((r) => r.id === node.dataset.billContract);
         if (contract) openInvoiceModal(clients, contract);
+      });
+      on(list, 'click', '[data-print-contract]', (e, node) => {
+        const contract = rows.find((r) => r.id === node.dataset.printContract);
+        if (contract) printSheet(contractSheet(contract));
+      });
+      on(list, 'click', '[data-pdf-contract]', async (e, node) => {
+        const contract = rows.find((r) => r.id === node.dataset.pdfContract);
+        if (!contract) return;
+        setBusy(node, true);
+        try {
+          await downloadPdf(contractSheet(contract), `luma-contract-${contract.contractNo || contract.id.slice(0, 6)}`);
+        } finally { setBusy(node, false); }
       });
     },
     (err) => mount($('#con-list'), readError(err, 'العقود'))
@@ -416,11 +440,10 @@ function paintReceipts(host, unsubs) {
           <table class="table">
             <thead><tr>
               <th>رقم السند</th><th>الفاتورة</th><th>العميل</th>
-              <th>التاريخ</th><th>الطريقة</th><th>المبلغ</th>
+              <th>التاريخ</th><th>الطريقة</th><th>المبلغ</th><th></th>
             </tr></thead>
             <tbody>${rows.map((p) => `
-              <tr class="${p.voided ? 'is-muted' : ''}"
-                  onclick="location.hash='#/finance/${attr(p.invoiceId)}'" style="cursor:pointer">
+              <tr class="${p.voided ? 'is-muted' : ''}" data-receipt-row="${attr(p.invoiceId)}" style="cursor:pointer">
                 <td class="is-strong ltr">${esc(p.receiptNo || '—')}
                   ${p.voided ? '<span class="badge badge--danger">ملغى</span>' : ''}</td>
                 <td class="ltr">${esc(p.invoiceNo || '—')}</td>
@@ -429,10 +452,41 @@ function paintReceipts(host, unsubs) {
                 <td>${esc(PAYMENT_METHODS[p.method] || p.method)}</td>
                 <td class="num fw-700" style="${p.voided ? 'text-decoration:line-through' : ''}">
                   ${esc(formatMinor(p.amount))}</td>
+                <td>
+                  <div class="flex gap-1">
+                    <button class="btn btn--ghost btn--icon btn--sm" data-print-receipt="${attr(p.id)}" title="طباعة">
+                      <i data-lucide="printer"></i></button>
+                    <button class="btn btn--ghost btn--icon btn--sm" data-pdf-receipt="${attr(p.id)}" title="تصدير PDF">
+                      <i data-lucide="file-down"></i></button>
+                  </div>
+                </td>
               </tr>`).join('')}
             </tbody>
           </table>
         </div>`;
+
+      refreshIcons(list);
+
+      const receiptSheet = (p) => buildReceiptSheet(p, { methodLabel: PAYMENT_METHODS[p.method] || p.method });
+
+      on(list, 'click', '[data-receipt-row]', (e, node) => {
+        if (e.target.closest('button')) return;
+        location.hash = `#/finance/${node.dataset.receiptRow}`;
+      });
+      on(list, 'click', '[data-print-receipt]', (e, node) => {
+        e.stopPropagation();
+        const payment = rows.find((r) => r.id === node.dataset.printReceipt);
+        if (payment) printSheet(receiptSheet(payment));
+      });
+      on(list, 'click', '[data-pdf-receipt]', async (e, node) => {
+        e.stopPropagation();
+        const payment = rows.find((r) => r.id === node.dataset.pdfReceipt);
+        if (!payment) return;
+        setBusy(node, true);
+        try {
+          await downloadPdf(receiptSheet(payment), `luma-receipt-${payment.receiptNo || payment.id.slice(0, 6)}`);
+        } finally { setBusy(node, false); }
+      });
     },
     (err) => mount($('#rec-list'), readError(err, 'سندات القبض'))
   ));
@@ -473,7 +527,7 @@ function paintExpenses(host, unsubs, clients, canManage) {
           <table class="table">
             <thead><tr>
               <th>الرقم</th><th>الوصف</th><th>التصنيف</th><th>العميل</th>
-              <th>التاريخ</th><th>المبلغ</th><th>الحالة</th>${canApprove ? '<th></th>' : ''}
+              <th>التاريخ</th><th>المبلغ</th><th>الحالة</th><th></th>${canApprove ? '<th></th>' : ''}
             </tr></thead>
             <tbody>${rows.map((e) => `
               <tr>
@@ -485,6 +539,14 @@ function paintExpenses(host, unsubs, clients, canManage) {
                 <td class="num fw-700">${esc(formatMinor(e.amount))}</td>
                 <td><span class="badge badge--${attr(EXPENSE_STATUS[e.status]?.badge || '')}">
                   ${esc(EXPENSE_STATUS[e.status]?.ar || e.status)}</span></td>
+                <td>
+                  <div class="flex gap-1">
+                    <button class="btn btn--ghost btn--icon btn--sm" data-print-expense="${attr(e.id)}" title="طباعة">
+                      <i data-lucide="printer"></i></button>
+                    <button class="btn btn--ghost btn--icon btn--sm" data-pdf-expense="${attr(e.id)}" title="تصدير PDF">
+                      <i data-lucide="file-down"></i></button>
+                  </div>
+                </td>
                 ${canApprove ? `<td>${e.status === 'pending' ? `
                   <div class="flex gap-1">
                     <button class="btn btn--success btn--sm" data-approve="${attr(e.id)}">اعتماد</button>
@@ -505,6 +567,24 @@ function paintExpenses(host, unsubs, clients, canManage) {
       };
       on(list, 'click', '[data-approve]', (e, node) => decide(node.dataset.approve, 'approved'));
       on(list, 'click', '[data-reject]', (e, node) => decide(node.dataset.reject, 'rejected'));
+
+      const expenseSheet = (exp) => buildExpenseSheet(exp, {
+        categoryLabel: EXPENSE_CATEGORIES[exp.category] || exp.category,
+        statusLabel: EXPENSE_STATUS[exp.status]?.ar || exp.status,
+        statusTone: EXPENSE_STATUS[exp.status]?.badge || 'neutral'
+      });
+      on(list, 'click', '[data-print-expense]', (e, node) => {
+        const expense = rows.find((r) => r.id === node.dataset.printExpense);
+        if (expense) printSheet(expenseSheet(expense));
+      });
+      on(list, 'click', '[data-pdf-expense]', async (e, node) => {
+        const expense = rows.find((r) => r.id === node.dataset.pdfExpense);
+        if (!expense) return;
+        setBusy(node, true);
+        try {
+          await downloadPdf(expenseSheet(expense), `luma-expense-${expense.expenseNo || expense.id.slice(0, 6)}`);
+        } finally { setBusy(node, false); }
+      });
     },
     (err) => mount($('#exp-list'), readError(err, 'المصاريف'))
   ));
@@ -647,9 +727,15 @@ function paintAdBudgets(host, unsubs, clients, canManage) {
                 <span class="kv__v num">${esc(formatMinor(b.spent || 0))}</span></div>
               <div class="kv"><span class="kv__k fw-700">المتبقي</span>
                 <span class="kv__v num fw-700">${esc(formatMinor(remaining))}</span></div>
-              ${canManage && remaining > 0 ? `
-                <button class="btn btn--secondary btn--block btn--sm mt-3" data-spend="${attr(b.id)}">
-                  <i data-lucide="minus-circle"></i> تسجيل صرف</button>` : ''}
+              <div class="flex gap-2 mt-3">
+                <button class="btn btn--ghost btn--icon btn--sm" data-print-budget="${attr(b.id)}" title="طباعة">
+                  <i data-lucide="printer"></i></button>
+                <button class="btn btn--ghost btn--icon btn--sm" data-pdf-budget="${attr(b.id)}" title="تصدير PDF">
+                  <i data-lucide="file-down"></i></button>
+                ${canManage && remaining > 0 ? `
+                  <button class="btn btn--secondary btn--sm flex-1" data-spend="${attr(b.id)}">
+                    <i data-lucide="minus-circle"></i> تسجيل صرف</button>` : ''}
+              </div>
             </div>`;
         }).join('')}</div>`;
 
@@ -657,6 +743,20 @@ function paintAdBudgets(host, unsubs, clients, canManage) {
       on(list, 'click', '[data-spend]', (e, node) => {
         const budget = rows.find((r) => r.id === node.dataset.spend);
         if (budget) openAdSpendModal(budget);
+      });
+
+      const budgetSheet = (b) => buildAdBudgetSheet(b, { platformLabel: AD_PLATFORMS[b.platform] || b.platform });
+      on(list, 'click', '[data-print-budget]', (e, node) => {
+        const budget = rows.find((r) => r.id === node.dataset.printBudget);
+        if (budget) printSheet(budgetSheet(budget));
+      });
+      on(list, 'click', '[data-pdf-budget]', async (e, node) => {
+        const budget = rows.find((r) => r.id === node.dataset.pdfBudget);
+        if (!budget) return;
+        setBusy(node, true);
+        try {
+          await downloadPdf(budgetSheet(budget), `luma-ad-budget-${budget.id}`);
+        } finally { setBusy(node, false); }
       });
     },
     (err) => mount($('#ad-list'), readError(err, 'ميزانيات الإعلانات'))
@@ -808,6 +908,7 @@ async function renderInvoice(container, invoiceId) {
         <div class="page-head__actions">
           <a class="btn btn--ghost" href="#/finance"><i data-lucide="arrow-right"></i> رجوع</a>
           <button class="btn btn--secondary" id="print-invoice"><i data-lucide="printer"></i> طباعة</button>
+          <button class="btn btn--secondary" id="pdf-invoice"><i data-lucide="file-down"></i> تصدير PDF</button>
           ${canManage && balance > 0 && inv.status !== 'cancelled'
             ? '<button class="btn btn--primary" id="add-payment"><i data-lucide="hand-coins"></i> تسجيل دفعة</button>' : ''}
           ${canVoid && (inv.paid || 0) === 0 && inv.status !== 'cancelled'
@@ -860,7 +961,18 @@ async function renderInvoice(container, invoiceId) {
 
     refreshIcons(root);
 
-    $('#print-invoice')?.addEventListener('click', () => window.print());
+    const invoiceSheet = () => buildInvoiceSheet(inv, {
+      statusLabel: meta.ar || inv.status,
+      statusTone: meta.badge || 'neutral'
+    });
+    $('#print-invoice')?.addEventListener('click', () => printSheet(invoiceSheet()));
+    $('#pdf-invoice')?.addEventListener('click', async () => {
+      const button = $('#pdf-invoice');
+      setBusy(button, true);
+      try {
+        await downloadPdf(invoiceSheet(), `luma-invoice-${inv.invoiceNo || inv.id.slice(0, 6)}`);
+      } finally { setBusy(button, false); }
+    });
     $('#add-payment')?.addEventListener('click', () => openPaymentModal(inv));
     $('#cancel-invoice')?.addEventListener('click', () => cancelInvoice(inv));
   }
