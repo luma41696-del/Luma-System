@@ -53,7 +53,6 @@ function sheetHeader(docTitle, subtitle, number) {
         <div>
           <div class="doc-sheet__brand-name">LUMA</div>
           <div class="doc-sheet__brand-word">AGENCY</div>
-          <div class="doc-sheet__brand-sub">وكالة لوما</div>
         </div>
       </div>
       <div class="doc-sheet__meta">
