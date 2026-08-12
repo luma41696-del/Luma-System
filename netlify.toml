@@ -17,6 +17,14 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # Netlify's secret scanner flags the Firebase Web SDK config's `apiKey`
+  # (js/firebase-config.js, firebase-messaging-sw.js) because it matches
+  # Google's API-key format. It is not a secret — Firebase Web config
+  # identifies the project, the same way a URL does, and is designed to ship
+  # in client code; access is enforced server-side by Firestore Security
+  # Rules and App Check, not by hiding this value. Scope the scanner past it
+  # rather than disabling it, so a real accidental leak still gets caught.
+  SECRETS_SCAN_OMIT_PATHS = "js/firebase-config.js,firebase-messaging-sw.js"
 
 # The adapter in netlify/functions/api.js requires the handlers from functions/,
 # so that tree must be bundled with it.
