@@ -20,6 +20,7 @@ import { checkPassword } from './utils/sanitize.js';
 import { FCM_VAPID_KEY, APP_CHECK_SITE_KEY, TIMEZONE } from './firebase-config.js';
 import { t, getLang, setLang } from './utils/i18n.js';
 import { notifyPermission, requestNotifyPermission, permissionLabel } from './utils/browser-notify.js';
+import { THEMES, THEME_META, getTheme, setTheme } from './utils/theme.js';
 
 const TABS = [
   { id: 'general',       labelKey: 'settings.tab.general',       icon: 'sliders-horizontal' },
@@ -83,16 +84,25 @@ export async function render(container, ctx) {
 /* ---------------------------------------------------------------- general */
 
 function generalTab(host) {
-  const theme = document.documentElement.dataset.theme || 'dark';
+  const theme = getTheme();
   host.innerHTML = `
     <div class="grid grid-2 mt-4">
       <div class="card">
         <div class="card__head"><div class="card__title"><i data-lucide="palette"></i> ${esc(t('settings.appearance.title'))}</div></div>
-        <label class="switch mb-4">
-          <input type="checkbox" id="s-theme" ${theme === 'light' ? 'checked' : ''}>
-          <span class="switch__track"></span>
-          <span>${esc(t('settings.appearance.lightMode'))}</span>
-        </label>
+        <div class="theme-picker mb-4" id="theme-picker">
+          ${THEMES.map((key) => `
+            <button type="button" class="theme-swatch theme-swatch--${key}${key === theme ? ' is-active' : ''}"
+                    data-theme-choice="${key}">
+              <span class="theme-swatch__preview" aria-hidden="true">
+                <span class="theme-swatch__dot"></span>
+              </span>
+              <span class="theme-swatch__text">
+                <span class="theme-swatch__label">${esc(t(THEME_META[key].labelKey))}</span>
+                <span class="theme-swatch__hint">${esc(t(THEME_META[key].hintKey))}</span>
+              </span>
+              <i data-lucide="check" class="theme-swatch__check"></i>
+            </button>`).join('')}
+        </div>
         <label class="switch">
           <input type="checkbox" id="s-collapsed"
             ${localStorage.getItem('luma.sidebarCollapsed') === '1' ? 'checked' : ''}>
@@ -146,11 +156,12 @@ function generalTab(host) {
       </div>
     </div>`;
 
-  $('#s-theme').addEventListener('change', (e) => {
-    const next = e.target.checked ? 'light' : 'dark';
-    document.documentElement.dataset.theme = next;
-    try { localStorage.setItem('luma.theme', next); } catch {}
-    window.dispatchEvent(new CustomEvent('luma:theme', { detail: next }));
+  $('#theme-picker').addEventListener('click', (e) => {
+    const button = e.target.closest('[data-theme-choice]');
+    if (!button) return;
+    setTheme(button.dataset.themeChoice);
+    $$('.theme-swatch', host).forEach((swatch) =>
+      swatch.classList.toggle('is-active', swatch === button));
   });
 
   $('#s-collapsed').addEventListener('change', (e) => {

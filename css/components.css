@@ -11,6 +11,12 @@
   box-shadow: var(--shadow-xs);
 }
 .card--flat { box-shadow: none; }
+/* Frosted glass over the starfield instead of a flat panel. */
+[data-theme="space"] .card {
+  background: rgba(10, 39, 64, 0.55);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
 .card--pad-sm { padding: var(--sp-4); }
 .card--pad-0 { padding: 0; overflow: hidden; }
 .card__head {
@@ -291,6 +297,62 @@ html[dir="ltr"] .select { background-position: right var(--sp-3) center; padding
 .switch input:checked + .switch__track::after { transform: translateX(-18px); }
 html[dir="ltr"] .switch input:checked + .switch__track::after { transform: translateX(18px); }
 .switch input:focus-visible + .switch__track { box-shadow: var(--shadow-focus); }
+
+/* ----------------------------------------------------------- theme picker */
+.theme-picker { display: flex; flex-direction: column; gap: var(--sp-2); }
+.theme-swatch {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  padding: var(--sp-3);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-inset);
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+.theme-swatch:hover { background: var(--bg-hover); }
+.theme-swatch.is-active { border-color: var(--brand); background: var(--brand-soft); }
+
+/* Fixed, literal colours — these previews must look right regardless of
+   which theme is currently active, so they cannot use the theme's own vars. */
+.theme-swatch__preview {
+  position: relative;
+  width: 44px; height: 44px;
+  border-radius: var(--radius-sm);
+  flex: none;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.12);
+}
+.theme-swatch--dark .theme-swatch__preview { background: linear-gradient(135deg, #16324f 0%, #071A2F 100%); }
+.theme-swatch--light .theme-swatch__preview { background: linear-gradient(135deg, #FFFFFF 0%, #EEF1F6 100%); }
+.theme-swatch--space .theme-swatch__preview {
+  background:
+    radial-gradient(10px 10px at 75% 15%, rgba(232, 185, 92, .5), transparent),
+    radial-gradient(1px 1px at 20% 30%, #fff, transparent),
+    radial-gradient(1px 1px at 60% 60%, #fff, transparent),
+    radial-gradient(1px 1px at 35% 75%, #fff, transparent),
+    linear-gradient(135deg, #0a2740 0%, #020e1a 100%);
+}
+.theme-swatch__dot {
+  position: absolute;
+  inset-inline-end: 5px;
+  bottom: 5px;
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.15);
+}
+.theme-swatch--dark .theme-swatch__dot { background: #4070C8; }
+.theme-swatch--light .theme-swatch__dot { background: #4070C8; }
+.theme-swatch--space .theme-swatch__dot { background: #e8b95c; }
+
+.theme-swatch__text { flex: 1; min-width: 0; }
+.theme-swatch__label { display: block; font-weight: 700; font-size: var(--fs-sm); color: var(--text-primary); }
+.theme-swatch__hint { display: block; font-size: var(--fs-xs); color: var(--text-muted); margin-top: 2px; }
+.theme-swatch__check { flex: none; color: var(--brand); opacity: 0; width: 18px; height: 18px; }
+.theme-swatch.is-active .theme-swatch__check { opacity: 1; }
 
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-4); }
 .form-grid .field--full { grid-column: 1 / -1; }

@@ -24,6 +24,19 @@
 }
 [data-theme="light"] .sidebar { background: var(--bg-surface); }
 
+/* A faint star dusting keeps the nav readable while still feeling part of
+   the cosmic canvas — the full nebula glow is reserved for the content side. */
+[data-theme="space"] .sidebar {
+  background-color: var(--bg-canvas);
+  background-image:
+    radial-gradient(1px 1px at 15% 22%, rgba(245, 247, 250, .55) 50%, transparent 52%),
+    radial-gradient(1px 1px at 72% 68%, rgba(245, 247, 250, .4) 50%, transparent 52%),
+    radial-gradient(1.4px 1.4px at 42% 88%, rgba(245, 247, 250, .5) 50%, transparent 52%),
+    radial-gradient(1px 1px at 88% 40%, rgba(245, 247, 250, .35) 50%, transparent 52%);
+  background-repeat: repeat;
+  background-size: 180px 180px, 220px 220px, 260px 260px, 200px 200px;
+}
+
 .sidebar__brand {
   display: flex;
   align-items: center;
@@ -239,6 +252,30 @@
   min-height: 0;
   background: var(--bg-app);
 }
+
+/* Nebula glow + a tiled star field, fixed to the viewport so the sticky
+   topbar below shares the exact same backdrop with no visible seam. */
+[data-theme="space"] .main,
+[data-theme="space"] .topbar {
+  background-color: var(--bg-app);
+  background-image:
+    radial-gradient(1px 1px at 10% 18%, rgba(245, 247, 250, .9) 50%, transparent 52%),
+    radial-gradient(1px 1px at 70% 62%, rgba(245, 247, 250, .7) 50%, transparent 52%),
+    radial-gradient(1.5px 1.5px at 40% 84%, rgba(245, 247, 250, .8) 50%, transparent 52%),
+    radial-gradient(1px 1px at 85% 12%, rgba(245, 247, 250, .6) 50%, transparent 52%),
+    radial-gradient(1.5px 1.5px at 25% 45%, rgba(245, 247, 250, .85) 50%, transparent 52%),
+    radial-gradient(1px 1px at 55% 8%, rgba(245, 247, 250, .6) 50%, transparent 52%),
+    radial-gradient(1px 1px at 92% 78%, rgba(245, 247, 250, .5) 50%, transparent 52%),
+    radial-gradient(960px 720px at 82% -8%, rgba(232, 185, 92, .12), transparent 62%),
+    radial-gradient(1120px 880px at 8% 12%, rgba(22, 73, 110, .38), transparent 60%),
+    radial-gradient(1440px 1120px at 50% 110%, rgba(10, 39, 64, .6), transparent 68%);
+  background-repeat: repeat, repeat, repeat, repeat, repeat, repeat, repeat, no-repeat, no-repeat, no-repeat;
+  background-size:
+    180px 180px, 220px 220px, 260px 260px, 200px 200px, 240px 240px, 300px 300px, 340px 340px,
+    auto, auto, auto;
+  background-attachment: fixed;
+}
+[data-theme="space"] .topbar { border-bottom-color: var(--border-soft); }
 
 .topbar {
   display: flex;

@@ -23,6 +23,7 @@ import {
 } from './utils/api.js';
 import { t, applyStaticI18n } from './utils/i18n.js';
 import { showBrowserNotification } from './utils/browser-notify.js';
+import { THEME_META, getTheme, cycleTheme } from './utils/theme.js';
 
 /* -------------------------------------------------------------- elements */
 
@@ -158,18 +159,18 @@ function wireChrome() {
   /* theme ---------------------------------------------------------------- */
   const themeButton = $('#theme-toggle');
   const syncThemeIcon = () => {
-    const isLight = document.documentElement.dataset.theme === 'light';
-    themeButton.innerHTML = `<i data-lucide="${isLight ? 'sun' : 'moon'}"></i>`;
-    themeButton.classList.toggle('is-on', isLight);
+    const theme = getTheme();
+    const meta = THEME_META[theme];
+    themeButton.innerHTML = `<i data-lucide="${meta.icon}"></i>`;
+    themeButton.classList.toggle('is-on', theme !== 'dark');
+    themeButton.title = t(meta.labelKey);
+    themeButton.setAttribute('aria-label', t(meta.labelKey));
     refreshIcons(themeButton);
   };
   syncThemeIcon();
   themeButton.addEventListener('click', () => {
-    const next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
-    document.documentElement.dataset.theme = next;
-    try { localStorage.setItem('luma.theme', next); } catch {}
+    cycleTheme();
     syncThemeIcon();
-    window.dispatchEvent(new CustomEvent('luma:theme', { detail: next }));
   });
 
   /* sidebar collapse ------------------------------------------------------ */
