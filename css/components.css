@@ -233,6 +233,37 @@ select option:disabled {
 }
 html[dir="ltr"] .select { background-position: right var(--sp-3) center; padding-inline-start: var(--sp-3); padding-inline-end: var(--sp-7); }
 
+/* ------------------------------------------------------------- client picker */
+/* A native <select> cannot render an <img> per option, so the client field is
+   a button that opens the shared .dropdown panel (see app.js `dropdown()`)
+   with each client's logo alongside its name. */
+.client-picker {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 42px;
+  padding: 6px var(--sp-3);
+  background: var(--bg-inset);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: var(--fs-md);
+  font-family: var(--font-base);
+  cursor: pointer;
+  text-align: start;
+  transition: border-color var(--t-fast) var(--ease);
+}
+[data-theme="light"] .client-picker { background: var(--bg-surface); }
+.client-picker:hover { border-color: var(--border-strong); }
+.client-picker:focus-visible { border-color: var(--brand); box-shadow: var(--shadow-focus); outline: none; }
+.client-picker__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.client-picker__placeholder { display: flex; align-items: center; gap: var(--sp-2); color: var(--text-muted); flex: 1; min-width: 0; }
+.client-picker__chevron { flex: none; color: var(--text-muted); width: 16px; height: 16px; }
+
+/* Client branding shown on a task card, next to its name. */
+.task-card__client-logo { width: 16px; height: 16px; border-radius: 4px; object-fit: cover; flex: none; }
+
 .input-group { position: relative; }
 .input-group .input { padding-inline-end: 44px; }
 .input-group__btn {

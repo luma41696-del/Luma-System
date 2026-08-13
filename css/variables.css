@@ -216,9 +216,12 @@
 
   --z-sticky: 100;
   --z-sidebar: 200;
-  --z-dropdown: 400;
   --z-overlay: 600;
   --z-modal: 700;
+  /* Above --z-modal: a dropdown (app.js `dropdown()`) can be opened from a
+     control that lives inside a modal — e.g. the task form's client picker —
+     and must render above it, not sealed behind it. */
+  --z-dropdown: 750;
   --z-toast: 900;
 
   color-scheme: dark;

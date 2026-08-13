@@ -28,6 +28,7 @@ import { sanitizeText, sanitizeMultiline, renderMessageBody } from './utils/sani
 import { uploadFile, pickFiles, paths, deleteFile } from './utils/upload.js';
 import { uploadsEnabled, UPLOADS_DISABLED_MSG } from './features.js';
 import { createPagedFeed, mountLoadMore } from './utils/paging.js';
+import { dropdown } from './app.js';
 
 const VIEW_KEY = 'luma.taskView';
 
@@ -66,6 +67,7 @@ async function renderBoard(container, ctx) {
       : Promise.resolve([])
   ]);
   const people = Object.fromEntries(directory.map((u) => [u.id, u]));
+  const clientsById = Object.fromEntries(clients.map((c) => [c.id, c]));
 
   container.innerHTML = `
     <div class="page__inner">
@@ -208,9 +210,9 @@ async function renderBoard(container, ctx) {
       return;
     }
 
-    if (view === 'board') renderKanban(host, filtered, people);
+    if (view === 'board') renderKanban(host, filtered, people, clientsById);
     else if (view === 'table') renderTable(host, filtered, people);
-    else renderList(host, filtered, people);
+    else renderList(host, filtered, people, clientsById);
 
     // The board scrolls sideways, so an intersection sentinel at the bottom
     // would never come into view — it gets an explicit button instead.
@@ -245,7 +247,7 @@ function statChip(icon, tone, value, label) {
  * together. `dayKey` is timezone-aware (Asia/Amman), so a day boundary is the
  * office's, not the device's.
  */
-function renderList(host, tasks, people) {
+function renderList(host, tasks, people, clientsById = {}) {
   const sorted = sortTasks(tasks);
   const today = dayKey();
   const yesterday = dayKey(Date.now() - 86_400_000);
@@ -275,7 +277,7 @@ function renderList(host, tasks, people) {
 
   // A single day needs no heading — there is nothing to separate it from.
   if (byDay.size <= 1) {
-    host.innerHTML = `<div class="grid grid-auto">${sorted.map((t) => taskCard(t, people)).join('')}</div>`;
+    host.innerHTML = `<div class="grid grid-auto">${sorted.map((t) => taskCard(t, people, clientsById)).join('')}</div>`;
   } else {
     host.innerHTML = days.map((key) => {
       const items = byDay.get(key);
@@ -287,7 +289,7 @@ function renderList(host, tasks, people) {
             <span class="task-group__title">${esc(label)}</span>
             <span class="task-group__count num">${items.length}</span>
           </header>
-          <div class="grid grid-auto">${items.map((t) => taskCard(t, people)).join('')}</div>
+          <div class="grid grid-auto">${items.map((t) => taskCard(t, people, clientsById)).join('')}</div>
         </section>`;
     }).join('');
   }
@@ -296,11 +298,12 @@ function renderList(host, tasks, people) {
   bindCards(host);
 }
 
-function taskCard(task, people) {
+function taskCard(task, people, clientsById = {}) {
   const status = TASK_STATUSES[task.status] || {};
   const overdue = isOverdue(task);
   const progress = progressOf(task);
   const assignees = (task.assignees || []).map((id) => people[id]).filter(Boolean);
+  const clientLogo = clientsById[task.clientId]?.logoURL;
 
   // Who actually worked on it — not the same as who it was handed to.
   const workers = (task.contributors || [])
@@ -313,7 +316,12 @@ function taskCard(task, people) {
       <div class="task-card__top">
         <div class="flex-1">
           <div class="task-card__title clamp-2">${esc(task.title)}</div>
-          ${task.clientName ? `<div class="fs-xs text-muted mt-2"><i data-lucide="briefcase" class="icon-sm"></i> ${esc(task.clientName)}</div>` : ''}
+          ${task.clientName ? `<div class="fs-xs text-muted mt-2 flex items-center gap-2">
+            ${clientLogo
+              ? `<img class="task-card__client-logo" src="${attr(clientLogo)}" alt="${attr(task.clientName)}" loading="lazy">`
+              : '<i data-lucide="briefcase" class="icon-sm"></i>'}
+            <span class="truncate">${esc(task.clientName)}</span>
+          </div>` : ''}
         </div>
         <span class="badge badge--${attr(overdue ? 'danger' : status.badge || '')}">
           ${esc(overdue ? 'متأخرة' : status.ar || '')}
@@ -359,7 +367,7 @@ function bindCards(host) {
 
 /* ------------------------------------------------------------ kanban view */
 
-function renderKanban(host, tasks, people) {
+function renderKanban(host, tasks, people, clientsById = {}) {
   const columns = BOARD_COLUMNS.map((status) => ({
     status,
     meta: TASK_STATUSES[status],
@@ -375,7 +383,7 @@ function renderKanban(host, tasks, people) {
         </span>
         <span class="kanban__count">${c.items.length}</span>
       </header>
-      <div class="kanban__list">${c.items.map((t) => taskCard(t, people)).join('')}</div>
+      <div class="kanban__list">${c.items.map((t) => taskCard(t, people, clientsById)).join('')}</div>
     </section>`).join('')}</div>`;
 
   refreshIcons(host);
@@ -1115,6 +1123,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
   ]);
 
   const selected = new Set(task?.assignees || (personal || !canAssign ? [session.uid] : []));
+  let selectedClientId = task?.clientId || clientId || '';
 
   const modal = openModal({
     title: isEdit ? 'تعديل المهمة' : (personal ? 'مهمة شخصية جديدة' : 'مهمة جديدة'),
@@ -1138,12 +1147,8 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
         <div class="form-grid">
           ${canAssign && clients.length ? `
           <div class="field">
-            <label class="field__label" for="t-client">العميل</label>
-            <select class="select" id="t-client">
-              <option value="">— بدون عميل —</option>
-              ${clients.map((c) => `<option value="${attr(c.id)}" ${
-                (task?.clientId || clientId) === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}
-            </select>
+            <label class="field__label">العميل</label>
+            <button type="button" class="client-picker" id="t-client-btn"></button>
           </div>` : ''}
 
           <div class="field">
@@ -1209,6 +1214,40 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
     onMount: (api) => {
       refreshIcons(api.root);
 
+      /* client picker — a native <select> cannot show a logo per option */
+      const clientBtn = api.$('#t-client-btn');
+      const paintClientButton = () => {
+        if (!clientBtn) return;
+        const client = clients.find((c) => c.id === selectedClientId);
+        clientBtn.innerHTML = client
+          ? `${avatarHTML({ name: client.name, photoURL: client.logoURL }, 'xs')}
+             <span class="client-picker__name">${esc(client.name)}</span>
+             <i data-lucide="chevron-down" class="client-picker__chevron"></i>`
+          : `<span class="client-picker__placeholder">
+               <i data-lucide="briefcase" class="icon-sm"></i> — بدون عميل —
+             </span>
+             <i data-lucide="chevron-down" class="client-picker__chevron"></i>`;
+        refreshIcons(clientBtn);
+      };
+      paintClientButton();
+      clientBtn?.addEventListener('click', () => {
+        const rows = [
+          `<button type="button" class="dropdown__item" data-act="__none__">
+             <i data-lucide="ban" class="icon-sm"></i> — بدون عميل —
+           </button>`,
+          ...clients.map((c) => `
+            <button type="button" class="dropdown__item" data-act="${attr(c.id)}">
+              ${avatarHTML({ name: c.name, photoURL: c.logoURL }, 'xs')}
+              <span class="truncate">${esc(c.name)}</span>
+            </button>`)
+        ].join('');
+        dropdown(clientBtn, rows, (act, close) => {
+          selectedClientId = act === '__none__' ? '' : act;
+          paintClientButton();
+          close();
+        });
+      });
+
       /* assignees */
       api.root.querySelectorAll('[data-uid]').forEach((chip) => {
         chip.addEventListener('click', () => {
@@ -1251,8 +1290,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
         const assignees = canAssign && !personal ? [...selected] : [session.uid];
         if (!assignees.length) { toastError('يجب اختيار مسؤول واحد على الأقل.'); return; }
 
-        const clientSelect = api.$('#t-client');
-        const clientOption = clientSelect?.selectedOptions?.[0];
+        const selectedClient = clients.find((c) => c.id === selectedClientId);
         const dueValue = api.$('#t-due').value;
         const startValue = api.$('#t-start').value;
 
@@ -1261,8 +1299,8 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
           titleLower: title.toLowerCase(),
           description: sanitizeMultiline(api.$('#t-desc').value, 4000),
           project: sanitizeText(api.$('#t-project').value, 120),
-          clientId: clientSelect?.value || null,
-          clientName: clientSelect?.value ? sanitizeText(clientOption.textContent, 140) : null,
+          clientId: selectedClient?.id || null,
+          clientName: selectedClient ? sanitizeText(selectedClient.name, 140) : null,
           priority: api.$('#t-priority').value,
           status: api.$('#t-status').value,
           assignees,
