@@ -192,11 +192,16 @@ async function renderEmployee(root, unsubs) {
     ].join('');
     refreshIcons($('#emp-stats'));
 
-    // Today's tasks
-    const todays = sortTasks(tasks.filter((t) => isDueToday(t) || (isOverdue(t) && t.status !== 'completed')));
+    // Today's tasks: due today, overdue, or simply open with no due date set
+    // at all — an undated task is still active work, and without this it fell
+    // into a blind spot (not "due today", not "upcoming" either) and silently
+    // never appeared on the dashboard despite showing fine in the full list.
+    const openNoDate = (t) => !t.dueAt && t.status !== 'completed' && t.status !== 'cancelled';
+    const todays = sortTasks(tasks.filter((t) =>
+      isDueToday(t) || (isOverdue(t) && t.status !== 'completed') || openNoDate(t)));
     $('#today-tasks-body').innerHTML = todays.length
       ? todays.slice(0, 6).map(taskRow).join('')
-      : emptyState({ icon: 'coffee', title: 'لا توجد مهام مستحقة اليوم', text: 'استغل الوقت في التخطيط أو ساعد زميلاً في مهمة.' });
+      : emptyState({ icon: 'coffee', title: 'لا توجد مهام لليوم', text: 'استغل الوقت في التخطيط أو ساعد زميلاً في مهمة.' });
     refreshIcons($('#today-tasks-body'));
 
     // Upcoming

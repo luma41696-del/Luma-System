@@ -16,7 +16,7 @@ import {
   getDirectory, addDoc, updateDoc, deleteDoc, setDoc, doc, ts, callFn, arrayUnion
 } from './utils/api.js';
 import {
-  TASK_STATUSES, PRIORITIES, BOARD_COLUMNS, summarize, sortTasks, filterTasks,
+  TASK_STATUSES, PRIORITIES, WORK_TYPES, BOARD_COLUMNS, summarize, sortTasks, filterTasks,
   isOverdue, progressOf, statusLabel, priorityLabel, myTasksQuery, allTasksQuery,
   watchTasks
 } from './utils/task-model.js';
@@ -652,6 +652,8 @@ async function renderDetail(container, taskId) {
 async function paintDetail(root, task, unsubs) {
   const assignees = await getUsers(task.assignees || []);
   const creator = await getUsers([task.createdBy]).then((r) => r[0]);
+  // Best-effort: a viewer without clients.view simply sees the name with no logo.
+  const client = task.clientId ? await getOne('clients', task.clientId).catch(() => null) : null;
   const status = TASK_STATUSES[task.status] || {};
   const overdue = isOverdue(task);
   const progress = progressOf(task);
@@ -731,7 +733,10 @@ async function paintDetail(root, task, unsubs) {
           <div class="kv"><span class="kv__k">التقدم</span><span class="kv__v num">${progress}%</span></div>
           <div class="progress mb-3"><div class="progress__bar${progress === 100 ? ' progress__bar--success' : ''}" style="width:${progress}%"></div></div>
           <div class="kv"><span class="kv__k">العميل</span><span class="kv__v">
-            ${task.clientId ? `<a href="#/clients/${attr(task.clientId)}">${esc(task.clientName || '—')}</a>` : '—'}
+            ${task.clientId ? `<a href="#/clients/${attr(task.clientId)}" class="flex items-center gap-2" style="display:inline-flex">
+              ${avatarHTML({ name: task.clientName, photoURL: client?.logoURL }, 'xs')}
+              ${esc(task.clientName || '—')}
+            </a>` : '—'}
           </span></div>
           <div class="kv"><span class="kv__k">المشروع</span><span class="kv__v">${esc(task.project || '—')}</span></div>
           <div class="kv"><span class="kv__k">تاريخ البدء</span><span class="kv__v">${esc(task.startedAt ? formatDate(task.startedAt) : '—')}</span></div>
@@ -740,6 +745,11 @@ async function paintDetail(root, task, unsubs) {
               ${task.dueAt ? esc(formatDateTime(task.dueAt)) : '—'}</span></div>
           <div class="kv"><span class="kv__k">تاريخ الإنجاز</span><span class="kv__v">${esc(task.completedAt ? formatDateTime(task.completedAt) : '—')}</span></div>
           <div class="kv"><span class="kv__k">الوقت المستغرق</span><span class="kv__v num">${esc(formatDuration(task.timeSpentMs || 0))}</span></div>
+          ${task.workType === 'design' ? `
+          <div class="kv"><span class="kv__k">عدد الصور المصممة</span><span class="kv__v num">${task.imageCount ?? 0}</span></div>` : ''}
+          ${task.workType === 'video' ? `
+          <div class="kv"><span class="kv__k">عدد الفيديوهات</span><span class="kv__v num">${task.videoCount ?? 0}</span></div>
+          <div class="kv"><span class="kv__k">مدة الفيديو</span><span class="kv__v">${esc(task.videoDuration || '—')}</span></div>` : ''}
         </div>
 
         <div class="card">
@@ -1108,6 +1118,34 @@ function openStatusPicker(task) {
 /* Create / edit modal                                                        */
 /* ========================================================================== */
 
+/** Deliverable count fields, shape depends on the work type. */
+function outputFieldsFor(workType, task = null) {
+  if (workType === 'design') {
+    return `
+      <div class="field">
+        <label class="field__label" for="t-image-count">عدد الصور المصممة</label>
+        <input class="input ltr" id="t-image-count" type="number" min="0" step="1"
+               value="${task?.imageCount ?? ''}" placeholder="0">
+      </div>`;
+  }
+  if (workType === 'video') {
+    return `
+      <div class="form-grid">
+        <div class="field">
+          <label class="field__label" for="t-video-count">عدد الفيديوهات</label>
+          <input class="input ltr" id="t-video-count" type="number" min="0" step="1"
+                 value="${task?.videoCount ?? ''}" placeholder="0">
+        </div>
+        <div class="field">
+          <label class="field__label" for="t-video-duration">مدة الفيديو</label>
+          <input class="input" id="t-video-duration" maxlength="40"
+                 value="${attr(task?.videoDuration || '')}" placeholder="مثال: 3 دقائق">
+        </div>
+      </div>`;
+  }
+  return '';
+}
+
 /**
  * @param {{task?:object, personal?:boolean, clientId?:string, defaults?:object}} options
  */
@@ -1158,6 +1196,14 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
           </div>
 
           <div class="field">
+            <label class="field__label" for="t-worktype">نوع العمل</label>
+            <select class="select" id="t-worktype">
+              ${Object.entries(WORK_TYPES).map(([k, v]) => `
+                <option value="${k}" ${(task?.workType || 'other') === k ? 'selected' : ''}>${esc(v.ar)}</option>`).join('')}
+            </select>
+          </div>
+
+          <div class="field">
             <label class="field__label" for="t-priority">الأولوية</label>
             <select class="select" id="t-priority">
               ${Object.entries(PRIORITIES).map(([k, v]) => `
@@ -1186,6 +1232,8 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
                    value="${attr(task?.startedAt ? toDateTimeInput(task.startedAt) : '')}">
           </div>
         </div>
+
+        <div id="t-output-fields">${outputFieldsFor(task?.workType || 'other', task)}</div>
 
         ${canAssign && !personal ? `
         <div class="field">
@@ -1248,6 +1296,11 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
         });
       });
 
+      /* deliverable count fields — shape follows the chosen work type */
+      api.$('#t-worktype').addEventListener('change', (e) => {
+        api.$('#t-output-fields').innerHTML = outputFieldsFor(e.target.value);
+      });
+
       /* assignees */
       api.root.querySelectorAll('[data-uid]').forEach((chip) => {
         chip.addEventListener('click', () => {
@@ -1293,6 +1346,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
         const selectedClient = clients.find((c) => c.id === selectedClientId);
         const dueValue = api.$('#t-due').value;
         const startValue = api.$('#t-start').value;
+        const workType = api.$('#t-worktype').value;
 
         const payload = {
           title,
@@ -1308,6 +1362,10 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
           startedAt: startValue ? new Date(startValue) : (task?.startedAt || null),
           checklist: checklist.filter((c) => c.text.trim()),
           isPersonal: personal || (!canAssign),
+          workType,
+          imageCount: workType === 'design' ? (Number(api.$('#t-image-count')?.value) || 0) : null,
+          videoCount: workType === 'video' ? (Number(api.$('#t-video-count')?.value) || 0) : null,
+          videoDuration: workType === 'video' ? sanitizeText(api.$('#t-video-duration')?.value || '', 40) : null,
           updatedAt: ts()
         };
 

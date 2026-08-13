@@ -34,6 +34,13 @@ export const PRIORITIES = {
 
 export const OPEN_STATUSES = ['new', 'assigned', 'inprogress', 'waiting', 'review'];
 
+/** What kind of deliverable a task produces, so its output can be counted. */
+export const WORK_TYPES = {
+  design: { ar: 'تصميم جرافيك', icon: 'image' },
+  video:  { ar: 'إنتاج فيديو',  icon: 'video' },
+  other:  { ar: 'أخرى',         icon: 'briefcase' }
+};
+
 export function statusLabel(status) { return TASK_STATUSES[status]?.ar || status; }
 export function priorityLabel(priority) { return PRIORITIES[priority]?.ar || priority; }
 
