@@ -15,20 +15,33 @@
 [data-theme="ship"] .card { border-top-color: rgba(34, 211, 238, 0.28); }
 
 /* ---------------------------------------------------------- glass effect */
-/* Opt-in frosted surfaces. Only these four are glassed: they are the ones
-   with something behind them worth showing through — page content under the
-   topbar, the page under a modal or dropdown, the theme's own backdrop under
-   a card. Glassing anything else costs a blur pass and shows nothing. */
+/* Opt-in frosted surfaces, covering every panel that floats over the page.
+   Anything with content behind it worth showing through is included; the
+   lightbox is deliberately left out, since an image needs a dark surround to
+   be judged against, not a view of the page behind it. */
 [data-glass="on"] .card {
   background: var(--glass-surface);
   backdrop-filter: blur(var(--glass-blur));
   -webkit-backdrop-filter: blur(var(--glass-blur));
 }
 [data-glass="on"] .modal,
-[data-glass="on"] .dropdown {
+[data-glass="on"] .dropdown,
+[data-glass="on"] .ai-panel,
+[data-glass="on"] .toast,
+[data-glass="on"] .search-results {
   background: var(--glass-elevated);
   backdrop-filter: blur(var(--glass-blur)) saturate(140%);
   -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+}
+
+/* The dimmer behind a dialog. Lightened and blurred rather than darkened, so
+   the page stays readable underneath — the dialog reads as sitting over the
+   work instead of blacking it out. */
+[data-glass="on"] .modal-backdrop,
+[data-glass="on"] .ai-backdrop {
+  background: var(--glass-overlay);
+  backdrop-filter: blur(10px) saturate(120%);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
 }
 .card--pad-sm { padding: var(--sp-4); }
 .card--pad-0 { padding: 0; overflow: hidden; }

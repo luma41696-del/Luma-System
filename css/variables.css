@@ -199,6 +199,11 @@
   --glass-blur: 14px;
   --glass-surface: rgba(22, 50, 79, 0.62);
   --glass-elevated: rgba(26, 58, 90, 0.76);
+  /* Dimmer behind a dialog. Much lighter than --bg-overlay on purpose: with
+     the blur doing the separating, the page stays legible underneath instead
+     of being blacked out, so a dialog reads as laid over the work rather than
+     replacing it. */
+  --glass-overlay: rgba(3, 10, 18, 0.42);
 
   /* ----------------------------------------------------------- spacing */
   --sp-1: 4px;
@@ -265,6 +270,7 @@
 
   --glass-surface: rgba(255, 255, 255, 0.62);
   --glass-elevated: rgba(255, 255, 255, 0.8);
+  --glass-overlay: rgba(23, 27, 34, 0.26);
 
   color-scheme: light;
 }
@@ -321,6 +327,7 @@
 
   --glass-surface: rgba(10, 39, 64, 0.55);
   --glass-elevated: rgba(16, 57, 92, 0.72);
+  --glass-overlay: rgba(2, 14, 26, 0.44);
 
   color-scheme: dark;
 }
@@ -378,6 +385,7 @@
 
   --glass-surface: rgba(16, 29, 40, 0.7);
   --glass-elevated: rgba(26, 47, 63, 0.8);
+  --glass-overlay: rgba(4, 10, 16, 0.44);
   --glass-blur: 12px;
 
   color-scheme: dark;
