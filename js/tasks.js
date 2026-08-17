@@ -18,7 +18,7 @@ import {
 import {
   TASK_STATUSES, PRIORITIES, WORK_TYPES, BOARD_COLUMNS, summarize, sortTasks, filterTasks,
   isOverdue, progressOf, statusLabel, priorityLabel, myTasksQuery, allTasksQuery,
-  watchTasks
+  watchTasks, workersOf
 } from './utils/task-model.js';
 import {
   formatDate, formatDateTime, formatDuration, timeAgo, toMillis, toDateTimeInput, formatBytes,
@@ -305,8 +305,9 @@ function taskCard(task, people, clientsById = {}) {
   const assignees = (task.assignees || []).map((id) => people[id]).filter(Boolean);
   const clientLogo = clientsById[task.clientId]?.logoURL;
 
-  // Who actually worked on it — not the same as who it was handed to.
-  const workers = (task.contributors || [])
+  // Who actually worked on it — not the same as who it was handed to, and not
+  // whoever opened the task (see workersOf).
+  const workers = workersOf(task)
     .map((id) => people[id]?.displayName)
     .filter(Boolean);
 
@@ -916,10 +917,20 @@ async function paintDetail(root, task, unsubs) {
       // `task.contributors` is authoritative and complete; the activity log is
       // capped at 30 events, so it is only a fallback for tasks created before
       // the field existed (and it can under-report on long-running ones).
-      const fromLog = [...new Set(events.map((e) => e.actorId).filter(Boolean))];
-      const contributorIds = task.contributors?.length ? task.contributors : fromLog;
+      // Either way the creation event never counts as work — opening a task is
+      // not doing it — so it is excluded from the fallback the same way
+      // workersOf excludes a hand-off creator from the stored list.
+      const fromLog = [...new Set(
+        events.filter((e) => e.type !== 'create').map((e) => e.actorId).filter(Boolean)
+      )];
+      const contributorIds = task.contributors?.length ? workersOf(task) : fromLog;
 
-      const actors = await getUsers([...new Set([...contributorIds, ...fromLog])]);
+      // Names are needed for every actor in the log — the timeline below still
+      // renders the creation event — not just for those counted as workers.
+      const actors = await getUsers([...new Set([
+        ...contributorIds,
+        ...events.map((e) => e.actorId).filter(Boolean)
+      ])]);
       const byId = Object.fromEntries(actors.map((u) => [u.id, u]));
 
       const node = $('#activity');
@@ -1073,10 +1084,15 @@ async function logActivity(taskId, type, text) {
     console.warn('[luma] activity log failed', err.code);
   }
 
-  // Anyone who acts on a task is a contributor, whether or not they were ever
-  // assigned to it. Kept on the task itself so the detail page can list them
-  // without paging through the whole activity log.
+  // Anyone who *works* on a task is a contributor, whether or not they were
+  // ever assigned to it. Kept on the task itself so the detail page can list
+  // them without paging through the whole activity log.
   //
+  // Creating the task is the exception: opening a job and handing it to
+  // someone else is not doing it, and recording the author here would credit
+  // them with work they never did.
+  if (type === 'create') return;
+
   // arrayUnion is idempotent in content but still costs a write and still
   // re-triggers every task listener, so a already-recorded actor is skipped.
   const seenKey = `${taskId}:${session.uid}`;

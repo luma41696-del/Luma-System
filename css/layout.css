@@ -26,6 +26,14 @@
 
 /* A faint star dusting keeps the nav readable while still feeling part of
    the cosmic canvas — the full nebula glow is reserved for the content side. */
+/* Hull plating: seams running down the nav, lit from the console side. */
+[data-theme="ship"] .sidebar {
+  background-color: var(--bg-canvas);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(34, 211, 238, .05) 0 1px, transparent 1px 72px),
+    linear-gradient(to left, rgba(34, 211, 238, .07), transparent 40%);
+}
+
 [data-theme="space"] .sidebar {
   background-color: var(--bg-canvas);
   background-image:
@@ -276,6 +284,21 @@
   background-attachment: fixed;
 }
 [data-theme="space"] .topbar { border-bottom-color: var(--border-soft); }
+
+/* Instrument panel: a fine grid of hull seams under a console glow, fixed to
+   the viewport so the sticky topbar sits on the same continuous surface. */
+[data-theme="ship"] .main,
+[data-theme="ship"] .topbar {
+  background-color: var(--bg-app);
+  background-image:
+    repeating-linear-gradient(0deg, rgba(34, 211, 238, .045) 0 1px, transparent 1px 64px),
+    repeating-linear-gradient(90deg, rgba(34, 211, 238, .045) 0 1px, transparent 1px 64px),
+    radial-gradient(900px 520px at 50% -12%, rgba(34, 211, 238, .13), transparent 62%),
+    radial-gradient(1100px 800px at 100% 108%, rgba(14, 116, 144, .22), transparent 66%);
+  background-repeat: repeat, repeat, no-repeat, no-repeat;
+  background-attachment: fixed;
+}
+[data-theme="ship"] .topbar { border-bottom-color: rgba(34, 211, 238, .22); }
 
 .topbar {
   display: flex;

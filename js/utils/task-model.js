@@ -65,6 +65,24 @@ export function effectiveStatus(task) {
   return isOverdue(task) ? 'overdue' : task.status;
 }
 
+/**
+ * Who actually worked on a task — distinct from who it was handed to
+ * (`assignees`) and who opened it (`createdBy`).
+ *
+ * Creating a task is not working on it: a manager who writes up a job and
+ * hands it off has contributed nothing to the work itself, and listing them
+ * as a worker misreports who did it. The creator therefore only counts once
+ * they are also assigned to the task.
+ *
+ * Applied on read as well as on write, so tasks recorded before this rule
+ * existed report correctly too.
+ */
+export function workersOf(task = {}) {
+  const assignees = task.assignees || [];
+  return (task.contributors || [])
+    .filter((id) => id !== task.createdBy || assignees.includes(id));
+}
+
 export function progressOf(task) {
   if (task.status === 'completed') return 100;
   if (typeof task.progress === 'number') return Math.max(0, Math.min(100, task.progress));

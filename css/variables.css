@@ -309,6 +309,60 @@
   color-scheme: dark;
 }
 
+/* -------------------------------------------------------- spaceship theme */
+/* The counterpart to Space: that one looks *out* at the stars, this one is
+   the view from inside the ship — gunmetal hull panels and a cyan console
+   glow, the palette of an instrument display rather than a night sky. */
+[data-theme="ship"] {
+  --navy-900: #070d13;
+  --navy-800: #0b141c;
+  --navy-700: #101d28;
+  --navy-600: #162734;
+  --border-dark: #1f3a4d;
+
+  --brand: #22d3ee;
+  --brand-hover: #0eb8d4;
+  --brand-light: #67e8f9;
+  --brand-soft: rgba(34, 211, 238, 0.15);
+  --brand-glow: rgba(34, 211, 238, 0.34);
+  --brand-gradient: linear-gradient(135deg, var(--brand-light) 0%, var(--brand) 55%, var(--brand-hover) 100%);
+  --brand-gradient-hover: linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 60%, #0a8ea6 100%);
+  --brand-gradient-x: linear-gradient(to right, var(--brand-light), var(--brand) 70%, var(--brand-hover));
+
+  --yellow: var(--brand);
+  --yellow-hover: var(--brand-hover);
+  --yellow-soft: var(--brand-soft);
+
+  --bg-app: #070d13;
+  --bg-canvas: #0b141c;
+  --bg-surface: #101d28;
+  --bg-surface-2: #162734;
+  --bg-elevated: #1a2f3f;
+  --bg-inset: rgba(230, 246, 251, 0.04);
+  --bg-hover: rgba(230, 246, 251, 0.07);
+  --bg-active: rgba(34, 211, 238, 0.14);
+  --bg-overlay: rgba(4, 10, 16, 0.78);
+
+  --text-primary: #e6f6fb;
+  --text-secondary: #a9c2d1;
+  --text-muted: #6d8798;
+  --text-inverse: #070d13;
+  /* Dark on the bright cyan accent — white on it fails contrast. */
+  --text-on-brand: #04222a;
+
+  --border: #1f3a4d;
+  --border-soft: rgba(230, 246, 251, 0.09);
+  --border-strong: rgba(34, 211, 238, 0.42);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.42);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.48);
+  --shadow-lg: 0 22px 54px rgba(0, 0, 0, 0.58);
+  --shadow-focus: 0 0 0 3px rgba(34, 211, 238, 0.32);
+
+  color-scheme: dark;
+}
+
 /* Users who ask for less motion get less motion. */
 @media (prefers-reduced-motion: reduce) {
   :root {

@@ -148,7 +148,12 @@ export function lineChart(canvasId, labels, datasets) {
     data: {
       labels,
       datasets: datasets.map((d, i) => ({
-        tension: 0.38,
+        // Monotone, not a plain tensioned spline. A tensioned curve overshoots
+        // between points — between a 25 and a 0 it swings below the axis and
+        // draws counts that never existed. Monotone keeps the line smooth but
+        // pins every local extreme to an actual data point, so what is drawn
+        // is what was measured.
+        cubicInterpolationMode: 'monotone',
         borderWidth: 2.5,
         pointRadius: 3,
         pointHoverRadius: 5,

@@ -7,12 +7,13 @@
  * re-themes itself on the `luma:theme` event (see utils/charts.js).
  */
 
-export const THEMES = ['dark', 'light', 'space'];
+export const THEMES = ['dark', 'light', 'space', 'ship'];
 
 export const THEME_META = {
   dark:  { icon: 'moon',     labelKey: 'settings.appearance.theme.dark',  hintKey: 'settings.appearance.theme.dark.hint' },
   light: { icon: 'sun',      labelKey: 'settings.appearance.theme.light', hintKey: 'settings.appearance.theme.light.hint' },
-  space: { icon: 'sparkles', labelKey: 'settings.appearance.theme.space', hintKey: 'settings.appearance.theme.space.hint' }
+  space: { icon: 'sparkles', labelKey: 'settings.appearance.theme.space', hintKey: 'settings.appearance.theme.space.hint' },
+  ship:  { icon: 'rocket',   labelKey: 'settings.appearance.theme.ship',  hintKey: 'settings.appearance.theme.ship.hint' }
 };
 
 export function getTheme() {

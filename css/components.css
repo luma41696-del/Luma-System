@@ -17,6 +17,13 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
+/* A console readout: smoked panel with a lit top edge. */
+[data-theme="ship"] .card {
+  background: rgba(16, 29, 40, 0.72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-top-color: rgba(34, 211, 238, 0.28);
+}
 .card--pad-sm { padding: var(--sp-4); }
 .card--pad-0 { padding: 0; overflow: hidden; }
 .card__head {
@@ -367,6 +374,13 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
     radial-gradient(1px 1px at 35% 75%, #fff, transparent),
     linear-gradient(135deg, #0a2740 0%, #020e1a 100%);
 }
+.theme-swatch--ship .theme-swatch__preview {
+  background:
+    repeating-linear-gradient(0deg, rgba(34, 211, 238, .16) 0 1px, transparent 1px 11px),
+    repeating-linear-gradient(90deg, rgba(34, 211, 238, .16) 0 1px, transparent 1px 11px),
+    radial-gradient(18px 12px at 50% 0%, rgba(34, 211, 238, .45), transparent 70%),
+    linear-gradient(135deg, #162734 0%, #070d13 100%);
+}
 .theme-swatch__dot {
   position: absolute;
   inset-inline-end: 5px;
@@ -378,6 +392,7 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .theme-swatch--dark .theme-swatch__dot { background: #4070C8; }
 .theme-swatch--light .theme-swatch__dot { background: #4070C8; }
 .theme-swatch--space .theme-swatch__dot { background: #e8b95c; }
+.theme-swatch--ship .theme-swatch__dot { background: #22d3ee; }
 
 .theme-swatch__text { flex: 1; min-width: 0; }
 .theme-swatch__label { display: block; font-weight: 700; font-size: var(--fs-sm); color: var(--text-primary); }
