@@ -196,14 +196,34 @@
      sit on that theme's own background to read as glass rather than as mud.
      It is a setting because backdrop-filter is genuinely expensive: it
      re-blurs on every scroll and paint, which older machines feel. */
-  --glass-blur: 14px;
-  --glass-surface: rgba(22, 50, 79, 0.62);
-  --glass-elevated: rgba(26, 58, 90, 0.76);
-  /* Dimmer behind a dialog. Much lighter than --bg-overlay on purpose: with
-     the blur doing the separating, the page stays legible underneath instead
-     of being blacked out, so a dialog reads as laid over the work rather than
-     replacing it. */
-  --glass-overlay: rgba(3, 10, 18, 0.42);
+  /* Two dials, 0 → 1, set from Settings and stored per user:
+       --glass-panel     how frosted the panels themselves are
+       --glass-backdrop  how strongly the page behind a dialog is veiled
+     Everything below is derived from them, so a theme only has to state its
+     own tint and the strengths apply on top of it. At 0 a surface is fully
+     opaque with no blur, which is the same result as switching glass off. */
+  --glass-panel: 0.6;
+  --glass-backdrop: 0.5;
+
+  /* Tints, as bare channels so the alpha can be computed from the dials. */
+  --glass-surface-rgb: 22, 50, 79;
+  --glass-elevated-rgb: 26, 58, 90;
+  --glass-overlay-rgb: 3, 10, 18;
+  /* Lets a light theme veil less at the same dial position. */
+  --glass-dim-scale: 1;
+
+  --glass-blur: calc(var(--glass-panel) * 22px);
+  --glass-surface: rgba(var(--glass-surface-rgb), calc(1 - 0.45 * var(--glass-panel)));
+  --glass-elevated: rgba(var(--glass-elevated-rgb), calc(1 - 0.32 * var(--glass-panel)));
+
+  /* The veil behind a dialog. It never reaches full black: with the blur
+     doing the separating, the work underneath stays legible and the dialog
+     reads as laid over the page rather than replacing it. */
+  --glass-overlay-blur: calc(var(--glass-backdrop) * 18px);
+  --glass-overlay: rgba(
+    var(--glass-overlay-rgb),
+    calc((0.15 + 0.6 * var(--glass-backdrop)) * var(--glass-dim-scale))
+  );
 
   /* ----------------------------------------------------------- spacing */
   --sp-1: 4px;
@@ -268,9 +288,11 @@
   --shadow-md: 0 10px 28px rgba(16, 41, 67, 0.10);
   --shadow-lg: 0 20px 48px rgba(16, 41, 67, 0.14);
 
-  --glass-surface: rgba(255, 255, 255, 0.62);
-  --glass-elevated: rgba(255, 255, 255, 0.8);
-  --glass-overlay: rgba(23, 27, 34, 0.26);
+  --glass-surface-rgb: 255, 255, 255;
+  --glass-elevated-rgb: 255, 255, 255;
+  --glass-overlay-rgb: 23, 27, 34;
+  /* A light UI needs far less veiling to separate a dialog from the page. */
+  --glass-dim-scale: 0.62;
 
   color-scheme: light;
 }
@@ -325,9 +347,9 @@
   --shadow-lg: 0 22px 54px rgba(0, 0, 0, 0.56);
   --shadow-focus: 0 0 0 3px rgba(232, 185, 92, 0.35);
 
-  --glass-surface: rgba(10, 39, 64, 0.55);
-  --glass-elevated: rgba(16, 57, 92, 0.72);
-  --glass-overlay: rgba(2, 14, 26, 0.44);
+  --glass-surface-rgb: 10, 39, 64;
+  --glass-elevated-rgb: 16, 57, 92;
+  --glass-overlay-rgb: 2, 14, 26;
 
   color-scheme: dark;
 }
@@ -383,10 +405,9 @@
   --shadow-lg: 0 22px 54px rgba(0, 0, 0, 0.58);
   --shadow-focus: 0 0 0 3px rgba(34, 211, 238, 0.32);
 
-  --glass-surface: rgba(16, 29, 40, 0.7);
-  --glass-elevated: rgba(26, 47, 63, 0.8);
-  --glass-overlay: rgba(4, 10, 16, 0.44);
-  --glass-blur: 12px;
+  --glass-surface-rgb: 16, 29, 40;
+  --glass-elevated-rgb: 26, 47, 63;
+  --glass-overlay-rgb: 4, 10, 16;
 
   color-scheme: dark;
 }

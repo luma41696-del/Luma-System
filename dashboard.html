@@ -31,6 +31,15 @@
       if (localStorage.getItem('luma.glass') === 'off') {
         document.documentElement.dataset.glass = 'off';
       }
+      // Its strength dials, applied here too so they never flash at the
+      // stylesheet defaults before the app boots.
+      var gs = JSON.parse(localStorage.getItem('luma.glassStrength') || '{}');
+      if (gs.panel !== undefined) {
+        document.documentElement.style.setProperty('--glass-panel', gs.panel / 100);
+      }
+      if (gs.backdrop !== undefined) {
+        document.documentElement.style.setProperty('--glass-backdrop', gs.backdrop / 100);
+      }
       if (localStorage.getItem('luma.sidebarCollapsed') === '1') {
         document.documentElement.dataset.sidebar = 'collapsed';
       }

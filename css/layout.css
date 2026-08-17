@@ -314,8 +314,8 @@
 /* The mobile drawer's dimmer, matched to the dialog one. */
 [data-glass="on"] .drawer-backdrop {
   background: var(--glass-overlay);
-  backdrop-filter: blur(10px) saturate(120%);
-  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  backdrop-filter: blur(var(--glass-overlay-blur)) saturate(120%);
+  -webkit-backdrop-filter: blur(var(--glass-overlay-blur)) saturate(120%);
 }
 
 .topbar {

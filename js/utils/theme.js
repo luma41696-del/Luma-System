@@ -52,3 +52,45 @@ export function setGlass(on) {
   try { localStorage.setItem('luma.glass', on ? 'on' : 'off'); } catch { /* private browsing */ }
   window.dispatchEvent(new CustomEvent('luma:glass', { detail: on }));
 }
+
+/**
+ * Strength of the effect, as two dials each 0 → 100:
+ *   panel     how frosted the panels themselves are
+ *   backdrop  how strongly the page behind a dialog is veiled
+ *
+ * Stored as percentages because that is what the sliders speak; the
+ * stylesheet works in 0 → 1, so they are divided on the way out.
+ */
+export const GLASS_DEFAULTS = { panel: 60, backdrop: 50 };
+
+const clampPercent = (value, fallback) => {
+  const n = Number(value);
+  return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : fallback;
+};
+
+export function getGlassStrength() {
+  let stored = {};
+  try { stored = JSON.parse(localStorage.getItem('luma.glassStrength') || '{}'); } catch { /* corrupt */ }
+  return {
+    panel: clampPercent(stored.panel, GLASS_DEFAULTS.panel),
+    backdrop: clampPercent(stored.backdrop, GLASS_DEFAULTS.backdrop)
+  };
+}
+
+export function setGlassStrength({ panel, backdrop } = {}) {
+  const next = getGlassStrength();
+  if (panel !== undefined) next.panel = clampPercent(panel, next.panel);
+  if (backdrop !== undefined) next.backdrop = clampPercent(backdrop, next.backdrop);
+
+  applyGlassStrength(next);
+  try { localStorage.setItem('luma.glassStrength', JSON.stringify(next)); } catch { /* private browsing */ }
+  window.dispatchEvent(new CustomEvent('luma:glass', { detail: next }));
+  return next;
+}
+
+/** Write the dials onto the document. Shared with the pre-paint restore. */
+export function applyGlassStrength({ panel, backdrop }) {
+  const style = document.documentElement.style;
+  style.setProperty('--glass-panel', String(panel / 100));
+  style.setProperty('--glass-backdrop', String(backdrop / 100));
+}

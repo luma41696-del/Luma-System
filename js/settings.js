@@ -20,7 +20,10 @@ import { checkPassword } from './utils/sanitize.js';
 import { FCM_VAPID_KEY, APP_CHECK_SITE_KEY, TIMEZONE } from './firebase-config.js';
 import { t, getLang, setLang } from './utils/i18n.js';
 import { notifyPermission, requestNotifyPermission, permissionLabel } from './utils/browser-notify.js';
-import { THEMES, THEME_META, getTheme, setTheme, glassEnabled, setGlass } from './utils/theme.js';
+import {
+  THEMES, THEME_META, getTheme, setTheme,
+  glassEnabled, setGlass, getGlassStrength, setGlassStrength
+} from './utils/theme.js';
 
 const TABS = [
   { id: 'general',       labelKey: 'settings.tab.general',       icon: 'sliders-horizontal' },
@@ -85,6 +88,7 @@ export async function render(container, ctx) {
 
 function generalTab(host) {
   const theme = getTheme();
+  const glass = getGlassStrength();
   host.innerHTML = `
     <div class="grid grid-2 mt-4">
       <div class="card">
@@ -108,7 +112,26 @@ function generalTab(host) {
           <span class="switch__track"></span>
           <span>${esc(t('settings.appearance.glass'))}</span>
         </label>
-        <div class="field__hint mb-4">${esc(t('settings.appearance.glass.hint'))}</div>
+        <div class="field__hint mb-3">${esc(t('settings.appearance.glass.hint'))}</div>
+
+        <div id="glass-strength" class="mb-4" ${glassEnabled() ? '' : 'hidden'}>
+          <div class="field mb-3">
+            <label class="field__label" for="s-glass-panel">
+              ${esc(t('settings.appearance.glass.panel'))}
+              <span class="num text-muted" id="s-glass-panel-val">${glass.panel}%</span>
+            </label>
+            <input class="range" id="s-glass-panel" type="range" min="0" max="100" step="5"
+                   value="${glass.panel}">
+          </div>
+          <div class="field">
+            <label class="field__label" for="s-glass-backdrop">
+              ${esc(t('settings.appearance.glass.backdrop'))}
+              <span class="num text-muted" id="s-glass-backdrop-val">${glass.backdrop}%</span>
+            </label>
+            <input class="range" id="s-glass-backdrop" type="range" min="0" max="100" step="5"
+                   value="${glass.backdrop}">
+          </div>
+        </div>
         <label class="switch">
           <input type="checkbox" id="s-collapsed"
             ${localStorage.getItem('luma.sidebarCollapsed') === '1' ? 'checked' : ''}>
@@ -170,7 +193,24 @@ function generalTab(host) {
       swatch.classList.toggle('is-active', swatch === button));
   });
 
-  $('#s-glass').addEventListener('change', (e) => setGlass(e.target.checked));
+  $('#s-glass').addEventListener('change', (e) => {
+    setGlass(e.target.checked);
+    // The dials do nothing while the effect is off, so they are not offered.
+    $('#glass-strength').hidden = !e.target.checked;
+  });
+
+  // `input` rather than `change`: the surfaces update under the slider as it
+  // is dragged, which is the only way to judge a strength worth picking.
+  const bindDial = (key) => {
+    const slider = $(`#s-glass-${key}`);
+    const label = $(`#s-glass-${key}-val`);
+    slider.addEventListener('input', () => {
+      label.textContent = `${slider.value}%`;
+      setGlassStrength({ [key]: slider.value });
+    });
+  };
+  bindDial('panel');
+  bindDial('backdrop');
 
   $('#s-collapsed').addEventListener('change', (e) => {
     try { localStorage.setItem('luma.sidebarCollapsed', e.target.checked ? '1' : '0'); } catch {}
