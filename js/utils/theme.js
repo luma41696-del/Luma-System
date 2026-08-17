@@ -28,9 +28,27 @@ export function setTheme(next) {
   window.dispatchEvent(new CustomEvent('luma:theme', { detail: next }));
 }
 
-/** Dark → light → space → dark, for the single sidebar toggle button. */
+/** Dark → light → space → ship → dark, for the single sidebar toggle button. */
 export function cycleTheme() {
   const next = THEMES[(THEMES.indexOf(getTheme()) + 1) % THEMES.length];
   setTheme(next);
   return next;
+}
+
+/* ------------------------------------------------------------ glass effect */
+
+/**
+ * Frosted surfaces are a setting rather than part of a theme, because the
+ * cost is the user's to accept: `backdrop-filter` re-blurs on every scroll
+ * and repaint, which a low-powered machine feels. On by default — it is what
+ * the themes were designed against — and switched off in one place.
+ */
+export function glassEnabled() {
+  return document.documentElement.dataset.glass !== 'off';
+}
+
+export function setGlass(on) {
+  document.documentElement.dataset.glass = on ? 'on' : 'off';
+  try { localStorage.setItem('luma.glass', on ? 'on' : 'off'); } catch { /* private browsing */ }
+  window.dispatchEvent(new CustomEvent('luma:glass', { detail: on }));
 }

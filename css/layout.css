@@ -300,6 +300,17 @@
 }
 [data-theme="ship"] .topbar { border-bottom-color: rgba(34, 211, 238, .22); }
 
+/* Frosted topbar — content scrolls visibly under it instead of vanishing
+   behind an opaque bar. The themed backdrop is dropped here on purpose: the
+   bar becomes translucent, so `.main`'s own fixed background (starfield, hull
+   grid) shows through it and the surface still reads as continuous. */
+[data-glass="on"] .topbar {
+  background-color: var(--glass-surface);
+  background-image: none;
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+}
+
 .topbar {
   display: flex;
   align-items: center;

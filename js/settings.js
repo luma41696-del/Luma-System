@@ -20,7 +20,7 @@ import { checkPassword } from './utils/sanitize.js';
 import { FCM_VAPID_KEY, APP_CHECK_SITE_KEY, TIMEZONE } from './firebase-config.js';
 import { t, getLang, setLang } from './utils/i18n.js';
 import { notifyPermission, requestNotifyPermission, permissionLabel } from './utils/browser-notify.js';
-import { THEMES, THEME_META, getTheme, setTheme } from './utils/theme.js';
+import { THEMES, THEME_META, getTheme, setTheme, glassEnabled, setGlass } from './utils/theme.js';
 
 const TABS = [
   { id: 'general',       labelKey: 'settings.tab.general',       icon: 'sliders-horizontal' },
@@ -103,6 +103,12 @@ function generalTab(host) {
               <i data-lucide="check" class="theme-swatch__check"></i>
             </button>`).join('')}
         </div>
+        <label class="switch mb-3">
+          <input type="checkbox" id="s-glass" ${glassEnabled() ? 'checked' : ''}>
+          <span class="switch__track"></span>
+          <span>${esc(t('settings.appearance.glass'))}</span>
+        </label>
+        <div class="field__hint mb-4">${esc(t('settings.appearance.glass.hint'))}</div>
         <label class="switch">
           <input type="checkbox" id="s-collapsed"
             ${localStorage.getItem('luma.sidebarCollapsed') === '1' ? 'checked' : ''}>
@@ -163,6 +169,8 @@ function generalTab(host) {
     $$('.theme-swatch', host).forEach((swatch) =>
       swatch.classList.toggle('is-active', swatch === button));
   });
+
+  $('#s-glass').addEventListener('change', (e) => setGlass(e.target.checked));
 
   $('#s-collapsed').addEventListener('change', (e) => {
     try { localStorage.setItem('luma.sidebarCollapsed', e.target.checked ? '1' : '0'); } catch {}

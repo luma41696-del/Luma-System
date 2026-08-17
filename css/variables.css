@@ -190,6 +190,16 @@
   --shadow-lg: 0 18px 44px rgba(0, 0, 0, 0.36);
   --shadow-focus: 0 0 0 3px rgba(64, 112, 200, 0.35);
 
+  /* ------------------------------------------------------------- glass */
+  /* Frosted surfaces, applied only while the effect is switched on
+     (html[data-glass="on"]). Each theme tints its own, because glass has to
+     sit on that theme's own background to read as glass rather than as mud.
+     It is a setting because backdrop-filter is genuinely expensive: it
+     re-blurs on every scroll and paint, which older machines feel. */
+  --glass-blur: 14px;
+  --glass-surface: rgba(22, 50, 79, 0.62);
+  --glass-elevated: rgba(26, 58, 90, 0.76);
+
   /* ----------------------------------------------------------- spacing */
   --sp-1: 4px;
   --sp-2: 8px;
@@ -253,6 +263,9 @@
   --shadow-md: 0 10px 28px rgba(16, 41, 67, 0.10);
   --shadow-lg: 0 20px 48px rgba(16, 41, 67, 0.14);
 
+  --glass-surface: rgba(255, 255, 255, 0.62);
+  --glass-elevated: rgba(255, 255, 255, 0.8);
+
   color-scheme: light;
 }
 
@@ -305,6 +318,9 @@
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.46);
   --shadow-lg: 0 22px 54px rgba(0, 0, 0, 0.56);
   --shadow-focus: 0 0 0 3px rgba(232, 185, 92, 0.35);
+
+  --glass-surface: rgba(10, 39, 64, 0.55);
+  --glass-elevated: rgba(16, 57, 92, 0.72);
 
   color-scheme: dark;
 }
@@ -359,6 +375,10 @@
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.48);
   --shadow-lg: 0 22px 54px rgba(0, 0, 0, 0.58);
   --shadow-focus: 0 0 0 3px rgba(34, 211, 238, 0.32);
+
+  --glass-surface: rgba(16, 29, 40, 0.7);
+  --glass-elevated: rgba(26, 47, 63, 0.8);
+  --glass-blur: 12px;
 
   color-scheme: dark;
 }

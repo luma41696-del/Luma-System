@@ -11,18 +11,24 @@
   box-shadow: var(--shadow-xs);
 }
 .card--flat { box-shadow: none; }
-/* Frosted glass over the starfield instead of a flat panel. */
-[data-theme="space"] .card {
-  background: rgba(10, 39, 64, 0.55);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+/* A console readout: lit top edge, whether or not the glass is switched on. */
+[data-theme="ship"] .card { border-top-color: rgba(34, 211, 238, 0.28); }
+
+/* ---------------------------------------------------------- glass effect */
+/* Opt-in frosted surfaces. Only these four are glassed: they are the ones
+   with something behind them worth showing through — page content under the
+   topbar, the page under a modal or dropdown, the theme's own backdrop under
+   a card. Glassing anything else costs a blur pass and shows nothing. */
+[data-glass="on"] .card {
+  background: var(--glass-surface);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
 }
-/* A console readout: smoked panel with a lit top edge. */
-[data-theme="ship"] .card {
-  background: rgba(16, 29, 40, 0.72);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border-top-color: rgba(34, 211, 238, 0.28);
+[data-glass="on"] .modal,
+[data-glass="on"] .dropdown {
+  background: var(--glass-elevated);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
 }
 .card--pad-sm { padding: var(--sp-4); }
 .card--pad-0 { padding: 0; overflow: hidden; }

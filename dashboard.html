@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl" data-theme="dark">
+<html lang="ar" dir="rtl" data-theme="dark" data-glass="on">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -26,6 +26,11 @@
     try {
       var t = localStorage.getItem('luma.theme');
       if (t) document.documentElement.dataset.theme = t;
+      // Glass is on unless it was switched off; the attribute ships as "on"
+      // so the markup and the stylesheet agree before this runs.
+      if (localStorage.getItem('luma.glass') === 'off') {
+        document.documentElement.dataset.glass = 'off';
+      }
       if (localStorage.getItem('luma.sidebarCollapsed') === '1') {
         document.documentElement.dataset.sidebar = 'collapsed';
       }
