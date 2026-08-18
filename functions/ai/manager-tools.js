@@ -37,6 +37,7 @@ function ensureAny(caller, permissions) {
 
 const OPEN_STATUSES = ['new', 'assigned', 'inprogress', 'waiting', 'review'];
 const TASK_CEILING = 1000;
+const day = 86_400_000;
 
 const toMillis = (v) => {
   if (!v) return 0;
@@ -193,6 +194,9 @@ async function draftTask(caller, { title, description, assignee, client, priorit
   if (!title || String(title).trim().length < 3) throw new Error('عنوان المهمة مطلوب.');
 
   const draft = {
+    // Tagged so a client can tell a task proposal from a calendar one and
+    // open the right form.
+    kind: 'task',
     title: String(title).trim().slice(0, 200),
     description: String(description || '').trim().slice(0, 2000),
     project: String(project || '').trim().slice(0, 120),
@@ -247,6 +251,136 @@ async function draftTask(caller, { title, description, assignee, client, priorit
   };
 }
 
+/* ------------------------------------------------------------- calendar */
+
+const EVENT_TYPES = ['meeting', 'deadline', 'task', 'leave', 'event', 'birthday'];
+
+const asDate = (v) => {
+  if (!v) return null;
+  if (typeof v.toDate === 'function') return v.toDate();
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+/**
+ * Calendar entries in a window.
+ *
+ * The admin SDK bypasses security rules, so the visibility test from
+ * firestore.rules is repeated here by hand. Without it this tool would be a
+ * way to read private events through the assistant that the same person is
+ * refused when they ask the database directly.
+ */
+async function listCalendarEvents(caller, { from, to } = {}) {
+  const start = asDate(from) || new Date();
+  const end = asDate(to) || new Date(start.getTime() + 30 * day);
+
+  const snap = await db.collection('calendarEvents')
+    .orderBy('startAt', 'asc')
+    .limit(500)
+    .get();
+
+  const seesEverything = has(caller, 'dashboard.viewCompany') || has(caller, 'dashboard.viewTeam');
+
+  const events = snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }))
+    .filter((e) => {
+      const at = asDate(e.startAt);
+      return at && at >= start && at <= end;
+    })
+    .filter((e) => seesEverything
+      || (e.visibility || 'team') === 'team'
+      || (e.participants || []).includes(caller.uid)
+      || e.createdBy === caller.uid)
+    .slice(0, 100)
+    .map((e) => ({
+      id: e.id,
+      title: e.title || '',
+      type: e.type || 'event',
+      startAt: asDate(e.startAt)?.toISOString() || null,
+      endAt: asDate(e.endAt)?.toISOString() || null,
+      location: e.location || null,
+      client: e.clientName || null,
+      participantCount: (e.participants || []).length
+    }));
+
+  return { from: start.toISOString(), to: end.toISOString(), count: events.length, events };
+}
+
+/**
+ * Propose a calendar entry. A draft only — nothing is written.
+ *
+ * Same contract as draftTask: names are resolved to real ids server-side, and
+ * the browser opens the ordinary event form for a person to confirm.
+ */
+async function draftEvent(caller, {
+  title, type, startAt, endAt, participants, client, location, description, visibility
+} = {}) {
+  if (!title || String(title).trim().length < 3) throw new Error('عنوان الحدث مطلوب.');
+
+  const start = asDate(startAt);
+  if (!start) throw new Error('حدد تاريخ ووقت البداية بصيغة YYYY-MM-DDTHH:MM.');
+  // An hour is the sensible default a person would pick, and it keeps the end
+  // after the start without the model having to reason about it.
+  const end = asDate(endAt) || new Date(start.getTime() + 3_600_000);
+
+  const draft = {
+    kind: 'event',
+    title: String(title).trim().slice(0, 200),
+    type: EVENT_TYPES.includes(type) ? type : 'event',
+    // Matches the values the event form actually offers.
+    visibility: ['team', 'participants'].includes(visibility) ? visibility : 'team',
+    startAt: start.toISOString(),
+    endAt: (end > start ? end : new Date(start.getTime() + 3_600_000)).toISOString(),
+    location: String(location || '').trim().slice(0, 200),
+    description: String(description || '').trim().slice(0, 2000),
+    participants: [],
+    participantNames: [],
+    clientId: null,
+    clientName: null,
+    unresolved: []
+  };
+
+  if (participants) {
+    const people = await activeEmployees();
+    // The model is asked for a comma-separated list, so a single string of
+    // several names has to be split or every name but the first is lost.
+    const wanted = Array.isArray(participants)
+      ? participants
+      : String(participants).split(/[،,]/).map((s) => s.trim()).filter(Boolean);
+    wanted.slice(0, 20).forEach((raw) => {
+      const needle = String(raw).trim().toLowerCase();
+      const person = people.find((u) => u.id === raw)
+        || people.find((u) => (u.displayName || '').toLowerCase() === needle)
+        || people.find((u) => (u.displayName || '').toLowerCase().includes(needle));
+      if (person) {
+        draft.participants.push(person.id);
+        draft.participantNames.push(person.displayName || '');
+      } else {
+        draft.unresolved.push(String(raw));
+      }
+    });
+  }
+
+  if (client) {
+    const needle = String(client).trim().toLowerCase();
+    const rows = (await db.collection('clients').get()).docs.map((d) => ({ id: d.id, ...d.data() }));
+    const match = rows.find((c) => (c.name || '').toLowerCase() === needle)
+      || rows.find((c) => (c.name || '').toLowerCase().includes(needle));
+    if (match) {
+      draft.clientId = match.id;
+      draft.clientName = match.name || '';
+    } else {
+      draft.unresolved.push(String(client));
+    }
+  }
+
+  return {
+    kind: 'eventDraft',
+    draft,
+    note: 'مسودة فقط — لم تُحفظ. ستُعرض على المستخدم في نموذج الحدث لمراجعتها وحفظها.'
+  };
+}
+
 /* ------------------------------------------------------------ definitions */
 
 function tool(name, description, properties = {}, required = []) {
@@ -276,11 +410,28 @@ const DEFINITIONS = [
     priority: { type: 'string', description: 'urgent | high | medium | low' },
     dueAt: { type: 'string', description: 'YYYY-MM-DD أو YYYY-MM-DDTHH:MM' },
     project: { type: 'string' }
-  }, ['title'])
+  }, ['title']),
+  tool('listCalendarEvents', 'الأحداث المسجّلة في التقويم خلال فترة.', {
+    from: { type: 'string', description: 'YYYY-MM-DD' },
+    to: { type: 'string', description: 'YYYY-MM-DD' }
+  }),
+  tool('draftEvent',
+    'اقترح حدثاً في التقويم (مسودة فقط، لا يُحفظ): اجتماع، موعد تسليم، مهمة، إجازة، حدث، أو عيد ميلاد.', {
+      title: { type: 'string' },
+      type: { type: 'string', description: 'meeting | deadline | task | leave | event | birthday' },
+      startAt: { type: 'string', description: 'YYYY-MM-DDTHH:MM' },
+      endAt: { type: 'string', description: 'YYYY-MM-DDTHH:MM — اختياري، الافتراضي ساعة واحدة' },
+      participants: { type: 'string', description: 'أسماء المشاركين مفصولة بفاصلة' },
+      client: { type: 'string' },
+      location: { type: 'string' },
+      description: { type: 'string' },
+      visibility: { type: 'string', description: 'team | private' }
+    }, ['title', 'startAt'])
 ];
 
 const IMPLEMENTATIONS = {
-  listEmployees, getTeamWorkload, getEmployeeReport, getStaleTasks, draftTask
+  listEmployees, getTeamWorkload, getEmployeeReport, getStaleTasks, draftTask,
+  listCalendarEvents, draftEvent
 };
 
 /** Dispatch. Unknown names are rejected rather than ignored. */

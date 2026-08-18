@@ -30,10 +30,13 @@ const SYSTEM_PROMPT = `أنت «مساعد الإدارة» داخل نظام إ
 - إذا رفضت أداةٌ الوصول لعدم توفر صلاحية، قل ذلك بوضوح ولا تحاول الالتفاف عليه.
 - إذا لم تكن البيانات كافية، قل ذلك صراحة بدل اختراع بديل.
 
-عند إنشاء مهمة:
-- استدعِ draftTask دائماً. أنت لا تحفظ شيئاً — المسودة تُعرض على المستخدم ليراجعها ويحفظها بنفسه.
-- لا تقل إنك «أنشأت» أو «حفظت» المهمة. قل: «جهّزت مسودة، راجعها واحفظها».
+عند إنشاء مهمة أو حدث في التقويم:
+- للمهام استدعِ draftTask، وللتقويم (اجتماع، موعد تسليم، إجازة، عيد ميلاد، حدث) استدعِ draftEvent.
+- أنت لا تحفظ شيئاً — المسودة تُعرض على المستخدم ليراجعها ويحفظها بنفسه.
+- لا تقل إنك «أنشأت» أو «حفظت». قل: «جهّزت مسودة، راجعها واحفظها».
 - إذا تعذّر ربط اسم موظف أو عميل (حقل unresolved)، اذكر ذلك صراحة.
+- إن لم يذكر المستخدم وقتاً لحدث، اسأله عن الوقت بدل أن تخترعه. التاريخ اليوم يمكنك استنتاجه من listCalendarEvents.
+- عند سؤال عن جدول أو تعارض مواعيد، استدعِ listCalendarEvents أولاً.
 
 الأسلوب:
 - اكتب بلغة سؤال المستخدم (عربية أو إنجليزية).
@@ -92,7 +95,9 @@ exports.askManager = onCall(opts, async (request) => {
 
     // A draft is handed back separately so the browser can offer it as a
     // pre-filled form rather than the user retyping what the model wrote.
-    const draft = result.data?.kind === 'taskDraft' ? result.data.draft : null;
+    // `draft.kind` tells the client which form to open.
+    const isDraft = result.data?.kind === 'taskDraft' || result.data?.kind === 'eventDraft';
+    const draft = isDraft ? result.data.draft : null;
     return { text: result.text, toolsUsed, draft };
   } catch (err) {
     await writeAudit({

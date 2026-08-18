@@ -234,21 +234,48 @@ function renderMessage(message, index) {
     </div>`;
 }
 
-/** A proposed task, with the one action that turns it into a real one. */
+const PRIORITIES = { urgent: 'عاجلة', high: 'مرتفعة', medium: 'متوسطة', low: 'منخفضة' };
+const EVENT_KINDS = {
+  meeting: 'اجتماع', deadline: 'موعد تسليم', task: 'مهمة',
+  leave: 'إجازة', event: 'حدث', birthday: 'عيد ميلاد'
+};
+
+const when = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString('ar', {
+    dateStyle: 'medium', timeStyle: 'short'
+  });
+};
+
+/** A proposal — task or calendar event — with the action that commits it. */
 function renderDraft(draft, index) {
   if (!draft) return '';
-  const priorities = { urgent: 'عاجلة', high: 'مرتفعة', medium: 'متوسطة', low: 'منخفضة' };
-  const rows = [
-    ['العنوان', draft.title],
-    ['المسؤول', draft.assigneeNames?.join('، ') || '— لم يُحدَّد —'],
-    ['العميل', draft.clientName || '—'],
-    ['الأولوية', priorities[draft.priority] || draft.priority],
-    ['الموعد', draft.dueAt || '—']
-  ];
+  const isEvent = draft.kind === 'event';
+
+  const rows = isEvent
+    ? [
+      ['العنوان', draft.title],
+      ['النوع', EVENT_KINDS[draft.type] || draft.type],
+      ['البداية', when(draft.startAt)],
+      ['النهاية', when(draft.endAt)],
+      ['المشاركون', draft.participantNames?.join('، ') || '— لم يُحدَّد —'],
+      ['العميل', draft.clientName || '—'],
+      ['المكان', draft.location || '—']
+    ]
+    : [
+      ['العنوان', draft.title],
+      ['المسؤول', draft.assigneeNames?.join('، ') || '— لم يُحدَّد —'],
+      ['العميل', draft.clientName || '—'],
+      ['الأولوية', PRIORITIES[draft.priority] || draft.priority],
+      ['الموعد', draft.dueAt || '—']
+    ];
+
   return `
     <div class="ai-draft">
       <div class="fs-2xs text-muted mb-2">
-        <i data-lucide="file-plus" class="icon-sm"></i> مسودة مهمة — لم تُحفظ بعد
+        <i data-lucide="${isEvent ? 'calendar-plus' : 'file-plus'}" class="icon-sm"></i>
+        ${isEvent ? 'مسودة حدث' : 'مسودة مهمة'} — لم تُحفظ بعد
       </div>
       ${rows.map(([k, v]) => `
         <div class="kv"><span class="kv__k">${esc(k)}</span>

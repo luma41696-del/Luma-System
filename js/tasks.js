@@ -31,6 +31,7 @@ import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 import { dropdown } from './app.js';
 import { mountTaskAssistant } from './task-ai.js';
 import { mountManagerAssistant } from './manager-ai.js';
+import { openDraft } from './ai-draft.js';
 
 const VIEW_KEY = 'luma.taskView';
 
@@ -141,17 +142,7 @@ async function renderBoard(container, ctx) {
       panel.hidden = !opening;
       aiButton.classList.toggle('is-on', opening);
       if (opening && !teardown) {
-        teardown = mountManagerAssistant(panel, (draft) => openTaskModal({
-          defaults: {
-            title: draft.title,
-            description: draft.description,
-            project: draft.project,
-            priority: draft.priority,
-            dueAt: draft.dueAt || '',
-            assignees: draft.assignees,
-            clientId: draft.clientId
-          }
-        }));
+        teardown = mountManagerAssistant(panel, (draft) => openDraft(draft));
         unsubs.push(() => teardown?.());
       }
     });

@@ -29,7 +29,7 @@ import { uploadFile, compressImage, pickFiles, paths, deleteFile } from './utils
 import { uploadsEnabled } from './features.js';
 import { watchAllPresence, setTyping, watchTyping, WORK_STATES } from './utils/presence.js';
 import { LUMA_AI_ID, aiRoomRow, openAiChat } from './chat-ai.js';
-import { openTaskModal } from './tasks.js';
+import { openDraft } from './ai-draft.js';
 
 const CHAT_TYPES = {
   group:      { ar: 'مجموعة عامة',  icon: 'users' },
@@ -194,17 +194,7 @@ export async function render(container, ctx) {
     // it renders itself rather than going through the message subscription.
     if (chatId === LUMA_AI_ID) {
       aiTeardown?.();
-      aiTeardown = openAiChat($('#panel'), (draft) => openTaskModal({
-        defaults: {
-          title: draft.title,
-          description: draft.description,
-          project: draft.project,
-          priority: draft.priority,
-          dueAt: draft.dueAt || '',
-          assignees: draft.assignees,
-          clientId: draft.clientId
-        }
-      }));
+      aiTeardown = openAiChat($('#panel'), (draft) => openDraft(draft));
       $('#chat-back')?.addEventListener('click',
         () => $('#chat-layout').classList.remove('show-panel'));
       return;

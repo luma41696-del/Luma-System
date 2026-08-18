@@ -26,6 +26,8 @@ import {
 } from './utils/format.js';
 import { sanitizeText, sanitizeMultiline } from './utils/sanitize.js';
 import { TASK_STATUSES, isOverdue, myTasksQuery, allTasksQuery, watchTasks } from './utils/task-model.js';
+import { mountManagerAssistant } from './manager-ai.js';
+import { openDraft } from './ai-draft.js';
 
 export const EVENT_TYPES = {
   meeting:  { ar: 'اجتماع',       cls: 'meeting',  icon: 'users' },
@@ -71,9 +73,15 @@ export async function render(container, ctx) {
             <button data-view="day">يوم</button>
             <button data-view="agenda">جدول</button>
           </div>
+          ${can(session.claims, 'tasks.ai')
+            ? `<button class="btn btn--ai" id="cal-ai-btn">
+                 <i data-lucide="sparkles"></i> Luma AI
+               </button>` : ''}
           <button class="btn btn--primary" id="cal-add"><i data-lucide="plus"></i> حدث جديد</button>
         </div>
       </div>
+
+      ${can(session.claims, 'tasks.ai') ? '<div class="card mt-4" id="cal-ai" hidden></div>' : ''}
 
       <div class="cal-toolbar">
         <div class="cal-nav">
@@ -135,6 +143,32 @@ export async function render(container, ctx) {
   $('#cal-next').addEventListener('click', () => { step(1); });
   $('#cal-today').addEventListener('click', () => { cursor = new Date(); paint(); });
   $('#cal-add').addEventListener('click', () => openEventModal({ date: cursor }));
+
+  /* ------------------------------------------------------------- Luma AI */
+  // Mounted on first open: most visits to the calendar are not to talk to it.
+  const aiButton = $('#cal-ai-btn');
+  if (aiButton) {
+    const panel = $('#cal-ai');
+    let teardown = null;
+    aiButton.addEventListener('click', () => {
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      aiButton.classList.toggle('is-on', opening);
+      if (opening && !teardown) {
+        teardown = mountManagerAssistant(panel, (draft) => openDraft(draft), {
+          subtitle: 'المواعيد والأحداث وتوزيع المهام',
+          suggestions: [
+            'ما جدول هذا الأسبوع؟',
+            'أضف اجتماع مراجعة غداً الساعة 11',
+            'سجّل موعد تسليم لعميل PRALINE',
+            'أضف عيد ميلاد لموظف'
+          ]
+        });
+        unsubs.push(() => teardown?.());
+      }
+    });
+  }
+
 
   ['#f-employee', '#f-client', '#f-type'].forEach((sel) => {
     $(sel)?.addEventListener('change', () => {
@@ -540,19 +574,31 @@ function openEventDetail(item, people = {}) {
 
 /* ------------------------------------------------------------- event modal */
 
-export async function openEventModal({ event = null, date = new Date() } = {}) {
+/**
+ * @param {object}  options
+ * @param {object} [options.event]     an existing event, for editing
+ * @param {Date}   [options.date]      the day that was clicked
+ * @param {object} [options.defaults]  a proposal to open pre-filled (Luma AI);
+ *                                     seeds the same fields without making
+ *                                     this an edit of anything.
+ */
+export async function openEventModal({ event = null, date = new Date(), defaults = {} } = {}) {
   const isEdit = !!event;
   const directory = await getDirectory().catch(() => []);
   const clients = can(session.claims, 'clients.view')
     ? await getMany(query(col('clients'), orderBy('name'), limit(200))).catch(() => [])
     : [];
 
-  const selected = new Set(event?.participants || [session.uid]);
-  const defaultStart = event?.startAt ? toDateTimeInput(event.startAt) : toDateTimeInput(
-    new Date(new Date(date).setHours(10, 0, 0, 0))
+  const selected = new Set(
+    event?.participants
+    || (defaults.participants?.length ? defaults.participants : null)
+    || [session.uid]
   );
-  const defaultEnd = event?.endAt ? toDateTimeInput(event.endAt) : toDateTimeInput(
-    new Date(new Date(date).setHours(11, 0, 0, 0))
+  const defaultStart = toDateTimeInput(
+    event?.startAt || defaults.startAt || new Date(new Date(date).setHours(10, 0, 0, 0))
+  );
+  const defaultEnd = toDateTimeInput(
+    event?.endAt || defaults.endAt || new Date(new Date(date).setHours(11, 0, 0, 0))
   );
 
   openModal({
@@ -561,7 +607,7 @@ export async function openEventModal({ event = null, date = new Date() } = {}) {
     bodyHTML: `
       <div class="field">
         <label class="field__label" for="ev-title">العنوان <span class="req">*</span></label>
-        <input class="input" id="ev-title" maxlength="200" value="${attr(event?.title || '')}"
+        <input class="input" id="ev-title" maxlength="200" value="${attr(event?.title || defaults.title || '')}"
                placeholder="مثال: اجتماع مراجعة حملة العميل">
       </div>
 
@@ -571,14 +617,14 @@ export async function openEventModal({ event = null, date = new Date() } = {}) {
           <select class="select" id="ev-type">
             ${Object.entries(EVENT_TYPES)
               .filter(([k]) => k !== 'task' && k !== 'leave')
-              .map(([k, v]) => `<option value="${k}" ${event?.type === k ? 'selected' : ''}>${esc(v.ar)}</option>`).join('')}
+              .map(([k, v]) => `<option value="${k}" ${(event?.type || defaults.type) === k ? 'selected' : ''}>${esc(v.ar)}</option>`).join('')}
           </select>
         </div>
         <div class="field">
           <label class="field__label" for="ev-visibility">الظهور</label>
           <select class="select" id="ev-visibility">
-            <option value="team" ${(event?.visibility || 'team') === 'team' ? 'selected' : ''}>الفريق بالكامل</option>
-            <option value="participants" ${event?.visibility === 'participants' ? 'selected' : ''}>المشاركون فقط</option>
+            <option value="team" ${(event?.visibility || defaults.visibility || 'team') === 'team' ? 'selected' : ''}>الفريق بالكامل</option>
+            <option value="participants" ${(event?.visibility || defaults.visibility) === 'participants' ? 'selected' : ''}>المشاركون فقط</option>
           </select>
         </div>
         <div class="field">
@@ -591,7 +637,7 @@ export async function openEventModal({ event = null, date = new Date() } = {}) {
         </div>
         <div class="field">
           <label class="field__label" for="ev-location">المكان / الرابط</label>
-          <input class="input" id="ev-location" maxlength="200" value="${attr(event?.location || '')}">
+          <input class="input" id="ev-location" maxlength="200" value="${attr(event?.location || defaults.location || '')}">
         </div>
         ${clients.length ? `
         <div class="field">

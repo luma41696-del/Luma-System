@@ -13,7 +13,7 @@ import { sanitizeMultiline } from './utils/sanitize.js';
 
 const HISTORY_TURNS = 8;
 
-const SUGGESTIONS = [
+const DEFAULT_SUGGESTIONS = [
   'من هو الأقل انشغالاً الآن؟',
   'وزّع المهام المتأخرة على الفريق',
   'تقرير أداء الفريق هذا الشهر',
@@ -22,24 +22,31 @@ const SUGGESTIONS = [
 
 /**
  * @param {HTMLElement} host
- * @param {(draft: object) => void} onDraft  called when the model proposes a task
+ * @param {(draft: object) => void} onDraft  a proposal — task or calendar event
+ * @param {object} [options]
+ * @param {string} [options.subtitle]     what it does in this context
+ * @param {string[]} [options.suggestions] starter prompts for this page
  * @returns {Function} teardown
  */
-export function mountManagerAssistant(host, onDraft) {
+export function mountManagerAssistant(host, onDraft, {
+  subtitle = 'توزيع المهام ومتابعة الفريق',
+  suggestions = DEFAULT_SUGGESTIONS,
+  placeholder = 'مثال: أنشئ مهمة تصميم بوست لعميل PRALINE وأسندها للأقل انشغالاً'
+} = {}) {
   let messages = [];
   let busy = false;
 
   host.innerHTML = `
     <div class="card__head">
       <div class="card__title"><i data-lucide="sparkles"></i> Luma AI</div>
-      <span class="card__sub">توزيع المهام ومتابعة الفريق</span>
+      <span class="card__sub">${esc(subtitle)}</span>
     </div>
 
     <div id="mai-log" class="task-ai__log">
       <div class="task-ai__hint">
         اسألني عن حِمل العمل، أو اطلب توزيع مهمة، أو تقريراً عن موظف.
         <div class="tag-list mt-3">
-          ${SUGGESTIONS.map((s) => `
+          ${suggestions.map((s) => `
             <button type="button" class="badge" data-suggest="${esc(s)}"
                     style="cursor:pointer">${esc(s)}</button>`).join('')}
         </div>
@@ -48,7 +55,7 @@ export function mountManagerAssistant(host, onDraft) {
 
     <div class="chat-composer">
       <textarea class="textarea" id="mai-input" rows="2"
-                placeholder="مثال: أنشئ مهمة تصميم بوست لعميل PRALINE وأسندها للأقل انشغالاً"></textarea>
+                placeholder="${esc(placeholder)}"></textarea>
       <button class="btn btn--primary btn--icon" id="mai-send" aria-label="إرسال">
         <i data-lucide="send"></i>
       </button>
@@ -139,20 +146,48 @@ function renderMessage(message, index) {
     </div>`;
 }
 
-/** The proposal, with the one action that turns it into a real task. */
+const PRIORITIES = { urgent: 'عاجلة', high: 'مرتفعة', medium: 'متوسطة', low: 'منخفضة' };
+const EVENT_KINDS = {
+  meeting: 'اجتماع', deadline: 'موعد تسليم', task: 'مهمة',
+  leave: 'إجازة', event: 'حدث', birthday: 'عيد ميلاد'
+};
+
+const when = (iso) => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString('ar', {
+    dateStyle: 'medium', timeStyle: 'short'
+  });
+};
+
+/** The proposal, with the one action that turns it into a real record. */
 function renderDraft(draft, index) {
   if (!draft) return '';
-  const rows = [
-    ['العنوان', draft.title],
-    ['المسؤول', draft.assigneeNames?.join('، ') || '— لم يُحدَّد —'],
-    ['العميل', draft.clientName || '—'],
-    ['الأولوية', { urgent: 'عاجلة', high: 'مرتفعة', medium: 'متوسطة', low: 'منخفضة' }[draft.priority] || draft.priority],
-    ['الموعد', draft.dueAt || '—']
-  ];
+  const isEvent = draft.kind === 'event';
+
+  const rows = isEvent
+    ? [
+      ['العنوان', draft.title],
+      ['النوع', EVENT_KINDS[draft.type] || draft.type],
+      ['البداية', when(draft.startAt)],
+      ['النهاية', when(draft.endAt)],
+      ['المشاركون', draft.participantNames?.join('، ') || '— لم يُحدَّد —'],
+      ['العميل', draft.clientName || '—'],
+      ['المكان', draft.location || '—']
+    ]
+    : [
+      ['العنوان', draft.title],
+      ['المسؤول', draft.assigneeNames?.join('، ') || '— لم يُحدَّد —'],
+      ['العميل', draft.clientName || '—'],
+      ['الأولوية', PRIORITIES[draft.priority] || draft.priority],
+      ['الموعد', draft.dueAt || '—']
+    ];
+
   return `
     <div class="card card--pad-sm mt-3" style="background:var(--bg-inset)">
       <div class="fs-2xs text-muted mb-2">
-        <i data-lucide="file-plus" class="icon-sm"></i> مسودة مهمة — لم تُحفظ بعد
+        <i data-lucide="${isEvent ? 'calendar-plus' : 'file-plus'}" class="icon-sm"></i>
+        ${isEvent ? 'مسودة حدث' : 'مسودة مهمة'} — لم تُحفظ بعد
       </div>
       ${rows.map(([k, v]) => `
         <div class="kv"><span class="kv__k">${esc(k)}</span>
