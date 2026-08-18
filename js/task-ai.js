@@ -131,8 +131,9 @@ export function mountTaskAssistant(host, task) {
       messages.push({ role: 'assistant', content: result.text });
     } catch (err) {
       messages.push({ role: 'assistant', content: friendlyError(err), error: true });
-      // Surfaced in the thread above; the toast would just repeat it.
-      if (err?.code !== 'functions/failed-precondition') reportError(err, 'task-ai');
+      // Shown in the thread above, so a toast would only repeat it. Logged for
+      // the console either way.
+      console.warn('[luma] task-ai', err?.code, err?.message);
     } finally {
       busy = false;
       setBusy(button, false);
@@ -195,15 +196,15 @@ function formatText(text) {
     .join('');
 }
 
+/**
+ * The server already names the cause (see functions/ai/errors.js), so its
+ * message is preferred over anything invented here — a generic "try again"
+ * would hide "the key expired", which retrying cannot fix.
+ */
 function friendlyError(err) {
-  if (err?.code === 'functions/failed-precondition') {
-    return 'المساعد الذكي غير مُفعّل على الخادم بعد.';
-  }
-  if (err?.code === 'functions/resource-exhausted') {
-    return 'عدد كبير من الأسئلة خلال وقت قصير. انتظر دقيقة ثم أعد المحاولة.';
-  }
+  if (err?.message) return err.message;
   if (err?.code === 'functions/permission-denied') {
     return 'لا تملك صلاحية استخدام المساعد على هذه المهمة.';
   }
-  return err?.message || 'تعذّر الحصول على إجابة. حاول مرة أخرى.';
+  return 'تعذّر الحصول على إجابة. حاول مرة أخرى.';
 }

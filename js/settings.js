@@ -632,10 +632,24 @@ function auditTab(host, unsubs) {
   ));
 }
 
+/**
+ * Only the first few fields fit in the column, so the ones that explain a
+ * failure are pulled to the front. `error` used to sit fifth and was cut off
+ * every time — which made the audit trail silent about exactly the entries
+ * someone opens it to investigate.
+ */
+const META_FIRST = ['error', 'reason', 'success'];
+
 function summarizeMeta(meta) {
   if (!meta || typeof meta !== 'object') return '—';
-  return Object.entries(meta)
-    .filter(([, v]) => v !== null && v !== undefined && typeof v !== 'object')
+  const entries = Object.entries(meta)
+    .filter(([, v]) => v !== null && v !== undefined && typeof v !== 'object');
+  const rank = ([k]) => {
+    const i = META_FIRST.indexOf(k);
+    return i === -1 ? META_FIRST.length : i;
+  };
+  return entries
+    .sort((a, b) => rank(a) - rank(b))
     .slice(0, 4)
     .map(([k, v]) => `${k}: ${v}`)
     .join(' · ') || '—';

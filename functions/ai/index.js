@@ -14,6 +14,7 @@ const { writeAudit } = require('../lib/audit');
 const { AIService } = require('./service');
 const { DEFINITIONS, runTool } = require('./tools');
 const { enforceRateLimit } = require('./rate-limit');
+const { providerError } = require('./errors');
 
 // The key is read from the environment, never from source. Declaring it in
 // `secrets` makes Cloud Functions mount it and keeps it out of the build.
@@ -88,10 +89,9 @@ exports.askAccountant = onCall(opts, async (request) => {
       }
     });
 
-    if (err instanceof HttpsError) throw err;
     // Upstream detail (including anything echoed back by the provider) stays
     // in the logs rather than going to the browser.
     console.error('[ai] askAccountant failed', err);
-    throw new HttpsError('internal', 'تعذّر الحصول على إجابة من المساعد الذكي. حاول مرة أخرى.');
+    throw providerError(err);
   }
 });

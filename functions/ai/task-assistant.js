@@ -19,6 +19,7 @@ const { assert, str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const { AIService } = require('./service');
 const { enforceRateLimit } = require('./rate-limit');
+const { providerError } = require('./errors');
 
 const opts = { region: REGION, cors: true, secrets: ['OPENAI_API_KEY'] };
 
@@ -158,9 +159,8 @@ exports.askTaskAssistant = onCall(opts, async (request) => {
       }
     });
 
-    if (err instanceof HttpsError) throw err;
     // Provider detail stays in the logs — it can echo back the request.
     console.error('[ai] askTaskAssistant failed', err);
-    throw new HttpsError('internal', 'تعذّر الحصول على إجابة من المساعد الذكي. حاول مرة أخرى.');
+    throw providerError(err);
   }
 });
