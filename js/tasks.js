@@ -29,6 +29,7 @@ import { uploadFile, pickFiles, paths, deleteFile } from './utils/upload.js';
 import { uploadsEnabled, UPLOADS_DISABLED_MSG } from './features.js';
 import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 import { dropdown } from './app.js';
+import { mountTaskAssistant } from './task-ai.js';
 
 const VIEW_KEY = 'luma.taskView';
 
@@ -728,6 +729,8 @@ async function paintDetail(root, task, unsubs) {
           <div id="attachments"></div>
         </div>
 
+        ${can(session.claims, 'tasks.ai') ? '<div class="card" id="task-ai"></div>' : ''}
+
         <div class="card">
           <div class="card__head"><div class="card__title"><i data-lucide="message-square"></i> التعليقات</div></div>
           <div id="comments">${'<div class="skeleton skeleton--row"></div>'.repeat(2)}</div>
@@ -809,6 +812,12 @@ async function paintDetail(root, task, unsubs) {
     </div>`;
 
   refreshIcons(root);
+
+  /* -------------------------------------------------------- assistant */
+  // Torn down with the rest of the page so its state cannot follow the user
+  // onto the next task.
+  const assistantHost = $('#task-ai', root);
+  if (assistantHost) unsubs.push(mountTaskAssistant(assistantHost, task));
 
   /* ----------------------------------------------------------- actions */
   $('#btn-edit')?.addEventListener('click', () => openTaskModal({ task }));

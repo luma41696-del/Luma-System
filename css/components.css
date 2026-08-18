@@ -1567,6 +1567,54 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
 .btn--ai.is-on { background: var(--brand-gradient); color: var(--text-on-brand); }
 .btn--ai [data-lucide] { width: 16px; height: 16px; }
 
+/* ------------------------------------------------- task assistant panel */
+/* Reuses the .ai-msg / .ai-bubble chat pieces below, so the two assistants
+   look like one feature rather than two. */
+.task-ai__log {
+  max-height: 340px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.task-ai__hint {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  padding: var(--sp-3);
+  background: var(--bg-inset);
+  border-radius: var(--radius-sm);
+  line-height: 1.8;
+}
+.task-ai__images { margin: var(--sp-3) 0; }
+.task-ai__thumbs { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.task-ai__thumb {
+  position: relative;
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: border-color var(--t-fast) var(--ease);
+}
+.task-ai__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.task-ai__thumb:hover { border-color: var(--border-strong); }
+.task-ai__thumb.is-on { border-color: var(--brand); }
+/* The tick only appears once picked, so the thumbnails stay readable. */
+.task-ai__thumb-check {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--brand-soft);
+  color: var(--brand-light);
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease);
+}
+.task-ai__thumb.is-on .task-ai__thumb-check { opacity: 1; }
+.task-ai__thumb-check [data-lucide] { width: 20px; height: 20px; }
+
 .ai-backdrop {
   position: fixed;
   inset: 0;

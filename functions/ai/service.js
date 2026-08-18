@@ -63,11 +63,18 @@ class AIService {
     });
   }
 
-  ask({ question, history = [], tools, runTool }) {
+  /**
+   * @param {object} options
+   * @param {string} [options.system]  overrides the finance instructions, for
+   *                                   an assistant with a different job
+   * @param {Array}  [options.images]  image URLs to show with the question
+   */
+  ask({ question, history = [], tools, runTool, system = SYSTEM_PROMPT, images = [] }) {
     return this.provider.answer({
-      system: SYSTEM_PROMPT,
+      system,
       history,
       question,
+      images,
       tools,
       runTool
     });

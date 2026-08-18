@@ -36,6 +36,7 @@ const PERMISSION_CODES = {
   'finance.void': 'fx',
   'finance.approve': 'fa',
   'finance.ai': 'fai',
+  'tasks.ai': 'tai',
   'finance.treasury': 'ft',
   'finance.payroll': 'fp',
   'settings.manage': 'sm'

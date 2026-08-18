@@ -85,6 +85,9 @@ const ai = require('./ai');
 
 exports.askAccountant = ai.askAccountant;
 
+const taskAssistant = require('./ai/task-assistant');
+exports.askTaskAssistant = taskAssistant.askTaskAssistant;
+
 /* --------------------------------------------------------- notifications */
 const notifications = require('./notifications');
 

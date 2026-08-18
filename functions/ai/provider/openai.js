@@ -40,9 +40,12 @@ class OpenAIProvider {
 
       if (!response.ok) {
         const detail = await response.text().catch(() => '');
-        // The key must never reach a log or a client, so only the status and
-        // the provider's own message are surfaced.
-        const err = new Error(`OpenAI ${response.status}: ${detail.slice(0, 300)}`);
+        // The key must never reach a log or a client. OpenAI masks the middle
+        // of it in auth errors but still echoes the first and last characters
+        // ("sk-abcd****wxyz"), and this message ends up in the audit trail —
+        // so anything key-shaped is stripped before it travels any further.
+        const safe = detail.replace(/sk-[A-Za-z0-9_*-]+/g, 'sk-***');
+        const err = new Error(`OpenAI ${response.status}: ${safe.slice(0, 300)}`);
         err.status = response.status;
         throw err;
       }
@@ -59,14 +62,25 @@ class OpenAIProvider {
    * @param {string}   options.system        system instructions
    * @param {Array}    options.history       prior turns [{role, content}]
    * @param {string}   options.question
-   * @param {Array}    options.tools         Responses-API tool definitions
-   * @param {Function} options.runTool       (name, args) => Promise<any>
+   * @param {Array}    [options.images]      image URLs to show alongside the question
+   * @param {Array}    [options.tools]       Responses-API tool definitions
+   * @param {Function} [options.runTool]     (name, args) => Promise<any>
    * @returns {{text: string, toolsUsed: string[], data: object|null}}
    */
-  async answer({ system, history, question, tools, runTool }) {
+  async answer({ system, history, question, images = [], tools, runTool }) {
+    // With images the question becomes a content array rather than a string;
+    // without them it stays a plain string, so the text-only callers are
+    // untouched.
+    const userContent = images.length
+      ? [
+        { type: 'input_text', text: question },
+        ...images.map((url) => ({ type: 'input_image', image_url: url }))
+      ]
+      : question;
+
     const input = [
       ...history.map((m) => ({ role: m.role, content: String(m.content || '').slice(0, 4000) })),
-      { role: 'user', content: question }
+      { role: 'user', content: userContent }
     ];
 
     const toolsUsed = [];
@@ -79,8 +93,9 @@ class OpenAIProvider {
         model: this.model,
         instructions: system,
         input,
-        tools,
-        tool_choice: 'auto',
+        // Omitted entirely for a caller with no tools — sending `tool_choice`
+        // with an empty tool list is rejected.
+        ...(tools?.length ? { tools, tool_choice: 'auto' } : {}),
         // Deterministic-ish: this is a reporting assistant, not a writing one.
         temperature: 0.2,
         max_output_tokens: 1200

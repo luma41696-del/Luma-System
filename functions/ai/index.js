@@ -7,43 +7,17 @@
  */
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
-const { db, FieldValue, REGION } = require('../lib/admin');
+const { REGION } = require('../lib/admin');
 const { requireAuth, requirePermission } = require('../lib/permissions');
 const { assert, str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const { AIService } = require('./service');
 const { DEFINITIONS, runTool } = require('./tools');
+const { enforceRateLimit } = require('./rate-limit');
 
 // The key is read from the environment, never from source. Declaring it in
 // `secrets` makes Cloud Functions mount it and keeps it out of the build.
 const opts = { region: REGION, cors: true, secrets: ['OPENAI_API_KEY'] };
-
-/** Sliding window per user — an accidental loop should not run up a bill. */
-const RATE_LIMIT = { windowMs: 60_000, maxRequests: 12 };
-
-async function enforceRateLimit(uid) {
-  const ref = db.collection('aiUsage').doc(uid);
-  const now = Date.now();
-
-  const allowed = await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const data = snap.exists ? snap.data() : {};
-    const windowStart = data.windowStart || 0;
-    const count = data.count || 0;
-
-    if (now - windowStart > RATE_LIMIT.windowMs) {
-      tx.set(ref, { windowStart: now, count: 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-      return true;
-    }
-    if (count >= RATE_LIMIT.maxRequests) return false;
-    tx.set(ref, { count: count + 1, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-    return true;
-  });
-
-  if (!allowed) {
-    throw new HttpsError('resource-exhausted', 'عدد كبير من الطلبات خلال وقت قصير. انتظر دقيقة ثم أعد المحاولة.');
-  }
-}
 
 exports.askAccountant = onCall(opts, async (request) => {
   const caller = requireAuth(request);
