@@ -13,7 +13,17 @@ const ENDPOINT = 'https://api.openai.com/v1/responses';
 
 /** Hard ceiling on tool round-trips for a single question. */
 const MAX_TOOL_ROUNDS = 5;
-const REQUEST_TIMEOUT_MS = 45_000;
+
+/**
+ * Give up before the platform does.
+ *
+ * On Netlify the handler is killed at 26s (netlify.toml [functions.api]); a
+ * 45s ceiling here could therefore never fire, so a slow answer was killed
+ * mid-flight and surfaced as an opaque platform error instead of the timeout
+ * message this code takes care to produce. 20s leaves room for the auth
+ * check, the task read and the audit write inside that budget.
+ */
+const REQUEST_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS) || 20_000;
 
 class OpenAIProvider {
   constructor({ apiKey, model }) {
