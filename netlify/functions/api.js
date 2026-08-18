@@ -41,7 +41,8 @@ const modules = [
   require('../../functions/finance/treasury'),
   require('../../functions/finance/payroll'),
   require('../../functions/ai'),
-  require('../../functions/ai/task-assistant')
+  require('../../functions/ai/task-assistant'),
+  require('../../functions/ai/manager')
 ];
 
 /** name -> onCall handler */

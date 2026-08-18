@@ -30,6 +30,7 @@ import { uploadsEnabled, UPLOADS_DISABLED_MSG } from './features.js';
 import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 import { dropdown } from './app.js';
 import { mountTaskAssistant } from './task-ai.js';
+import { mountManagerAssistant } from './manager-ai.js';
 
 const VIEW_KEY = 'luma.taskView';
 
@@ -84,9 +85,15 @@ async function renderBoard(container, ctx) {
             <button data-view="table" title="جدول"><i data-lucide="table"></i> جدول</button>
           </div>
           ${!scopeMine && canSeeAll ? '' : `<a class="btn btn--ghost" href="#/tasks">كل المهام</a>`}
+          ${can(session.claims, 'tasks.ai')
+            ? `<button class="btn btn--ai" id="manager-ai-btn">
+                 <i data-lucide="sparkles"></i> مساعد الإدارة
+               </button>` : ''}
           <button class="btn btn--primary" id="new-task"><i data-lucide="plus"></i> مهمة جديدة</button>
         </div>
       </div>
+
+      ${can(session.claims, 'tasks.ai') ? '<div class="card mt-4" id="manager-ai" hidden></div>' : ''}
 
       <div class="filter-bar">
         <span class="filter-bar__label"><i data-lucide="filter"></i> تصفية</span>
@@ -121,6 +128,34 @@ async function renderBoard(container, ctx) {
   refreshIcons(container);
 
   $('#new-task').addEventListener('click', () => openTaskModal({ personal: !can(session.claims, 'tasks.create') }));
+
+  /* --------------------------------------------------- manager assistant */
+  // Mounted on first open rather than with the page: most visits to the board
+  // are not to talk to it, and it would otherwise cost a render every time.
+  const aiButton = $('#manager-ai-btn');
+  if (aiButton) {
+    const panel = $('#manager-ai');
+    let teardown = null;
+    aiButton.addEventListener('click', () => {
+      const opening = panel.hidden;
+      panel.hidden = !opening;
+      aiButton.classList.toggle('is-on', opening);
+      if (opening && !teardown) {
+        teardown = mountManagerAssistant(panel, (draft) => openTaskModal({
+          defaults: {
+            title: draft.title,
+            description: draft.description,
+            project: draft.project,
+            priority: draft.priority,
+            dueAt: draft.dueAt || '',
+            assignees: draft.assignees,
+            clientId: draft.clientId
+          }
+        }));
+        unsubs.push(() => teardown?.());
+      }
+    });
+  }
 
   /* --------------------------------------------------------- filters */
   const applyFilters = () => {
@@ -1198,8 +1233,15 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
       : Promise.resolve([])
   ]);
 
-  const selected = new Set(task?.assignees || (personal || !canAssign ? [session.uid] : []));
-  let selectedClientId = task?.clientId || clientId || '';
+  // `defaults` also seeds the assignee and client, so a draft handed over by
+  // the assistant opens as a filled-in form rather than a blank one the user
+  // has to retype from the chat above it.
+  const selected = new Set(
+    task?.assignees
+    || defaults.assignees
+    || (personal || !canAssign ? [session.uid] : [])
+  );
+  let selectedClientId = task?.clientId || clientId || defaults.clientId || '';
 
   const modal = openModal({
     title: isEdit ? 'تعديل المهمة' : (personal ? 'مهمة شخصية جديدة' : 'مهمة جديدة'),
@@ -1217,7 +1259,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
         <div class="field">
           <label class="field__label" for="t-desc">الوصف</label>
           <textarea class="textarea" id="t-desc" maxlength="4000" rows="3"
-            placeholder="تفاصيل المهمة والمتطلبات…">${esc(task?.description || '')}</textarea>
+            placeholder="تفاصيل المهمة والمتطلبات…">${esc(task?.description || defaults.description || '')}</textarea>
         </div>
 
         <div class="form-grid">
@@ -1230,7 +1272,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
           <div class="field">
             <label class="field__label" for="t-project">المشروع</label>
             <input class="input" id="t-project" maxlength="120"
-                   value="${attr(task?.project || '')}" placeholder="اسم المشروع أو الحملة">
+                   value="${attr(task?.project || defaults.project || '')}" placeholder="اسم المشروع أو الحملة">
           </div>
 
           <div class="field">
@@ -1245,7 +1287,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
             <label class="field__label" for="t-priority">الأولوية</label>
             <select class="select" id="t-priority">
               ${Object.entries(PRIORITIES).map(([k, v]) => `
-                <option value="${k}" ${(task?.priority || 'medium') === k ? 'selected' : ''}>${esc(v.ar)}</option>`).join('')}
+                <option value="${k}" ${(task?.priority || defaults.priority || 'medium') === k ? 'selected' : ''}>${esc(v.ar)}</option>`).join('')}
             </select>
           </div>
 

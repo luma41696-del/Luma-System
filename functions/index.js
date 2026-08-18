@@ -88,6 +88,9 @@ exports.askAccountant = ai.askAccountant;
 const taskAssistant = require('./ai/task-assistant');
 exports.askTaskAssistant = taskAssistant.askTaskAssistant;
 
+const manager = require('./ai/manager');
+exports.askManager = manager.askManager;
+
 /* --------------------------------------------------------- notifications */
 const notifications = require('./notifications');
 
