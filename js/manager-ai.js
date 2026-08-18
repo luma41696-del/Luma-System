@@ -31,7 +31,7 @@ export function mountManagerAssistant(host, onDraft) {
 
   host.innerHTML = `
     <div class="card__head">
-      <div class="card__title"><i data-lucide="sparkles"></i> مساعد الإدارة</div>
+      <div class="card__title"><i data-lucide="sparkles"></i> Luma AI</div>
       <span class="card__sub">توزيع المهام ومتابعة الفريق</span>
     </div>
 

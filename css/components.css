@@ -1567,6 +1567,48 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
 .btn--ai.is-on { background: var(--brand-gradient); color: var(--text-on-brand); }
 .btn--ai [data-lucide] { width: 16px; height: 16px; }
 
+/* --------------------------------------------------- Luma AI in the chat */
+/* Pinned above the people and marked with the brand rather than an avatar,
+   so it reads as a contact of a different kind at a glance. */
+.chat-room--ai {
+  background: var(--brand-soft);
+  border: 1px solid var(--brand-soft);
+}
+.chat-room--ai.is-active { border-color: var(--brand); }
+.chat-room__ai-avatar {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  flex: none;
+  background: var(--brand-gradient);
+  color: var(--text-on-brand);
+}
+.chat-room__ai-avatar [data-lucide] { width: 17px; height: 17px; }
+.chat-room__ai-avatar--lg { width: 56px; height: 56px; margin-inline: auto; }
+.chat-room__ai-avatar--lg [data-lucide] { width: 28px; height: 28px; }
+
+.ai-greeting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: var(--sp-2);
+  height: 100%;
+  padding: var(--sp-6);
+}
+.ai-greeting p { max-width: 320px; margin: 0 0 var(--sp-3); }
+
+.ai-draft {
+  margin-top: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-soft);
+}
+
 /* ------------------------------------------------- task assistant panel */
 /* Reuses the .ai-msg / .ai-bubble chat pieces below, so the two assistants
    look like one feature rather than two. */

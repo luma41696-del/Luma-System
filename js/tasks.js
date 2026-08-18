@@ -87,7 +87,7 @@ async function renderBoard(container, ctx) {
           ${!scopeMine && canSeeAll ? '' : `<a class="btn btn--ghost" href="#/tasks">كل المهام</a>`}
           ${can(session.claims, 'tasks.ai')
             ? `<button class="btn btn--ai" id="manager-ai-btn">
-                 <i data-lucide="sparkles"></i> مساعد الإدارة
+                 <i data-lucide="sparkles"></i> Luma AI
                </button>` : ''}
           <button class="btn btn--primary" id="new-task"><i data-lucide="plus"></i> مهمة جديدة</button>
         </div>

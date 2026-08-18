@@ -118,13 +118,13 @@ function openPanel() {
   panel = document.createElement('aside');
   panel.className = 'ai-panel';
   panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-label', 'المساعد المالي الذكي');
+  panel.setAttribute('aria-label', 'Luma AI — المساعد المالي');
   panel.innerHTML = `
     <header class="ai-panel__head">
       <div class="ai-panel__title">
         <span class="ai-panel__avatar"><i data-lucide="sparkles"></i></span>
         <div>
-          <div class="fw-700">AI Accountant</div>
+          <div class="fw-700">Luma AI</div>
           <div class="fs-2xs text-muted">Powered by OpenAI</div>
         </div>
       </div>

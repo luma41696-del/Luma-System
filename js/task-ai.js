@@ -36,7 +36,7 @@ export function mountTaskAssistant(host, task) {
 
   host.innerHTML = `
     <div class="card__head">
-      <div class="card__title"><i data-lucide="sparkles"></i> مساعد ذكي</div>
+      <div class="card__title"><i data-lucide="sparkles"></i> Luma AI</div>
       <span class="card__sub">يساعدك على إنجاز هذه المهمة</span>
     </div>
 

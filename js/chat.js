@@ -28,6 +28,8 @@ import { renderMessageBody, sanitizeText, sanitizeMultiline, extractFirstLink, l
 import { uploadFile, compressImage, pickFiles, paths, deleteFile } from './utils/upload.js';
 import { uploadsEnabled } from './features.js';
 import { watchAllPresence, setTyping, watchTyping, WORK_STATES } from './utils/presence.js';
+import { LUMA_AI_ID, aiRoomRow, openAiChat } from './chat-ai.js';
+import { openTaskModal } from './tasks.js';
 
 const CHAT_TYPES = {
   group:      { ar: 'مجموعة عامة',  icon: 'users' },
@@ -44,6 +46,9 @@ export async function render(container, ctx) {
   let typingUnsub = null;
   let statuses = {};
   let replyTo = null;
+  let aiTeardown = null;
+
+  const canUseAi = can(session.claims, 'tasks.ai');
 
   const directory = await getDirectory().catch(() => []);
   const people = Object.fromEntries(directory.map((u) => [u.id, u]));
@@ -98,6 +103,9 @@ export async function render(container, ctx) {
     (snap) => {
       chats = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       paintRooms();
+      // The AI room opens itself and has no document to re-read, so it is
+      // left alone here — otherwise every chat update would wipe the panel.
+      if (activeId === LUMA_AI_ID) return;
       if (!activeId && chats.length && window.innerWidth > 640) openChat(chats[0].id);
       else if (activeId) {
         const chat = chats.find((c) => c.id === activeId);
@@ -114,6 +122,10 @@ export async function render(container, ctx) {
     openOrCreateDirect(ctx.query.dm).then((id) => id && openChat(id)).catch(() => {});
   }
 
+  // #/chat/__luma_ai__ — opened here rather than by the snapshot handler
+  // above, which only knows about rooms that exist as documents.
+  if (activeId === LUMA_AI_ID && canUseAi) openChat(LUMA_AI_ID);
+
   /* --------------------------------------------------------------- rooms */
 
   function paintRooms() {
@@ -125,12 +137,17 @@ export async function render(container, ctx) {
       .map((chat) => ({ ...chat, label: chatLabel(chat) }))
       .filter((chat) => !term || chat.label.toLowerCase().includes(term));
 
-    if (!rows.length) {
+    // Pinned above the people, and only hidden when a search plainly excludes
+    // it — it is always available rather than something to scroll for.
+    const showAi = canUseAi && (!term || 'luma ai'.includes(term) || term.includes('ai'));
+    const aiRow = showAi ? aiRoomRow({ active: activeId === LUMA_AI_ID }) : '';
+
+    if (!rows.length && !showAi) {
       mount(host, emptyState({ icon: 'message-square', title: 'لا محادثات', text: 'ابدأ محادثة جديدة.' }));
       return;
     }
 
-    host.innerHTML = rows.map((chat) => {
+    host.innerHTML = aiRow + rows.map((chat) => {
       const unread = chat.unread?.[session.uid] || 0;
       const other = chat.type === 'direct'
         ? people[(chat.members || []).find((m) => m !== session.uid)]
@@ -172,6 +189,26 @@ export async function render(container, ctx) {
     history.replaceState(null, '', `#/chat/${chatId}`);
     $('#chat-layout').classList.add('show-panel');
     paintRooms();
+
+    // The AI room is virtual — there is no Firestore document behind it, so
+    // it renders itself rather than going through the message subscription.
+    if (chatId === LUMA_AI_ID) {
+      aiTeardown?.();
+      aiTeardown = openAiChat($('#panel'), (draft) => openTaskModal({
+        defaults: {
+          title: draft.title,
+          description: draft.description,
+          project: draft.project,
+          priority: draft.priority,
+          dueAt: draft.dueAt || '',
+          assignees: draft.assignees,
+          clientId: draft.clientId
+        }
+      }));
+      $('#chat-back')?.addEventListener('click',
+        () => $('#chat-layout').classList.remove('show-panel'));
+      return;
+    }
 
     const chat = chats.find((c) => c.id === chatId);
     if (!chat) return;
@@ -693,6 +730,7 @@ export async function render(container, ctx) {
 
   return () => {
     setTyping(activeId, session.uid, false);
+    aiTeardown?.();
     unsubs.forEach((fn) => { try { fn(); } catch {} });
   };
 }

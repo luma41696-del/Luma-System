@@ -135,7 +135,7 @@ async function renderBoard(container, ctx) {
         <div class="page-head__actions">
           ${assistantAvailable()
             ? `<button class="btn btn--ai" id="ai-assistant-btn">
-                 <i data-lucide="sparkles"></i> AI Accountant
+                 <i data-lucide="sparkles"></i> Luma AI
                </button>` : ''}
           ${canManage ? `
             <button class="btn btn--ghost" id="new-expense"><i data-lucide="trending-down"></i> مصروف</button>
