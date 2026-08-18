@@ -8,6 +8,7 @@
  */
 
 const { OpenAIProvider } = require('./provider/openai');
+const { nowContext } = require('./context');
 
 const PROVIDERS = {
   openai: (config) => new OpenAIProvider(config)
@@ -71,7 +72,10 @@ class AIService {
    */
   ask({ question, history = [], tools, runTool, system = SYSTEM_PROMPT, images = [], webSearch = false }) {
     return this.provider.answer({
-      system,
+      // Prepended here rather than in each assistant's prompt: a model with no
+      // clock dates things from its training cutoff, and this is the one seam
+      // every assistant already passes through, so none can forget it.
+      system: `${nowContext()}\n\n${system}`,
       history,
       question,
       images,

@@ -17,6 +17,12 @@ import { callFn } from './utils/api.js';
 import { sanitizeMultiline, safeUrl } from './utils/sanitize.js';
 import { formatTime } from './utils/format.js';
 import { confirmDialog } from './utils/modal.js';
+import { uploadFile, compressImage, pickFiles, paths } from './utils/upload.js';
+import { uploadsEnabled } from './features.js';
+import { toastError } from './utils/toast.js';
+
+/** Vision is billed per image; the server enforces this cap too. */
+const MAX_IMAGES = 4;
 
 /** Id of the virtual room. Not a Firestore document. */
 export const LUMA_AI_ID = '__luma_ai__';
@@ -76,6 +82,8 @@ export function aiRoomRow({ active }) {
 export function openAiChat(panel, onDraft) {
   let messages = load();
   let busy = false;
+  /** Uploaded and waiting to be sent with the next message. */
+  let pending = [];
 
   panel.innerHTML = `
     <header class="chat-panel__head">
@@ -93,7 +101,13 @@ export function openAiChat(panel, onDraft) {
     </header>
     <div class="chat-panel__body" id="ai-messages"></div>
     <footer class="chat-panel__foot">
+      <div id="ai-attachments" class="ai-attachments" hidden></div>
       <div class="chat-composer">
+        ${uploadsEnabled() ? `
+        <button class="btn btn--ghost btn--icon" id="ai-attach" aria-label="إرفاق صورة"
+                title="إرفاق صورة">
+          <i data-lucide="image-plus"></i>
+        </button>` : ''}
         <textarea class="textarea" id="ai-msg-input" rows="1"
                   placeholder="اسأل Luma AI…"></textarea>
         <button class="btn btn--primary btn--icon" id="ai-send-btn" aria-label="إرسال">
@@ -125,19 +139,67 @@ export function openAiChat(panel, onDraft) {
     });
   }
 
+  /* ---------------------------------------------------------- attachments */
+  function paintPending() {
+    const strip = $('#ai-attachments', panel);
+    if (!strip) return;
+    strip.hidden = !pending.length;
+    strip.innerHTML = pending.map((img, i) => `
+      <span class="ai-attachment${img.uploading ? ' is-uploading' : ''}">
+        ${img.preview ? `<img src="${attr(img.preview)}" alt="">` : ''}
+        ${img.uploading
+          ? '<span class="ai-attachment__spinner"></span>'
+          : `<button class="ai-attachment__x" data-drop="${i}" aria-label="إزالة">
+               <i data-lucide="x"></i></button>`}
+      </span>`).join('');
+    refreshIcons(strip);
+    $$('[data-drop]', strip).forEach((b) => b.addEventListener('click', () => {
+      pending.splice(Number(b.dataset.drop), 1);
+      paintPending();
+    }));
+  }
+
+  $('#ai-attach', panel)?.addEventListener('click', async () => {
+    if (pending.length >= MAX_IMAGES) return toastError(`حتى ${MAX_IMAGES} صور في الرسالة الواحدة.`);
+    const [file] = await pickFiles({ accept: 'image/*' });
+    if (!file) return;
+
+    // Shown immediately from the local file; the upload fills in the URL.
+    const entry = { preview: URL.createObjectURL(file), uploading: true, url: null };
+    pending.push(entry);
+    paintPending();
+
+    try {
+      const compressed = await compressImage(file, { maxSize: 1200 });
+      const uploaded = await uploadFile(compressed, paths.chat(LUMA_AI_ID, session.uid, file), { maxMB: 10 });
+      entry.url = uploaded.url;
+      entry.uploading = false;
+    } catch (err) {
+      pending = pending.filter((p) => p !== entry);
+      toastError(err?.message || 'تعذّر رفع الصورة.');
+    } finally {
+      paintPending();
+    }
+  });
+
   async function send(raw) {
     const input = $('#ai-msg-input', panel);
     const question = sanitizeMultiline(raw ?? input.value, 1000);
     if (!question || busy) return;
+    if (pending.some((p) => p.uploading)) return toastError('انتظر انتهاء رفع الصورة.');
 
-    messages.push({ role: 'user', content: question, at: Date.now() });
+    const images = pending.map((p) => p.url).filter(Boolean);
+    messages.push({ role: 'user', content: question, images: images.length, at: Date.now() });
     input.value = '';
+    pending = [];
+    paintPending();
     busy = true;
     paint();
 
     try {
       const result = await callFn('askManager', {
         question,
+        images,
         history: messages
           .slice(-HISTORY_TURNS)
           .filter((m) => m.role === 'user' || m.role === 'assistant')
@@ -145,7 +207,7 @@ export function openAiChat(panel, onDraft) {
       });
       messages.push({
         role: 'assistant', content: result.text, draft: result.draft || null,
-        citations: result.citations || [], at: Date.now()
+        citations: result.citations || [], steps: result.steps || [], at: Date.now()
       });
     } catch (err) {
       // The server names the cause (functions/ai/errors.js), so it is repeated
@@ -180,11 +242,13 @@ export function openAiChat(panel, onDraft) {
     });
     if (!ok) return;
     messages = [];
+    pending = [];
     save(messages);
+    paintPending();
     paint();
   });
 
-  return () => { messages = []; };
+  return () => { messages = []; pending = []; };
 }
 
 /* ------------------------------------------------------------ rendering */
@@ -216,6 +280,9 @@ function renderMessage(message, index) {
     return `
       <div class="msg is-own">
         <div class="msg__bubble">
+          ${message.images ? `<div class="fs-2xs" style="opacity:.75">
+            <i data-lucide="image" class="icon-sm"></i> ${message.images} صورة مرفقة
+          </div>` : ''}
           <div class="msg__text">${esc(message.content)}</div>
           <div class="msg__meta">${esc(time)}</div>
         </div>
@@ -229,6 +296,7 @@ function renderMessage(message, index) {
         ${message.error
           ? `<div class="ai-error"><i data-lucide="alert-triangle"></i> ${esc(message.content)}</div>`
           : `<div class="msg__text ai-text">${formatText(message.content)}</div>`}
+        ${renderSteps(message.steps)}
         ${renderCitations(message.citations)}
         ${renderDraft(message.draft, index)}
         <div class="msg__meta">${esc(time)}</div>
@@ -341,4 +409,34 @@ function renderCitations(citations) {
           : '';
       }).join('')}
     </div>`;
+}
+
+const TOOL_LABELS = {
+  listEmployees: 'قرأ قائمة الموظفين',
+  getTeamWorkload: 'حسب حِمل الفريق',
+  getEmployeeReport: 'أعدّ تقرير موظف',
+  getStaleTasks: 'بحث عن المهام المتوقفة',
+  listCalendarEvents: 'قرأ التقويم',
+  draftTask: 'جهّز مسودة مهمة',
+  draftEvent: 'جهّز مسودة حدث',
+  draftNote: 'جهّز مسودة ملاحظة'
+};
+
+/** What the assistant did, in order. Collapsed until opened. */
+function renderSteps(steps) {
+  if (!steps?.length) return '';
+  return `
+    <details class="ai-steps">
+      <summary>
+        <i data-lucide="list-checks" class="icon-sm"></i>
+        ماذا فعلت؟ (${steps.length})
+      </summary>
+      <ol class="ai-steps__list">
+        ${steps.map((s) => s.kind === 'search'
+          ? `<li><i data-lucide="globe" class="icon-sm"></i>
+               بحث في الإنترنت${s.label ? `: <span class="ai-steps__q">${esc(s.label)}</span>` : ''}</li>`
+          : `<li><i data-lucide="database" class="icon-sm"></i>
+               ${esc(TOOL_LABELS[s.label] || s.label)}</li>`).join('')}
+      </ol>
+    </details>`;
 }

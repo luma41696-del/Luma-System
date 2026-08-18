@@ -22,6 +22,27 @@ const { providerError } = require('./errors');
 
 const opts = { region: REGION, cors: true, secrets: ['OPENAI_API_KEY'] };
 
+/** Vision is billed per image; the browser caps this too, this enforces it. */
+const MAX_IMAGES = 4;
+
+/**
+ * Is this a download URL for a file in our own Storage bucket?
+ *
+ * The bucket name is read from the environment so a different project does
+ * not silently fall through to accepting nothing — or, worse, anything.
+ */
+const STORAGE_HOSTS = new Set(['firebasestorage.googleapis.com', 'storage.googleapis.com']);
+const BUCKET = process.env.STORAGE_BUCKET || 'luma-web-d3550.firebasestorage.app';
+
+function isOwnStorageUrl(value) {
+  let url;
+  try { url = new URL(value); } catch { return false; }
+  if (url.protocol !== 'https:') return false;
+  if (!STORAGE_HOSTS.has(url.hostname)) return false;
+  // The bucket appears in the path for both host styles.
+  return url.pathname.includes(encodeURIComponent(BUCKET)) || url.pathname.includes(BUCKET);
+}
+
 const SYSTEM_PROMPT = `أنت «مساعد الإدارة» داخل نظام إدارة وكالة لوما. تساعد المدير على توزيع المهام ومتابعة الفريق.
 
 قواعد صارمة:
@@ -61,6 +82,16 @@ exports.askManager = onCall(opts, async (request) => {
   const question = str(request.data?.question, { max: 1000, required: true, field: 'السؤال' });
   assert(question.length >= 2, 'السؤال قصير جداً.');
 
+  // Images the user attached in the chat. Only files already uploaded to our
+  // own Storage bucket are accepted: taking an arbitrary URL from the browser
+  // would let anyone point the model at any address on the internet and have
+  // the agency's key pay to fetch it.
+  const rawImages = Array.isArray(request.data?.images) ? request.data.images : [];
+  const images = rawImages
+    .slice(0, MAX_IMAGES)
+    .map((u) => String(u || ''))
+    .filter(isOwnStorageUrl);
+
   const rawHistory = Array.isArray(request.data?.history) ? request.data.history : [];
   const history = rawHistory
     .slice(-8)
@@ -88,6 +119,7 @@ exports.askManager = onCall(opts, async (request) => {
       system: SYSTEM_PROMPT,
       question,
       history,
+      images,
       tools: DEFINITIONS,
       runTool: (name, args) => runTool(caller, name, args),
       // Off unless switched on, because it sends the question out to a search
@@ -102,6 +134,8 @@ exports.askManager = onCall(opts, async (request) => {
       meta: {
         question: question.slice(0, 300),
         tools: toolsUsed.join(','),
+        images: images.length,
+        rejectedImages: rawImages.length - images.length,
         durationMs: Date.now() - startedAt,
         success: true
       }
@@ -114,7 +148,13 @@ exports.askManager = onCall(opts, async (request) => {
     const draft = DRAFT_KINDS.includes(result.data?.kind) ? result.data.draft : null;
     // Sources travel with the answer so the reader can check them before they
     // act on anything the model found on the open web.
-    return { text: result.text, toolsUsed, draft, citations: result.citations || [] };
+    return {
+      text: result.text, toolsUsed, draft,
+      citations: result.citations || [],
+      // What it did, in order — shown so the answer is auditable rather than
+      // arriving from nowhere.
+      steps: result.steps || []
+    };
   } catch (err) {
     await writeAudit({
       action: 'ai.manager',

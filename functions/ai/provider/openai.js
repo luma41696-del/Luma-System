@@ -99,6 +99,8 @@ class OpenAIProvider {
     // rendered from computed data rather than re-read out of the model's prose.
     let lastData = null;
     let citations = [];
+    // What the model did, in order, so the UI can show its working.
+    const steps = [];
 
     // Web search is run by OpenAI, not by us: it comes back already folded
     // into the answer, so it needs no branch in the loop below — only to be
@@ -127,12 +129,20 @@ class OpenAIProvider {
       // Collected every round: a later round's answer can cite pages found in
       // an earlier one.
       citations = citations.concat(extractCitations(output));
-      if (output.some((item) => String(item.type || '').startsWith('web_search'))) {
+      for (const item of output) {
+        if (!String(item.type || '').startsWith('web_search')) continue;
         if (!toolsUsed.includes('webSearch')) toolsUsed.push('webSearch');
+        // The query the model actually issued, so the trail shows what it
+        // looked for rather than only that it looked.
+        const q = item.action?.query || item.query || null;
+        steps.push({ kind: 'search', label: q ? String(q).slice(0, 160) : null });
       }
 
       if (!calls.length) {
-        return { text: extractText(result, output), toolsUsed, data: lastData, citations: dedupe(citations) };
+        return {
+          text: extractText(result, output), toolsUsed, data: lastData,
+          citations: dedupe(citations), steps
+        };
       }
 
       // Echo the calls back, then append each result, exactly as the
@@ -145,6 +155,7 @@ class OpenAIProvider {
           const args = call.arguments ? JSON.parse(call.arguments) : {};
           payload = await runTool(call.name, args);
           toolsUsed.push(call.name);
+          steps.push({ kind: 'tool', label: call.name });
           if (payload && typeof payload === 'object') lastData = payload;
         } catch (err) {
           payload = { error: err.message || 'tool failed' };
@@ -161,7 +172,8 @@ class OpenAIProvider {
       text: 'تعذّر إكمال الإجابة — تم تجاوز الحد المسموح من الاستعلامات لسؤال واحد. جرّب سؤالاً أكثر تحديداً.',
       toolsUsed,
       data: lastData,
-      citations: dedupe(citations)
+      citations: dedupe(citations),
+      steps
     };
   }
 }

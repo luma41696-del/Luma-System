@@ -102,7 +102,8 @@ export function mountManagerAssistant(host, onDraft, {
       });
       messages.push({
         role: 'assistant', content: result.text,
-        draft: result.draft || null, citations: result.citations || []
+        draft: result.draft || null, citations: result.citations || [],
+        steps: result.steps || []
       });
     } catch (err) {
       // The server names the cause (functions/ai/errors.js); repeating it is
@@ -145,7 +146,8 @@ function renderMessage(message, index) {
         ${message.error
           ? `<div class="ai-error"><i data-lucide="alert-triangle"></i> ${esc(message.content)}</div>`
           : `<div class="ai-text">${formatText(message.content)}</div>`
-            + renderCitations(message.citations) + renderDraft(message.draft, index)}
+            + renderSteps(message.steps) + renderCitations(message.citations)
+            + renderDraft(message.draft, index)}
       </div>
     </div>`;
 }
@@ -253,4 +255,34 @@ function renderCitations(citations) {
           : '';
       }).join('')}
     </div>`;
+}
+
+const TOOL_LABELS = {
+  listEmployees: 'قرأ قائمة الموظفين',
+  getTeamWorkload: 'حسب حِمل الفريق',
+  getEmployeeReport: 'أعدّ تقرير موظف',
+  getStaleTasks: 'بحث عن المهام المتوقفة',
+  listCalendarEvents: 'قرأ التقويم',
+  draftTask: 'جهّز مسودة مهمة',
+  draftEvent: 'جهّز مسودة حدث',
+  draftNote: 'جهّز مسودة ملاحظة'
+};
+
+/** What the assistant did, in order. Collapsed until opened. */
+function renderSteps(steps) {
+  if (!steps?.length) return '';
+  return `
+    <details class="ai-steps">
+      <summary>
+        <i data-lucide="list-checks" class="icon-sm"></i>
+        ماذا فعلت؟ (${steps.length})
+      </summary>
+      <ol class="ai-steps__list">
+        ${steps.map((s) => s.kind === 'search'
+          ? `<li><i data-lucide="globe" class="icon-sm"></i>
+               بحث في الإنترنت${s.label ? `: <span class="ai-steps__q">${esc(s.label)}</span>` : ''}</li>`
+          : `<li><i data-lucide="database" class="icon-sm"></i>
+               ${esc(TOOL_LABELS[s.label] || s.label)}</li>`).join('')}
+      </ol>
+    </details>`;
 }
