@@ -925,6 +925,48 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .task-card__workers [data-lucide] { flex: none; color: var(--brand-light); }
 .task-card.is-overdue { border-inline-start-color: var(--danger); background: linear-gradient(180deg, var(--danger-soft), transparent 60%), var(--bg-surface); }
 
+/* ------------------------------------------------- work happening now */
+/* "قيد التنفيذ" is the one status describing something in motion right now
+   rather than a state a task is parked in, so it is the only one that moves:
+   the chip's dot breathes and a highlight sweeps the progress track.
+   Both are deliberately indeterminate — they say "being worked on", not "this
+   far along", which the bar's own width already says. */
+@keyframes task-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(0.65); }
+}
+@keyframes task-sweep {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+@keyframes task-sweep-rtl {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(-100%); }
+}
+
+.badge--live .badge__dot { animation: task-pulse 1.6s var(--ease) infinite; }
+
+.task-card.is-active .progress { position: relative; }
+.task-card.is-active .progress::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 100%;
+  /* The track already clips (overflow: hidden), so the sweep stays inside. */
+  background: linear-gradient(90deg, transparent, var(--brand-glow), transparent);
+  animation: task-sweep 1.9s var(--ease) infinite;
+}
+/* Sweep with the reading direction, not against it. */
+html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-sweep-rtl; }
+
+/* Motion is the whole point here, so it is dropped entirely rather than
+   shortened when the reader has asked for less of it. */
+@media (prefers-reduced-motion: reduce) {
+  .badge--live .badge__dot,
+  .task-card.is-active .progress::after { animation: none; }
+}
+
 /* ================================================================= KANBAN */
 .kanban {
   display: grid;

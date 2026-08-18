@@ -222,6 +222,25 @@ async function renderBoard(container, ctx) {
   return () => unsubs.forEach((fn) => { try { fn(); } catch {} });
 }
 
+/**
+ * The status chip, shared by the card, the table and the detail page so all
+ * three agree on what a status looks like.
+ *
+ * A task actually being worked on right now gets a live, pulsing dot — the
+ * one status that describes something happening at this moment rather than a
+ * state it is parked in.
+ */
+function statusBadge(task, { dot = false } = {}) {
+  const status = TASK_STATUSES[task.status] || {};
+  const overdue = isOverdue(task);
+  const live = !overdue && task.status === 'inprogress';
+  const tone = overdue ? 'danger' : (status.badge || '');
+  const label = overdue ? 'متأخرة' : (status.ar || '');
+  return `<span class="badge badge--${attr(tone)}${live ? ' badge--live' : ''}">
+    ${dot || live ? '<span class="badge__dot"></span>' : ''}${esc(label)}
+  </span>`;
+}
+
 function statChip(icon, tone, value, label) {
   return `
     <div class="stat">
@@ -299,7 +318,6 @@ function renderList(host, tasks, people, clientsById = {}) {
 }
 
 function taskCard(task, people, clientsById = {}) {
-  const status = TASK_STATUSES[task.status] || {};
   const overdue = isOverdue(task);
   const progress = progressOf(task);
   const assignees = (task.assignees || []).map((id) => people[id]).filter(Boolean);
@@ -311,8 +329,11 @@ function taskCard(task, people, clientsById = {}) {
     .map((id) => people[id]?.displayName)
     .filter(Boolean);
 
+  const live = !overdue && task.status === 'inprogress';
+
   return `
-    <article class="task-card${overdue ? ' is-overdue' : ''}" data-priority="${attr(task.priority)}"
+    <article class="task-card${overdue ? ' is-overdue' : ''}${live ? ' is-active' : ''}"
+             data-priority="${attr(task.priority)}"
              data-task="${attr(task.id)}" tabindex="0">
       <div class="task-card__top">
         <div class="flex-1">
@@ -324,9 +345,7 @@ function taskCard(task, people, clientsById = {}) {
             <span class="truncate">${esc(task.clientName)}</span>
           </div>` : ''}
         </div>
-        <span class="badge badge--${attr(overdue ? 'danger' : status.badge || '')}">
-          ${esc(overdue ? 'متأخرة' : status.ar || '')}
-        </span>
+        ${statusBadge(task)}
       </div>
 
       ${task.description ? `<div class="fs-sm text-muted clamp-2">${esc(task.description)}</div>` : ''}
@@ -589,8 +608,6 @@ function renderTable(host, tasks, people) {
         </thead>
         <tbody>
           ${sorted.map((t) => {
-            const status = TASK_STATUSES[t.status] || {};
-            const overdue = isOverdue(t);
             const progress = progressOf(t);
             const assignees = (t.assignees || []).map((id) => people[id]).filter(Boolean);
             return `
@@ -600,8 +617,7 @@ function renderTable(host, tasks, people) {
                 <td>${avatarStack(assignees, 3)}</td>
                 <td><span class="badge badge--${attr(PRIORITIES[t.priority]?.badge || '')}">
                   ${esc(priorityLabel(t.priority))}</span></td>
-                <td><span class="badge badge--${attr(overdue ? 'danger' : status.badge || '')}">
-                  ${esc(overdue ? 'متأخرة' : status.ar || '')}</span></td>
+                <td>${statusBadge(t)}</td>
                 <td class="num">${t.dueAt ? esc(formatDate(t.dueAt, { short: true })) : '—'}</td>
                 <td style="min-width:120px">
                   <div class="progress"><div class="progress__bar" style="width:${progress}%"></div></div>
@@ -655,7 +671,6 @@ async function paintDetail(root, task, unsubs) {
   const creator = await getUsers([task.createdBy]).then((r) => r[0]);
   // Best-effort: a viewer without clients.view simply sees the name with no logo.
   const client = task.clientId ? await getOne('clients', task.clientId).catch(() => null) : null;
-  const status = TASK_STATUSES[task.status] || {};
   const overdue = isOverdue(task);
   const progress = progressOf(task);
 
@@ -667,9 +682,7 @@ async function paintDetail(root, task, unsubs) {
     <div class="page-head">
       <div class="flex-1" style="min-width:0">
         <div class="flex items-center gap-3 mb-3" style="flex-wrap:wrap">
-          <span class="badge badge--${attr(overdue ? 'danger' : status.badge || '')}">
-            <span class="badge__dot"></span>${esc(overdue ? 'متأخرة' : status.ar || '')}
-          </span>
+          ${statusBadge(task, { dot: true })}
           <span class="badge badge--${attr(PRIORITIES[task.priority]?.badge || '')}">
             ${esc(priorityLabel(task.priority))}
           </span>
