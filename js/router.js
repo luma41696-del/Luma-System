@@ -35,6 +35,7 @@ const ROUTES = [
   { path: '/documents/:id', title: 'تفاصيل الطلب',       titleKey: 'route.documentDetail',  module: () => import('./documents.js'),        crumbs: [['المستندات والطلبات', '#/documents']], crumbKeys: [['nav.documents', '#/documents']] },
   { path: '/chat',          title: 'الدردشة',            titleKey: 'route.chat',            module: () => import('./chat.js'),             crumbs: [] },
   { path: '/chat/:id',      title: 'الدردشة',            titleKey: 'route.chat',            module: () => import('./chat.js'),             crumbs: [] },
+  { path: '/knowledge',     title: 'قاعدة المعرفة',      titleKey: 'route.knowledge',       module: () => import('./knowledge.js'),        perm: ['knowledge.view'], crumbs: [] },
   { path: '/reports',       title: 'التقارير',           titleKey: 'route.reports',         module: () => import('./reports.js'),          perm: ['reports.view'], crumbs: [] },
   { path: '/notifications', title: 'الإشعارات',          titleKey: 'route.notifications',   module: () => import('./notifications.js'),    crumbs: [] },
   { path: '/settings',      title: 'الإعدادات',          titleKey: 'route.settings',        module: () => import('./settings.js'),         crumbs: [] },

@@ -322,6 +322,24 @@ service cloud.firestore {
       }
     }
 
+    // -------------------------------------------------------------- knowledge
+    // Research notes. Written by a person confirming a Luma AI draft, never by
+    // the assistant itself — so the same create rule covers both, and the
+    // author is always a real signed-in user.
+    match /knowledge/{noteId} {
+      allow read: if active() && can('kv');
+      allow create: if active() && can('km')
+        && request.resource.data.createdBy == uid()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200
+        && request.resource.data.content is string
+        && request.resource.data.content.size() <= 20000;
+      allow update: if active() && can('km')
+        && request.resource.data.createdBy == resource.data.createdBy;
+      allow delete: if active() && (can('km') || can('sm'));
+    }
+
     // --------------------------------------------------------------- calendar
     match /calendarEvents/{eventId} {
       allow read: if active() && (

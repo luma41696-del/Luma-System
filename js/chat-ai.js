@@ -12,9 +12,9 @@
  */
 
 import { session } from './auth.js';
-import { $, $$, esc, refreshIcons } from './utils/dom.js';
+import { $, $$, esc, attr, refreshIcons } from './utils/dom.js';
 import { callFn } from './utils/api.js';
-import { sanitizeMultiline } from './utils/sanitize.js';
+import { sanitizeMultiline, safeUrl } from './utils/sanitize.js';
 import { formatTime } from './utils/format.js';
 import { confirmDialog } from './utils/modal.js';
 
@@ -144,7 +144,8 @@ export function openAiChat(panel, onDraft) {
           .map((m) => ({ role: m.role, content: m.content }))
       });
       messages.push({
-        role: 'assistant', content: result.text, draft: result.draft || null, at: Date.now()
+        role: 'assistant', content: result.text, draft: result.draft || null,
+        citations: result.citations || [], at: Date.now()
       });
     } catch (err) {
       // The server names the cause (functions/ai/errors.js), so it is repeated
@@ -228,6 +229,7 @@ function renderMessage(message, index) {
         ${message.error
           ? `<div class="ai-error"><i data-lucide="alert-triangle"></i> ${esc(message.content)}</div>`
           : `<div class="msg__text ai-text">${formatText(message.content)}</div>`}
+        ${renderCitations(message.citations)}
         ${renderDraft(message.draft, index)}
         <div class="msg__meta">${esc(time)}</div>
       </div>
@@ -252,8 +254,16 @@ const when = (iso) => {
 function renderDraft(draft, index) {
   if (!draft) return '';
   const isEvent = draft.kind === 'event';
+  const isNote = draft.kind === 'note';
 
-  const rows = isEvent
+  const rows = isNote
+    ? [
+      ['العنوان', draft.title],
+      ['الوسوم', draft.tags?.join('، ') || '—'],
+      ['العميل', draft.clientName || '—'],
+      ['المصادر', draft.sources?.length ? `${draft.sources.length} رابط` : '—']
+    ]
+    : isEvent
     ? [
       ['العنوان', draft.title],
       ['النوع', EVENT_KINDS[draft.type] || draft.type],
@@ -274,8 +284,8 @@ function renderDraft(draft, index) {
   return `
     <div class="ai-draft">
       <div class="fs-2xs text-muted mb-2">
-        <i data-lucide="${isEvent ? 'calendar-plus' : 'file-plus'}" class="icon-sm"></i>
-        ${isEvent ? 'مسودة حدث' : 'مسودة مهمة'} — لم تُحفظ بعد
+        <i data-lucide="${isNote ? 'book-open' : isEvent ? 'calendar-plus' : 'file-plus'}" class="icon-sm"></i>
+        ${isNote ? 'مسودة ملاحظة' : isEvent ? 'مسودة حدث' : 'مسودة مهمة'} — لم تُحفظ بعد
       </div>
       ${rows.map(([k, v]) => `
         <div class="kv"><span class="kv__k">${esc(k)}</span>
@@ -313,4 +323,22 @@ function formatText(text) {
       return `<p>${trimmed}</p>`;
     })
     .join('');
+}
+
+/** Pages the answer was built from — shown so a reader can check them. */
+function renderCitations(citations) {
+  if (!citations?.length) return '';
+  return `
+    <div class="ai-sources">
+      <div class="fs-2xs text-muted mb-1">
+        <i data-lucide="link" class="icon-sm"></i> المصادر
+      </div>
+      ${citations.map((c) => {
+        const href = safeUrl(c.url);
+        return href
+          ? `<a class="fs-2xs truncate" href="${attr(href)}" target="_blank"
+                rel="noopener noreferrer nofollow">${esc(c.title || href)}</a>`
+          : '';
+      }).join('')}
+    </div>`;
 }

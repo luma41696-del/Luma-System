@@ -58,6 +58,8 @@ export const PERMISSIONS = {
   'tasks.editAll':          { code: 'te',  ar: 'تعديل جميع المهام',                 group: 'tasks' },
   'tasks.delete':           { code: 'tx',  ar: 'حذف المهام',                        group: 'tasks' },
   'tasks.ai':               { code: 'tai', ar: 'استخدام المساعد الذكي في المهام',    group: 'tasks' },
+  'knowledge.view':         { code: 'kv',  ar: 'عرض قاعدة المعرفة',                group: 'tasks' },
+  'knowledge.manage':       { code: 'km',  ar: 'إضافة وحذف ملاحظات المعرفة',    group: 'tasks' },
 
   'requests.approve':       { code: 'ra',  ar: 'اعتماد أو رفض الطلبات',             group: 'requests' },
   'chat.manage':            { code: 'cm',  ar: 'إدارة الدردشة والمجموعات',          group: 'chat' },
@@ -112,7 +114,7 @@ export const PERMISSION_PRESETS = {
       'dashboard.viewCompany', 'dashboard.viewTeam',
       'employees.view', 'employees.create', 'employees.edit',
       'clients.view', 'clients.create', 'clients.edit', 'clients.viewCredentials',
-      'tasks.create', 'tasks.assign', 'tasks.editAll', 'tasks.delete', 'tasks.ai',
+      'tasks.create', 'tasks.assign', 'tasks.editAll', 'tasks.delete', 'tasks.ai', 'knowledge.view', 'knowledge.manage',
       'requests.approve', 'chat.manage', 'reports.view', 'reports.export'
     ]
   },
@@ -136,7 +138,7 @@ export const PERMISSION_PRESETS = {
     role: 'manager',
     perms: [
       'dashboard.viewTeam', 'employees.view', 'clients.view',
-      'tasks.create', 'tasks.assign', 'tasks.editAll', 'tasks.ai', 'reports.view'
+      'tasks.create', 'tasks.assign', 'tasks.editAll', 'tasks.ai', 'knowledge.view', 'knowledge.manage', 'reports.view'
     ]
   },
   employee: {
@@ -145,7 +147,7 @@ export const PERMISSION_PRESETS = {
     // The task assistant is granted by default — it helps an employee do the
     // work in front of them — but stays a permission so it can be revoked
     // per person if the spend needs reining in.
-    perms: ['clients.view', 'tasks.ai']
+    perms: ['clients.view', 'tasks.ai', 'knowledge.view']
   }
 };
 
@@ -228,6 +230,8 @@ export const NAV_ITEMS = [
     perm: ['finance.view'] },
   { id: 'documents',   route: '#/documents',  labelKey: 'nav.documents',   icon: 'file-text' },
   { id: 'chat',        route: '#/chat',       labelKey: 'nav.chat',        icon: 'message-circle' },
+  { id: 'knowledge',   route: '#/knowledge',  labelKey: 'nav.knowledge',   icon: 'book-open',
+    perm: ['knowledge.view'] },
   { id: 'reports',     route: '#/reports',    labelKey: 'nav.reports',     icon: 'bar-chart-3',
     perm: ['reports.view'] },
   { id: 'notifications', route: '#/notifications', labelKey: 'nav.notifications', icon: 'bell' },

@@ -381,6 +381,61 @@ async function draftEvent(caller, {
   };
 }
 
+/* ----------------------------------------------------------- knowledge */
+
+/**
+ * Propose a note for the knowledge base. A draft only — nothing is written.
+ *
+ * This is the tool the model reaches for after searching the web, which makes
+ * it the one place untrusted text could turn into a stored record. It stays a
+ * proposal precisely because of that: a person reads the note and its sources
+ * before it becomes part of the agency's own material.
+ */
+async function draftNote(caller, { title, content, tags, sources, client } = {}) {
+  ensure(caller, 'knowledge.manage');
+  if (!title || String(title).trim().length < 3) throw new Error('عنوان الملاحظة مطلوب.');
+  if (!content || String(content).trim().length < 20) {
+    throw new Error('محتوى الملاحظة قصير جداً — لخّص ما وجدته أولاً.');
+  }
+
+  const draft = {
+    kind: 'note',
+    title: String(title).trim().slice(0, 200),
+    content: String(content).trim().slice(0, 8000),
+    tags: String(tags || '')
+      .split(/[،,]/).map((t) => t.trim()).filter(Boolean).slice(0, 8),
+    // Only http(s) survives: a note is rendered as links, and `javascript:`
+    // reaching that markup would be a stored XSS.
+    sources: String(sources || '')
+      .split(/[\s,،]+/)
+      .map((u) => u.trim())
+      .filter((u) => /^https?:\/\//i.test(u))
+      .slice(0, 12),
+    clientId: null,
+    clientName: null,
+    unresolved: []
+  };
+
+  if (client) {
+    const needle = String(client).trim().toLowerCase();
+    const rows = (await db.collection('clients').get()).docs.map((d) => ({ id: d.id, ...d.data() }));
+    const match = rows.find((c) => (c.name || '').toLowerCase() === needle)
+      || rows.find((c) => (c.name || '').toLowerCase().includes(needle));
+    if (match) {
+      draft.clientId = match.id;
+      draft.clientName = match.name || '';
+    } else {
+      draft.unresolved.push(String(client));
+    }
+  }
+
+  return {
+    kind: 'noteDraft',
+    draft,
+    note: 'مسودة فقط — لم تُحفظ. ستُعرض على المستخدم لمراجعتها وحفظها.'
+  };
+}
+
 /* ------------------------------------------------------------ definitions */
 
 function tool(name, description, properties = {}, required = []) {
@@ -426,12 +481,20 @@ const DEFINITIONS = [
       location: { type: 'string' },
       description: { type: 'string' },
       visibility: { type: 'string', description: 'team | private' }
-    }, ['title', 'startAt'])
+    }, ['title', 'startAt']),
+  tool('draftNote',
+    'احفظ ما توصلت إليه كملاحظة في قاعدة المعرفة (مسودة فقط، لا تُحفظ). استخدمها بعد البحث والتحليل.', {
+      title: { type: 'string' },
+      content: { type: 'string', description: 'الخلاصة والتحليل بصيغة نقاط' },
+      tags: { type: 'string', description: 'وسوم مفصولة بفاصلة' },
+      sources: { type: 'string', description: 'روابط المصادر مفصولة بمسافة أو فاصلة' },
+      client: { type: 'string', description: 'اسم العميل إن كانت الملاحظة تخصّه' }
+    }, ['title', 'content'])
 ];
 
 const IMPLEMENTATIONS = {
   listEmployees, getTeamWorkload, getEmployeeReport, getStaleTasks, draftTask,
-  listCalendarEvents, draftEvent
+  listCalendarEvents, draftEvent, draftNote
 };
 
 /** Dispatch. Unknown names are rejected rather than ignored. */

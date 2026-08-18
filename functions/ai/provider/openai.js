@@ -75,9 +75,10 @@ class OpenAIProvider {
    * @param {Array}    [options.images]      image URLs to show alongside the question
    * @param {Array}    [options.tools]       Responses-API tool definitions
    * @param {Function} [options.runTool]     (name, args) => Promise<any>
-   * @returns {{text: string, toolsUsed: string[], data: object|null}}
+   * @param {boolean}  [options.webSearch]   let the model search the web
+   * @returns {{text: string, toolsUsed: string[], data: object|null, citations: object[]}}
    */
-  async answer({ system, history, question, images = [], tools, runTool }) {
+  async answer({ system, history, question, images = [], tools, runTool, webSearch = false }) {
     // With images the question becomes a content array rather than a string;
     // without them it stays a plain string, so the text-only callers are
     // untouched.
@@ -97,6 +98,15 @@ class OpenAIProvider {
     // The payload behind the last tool call is handed to the UI so figures are
     // rendered from computed data rather than re-read out of the model's prose.
     let lastData = null;
+    let citations = [];
+
+    // Web search is run by OpenAI, not by us: it comes back already folded
+    // into the answer, so it needs no branch in the loop below — only to be
+    // listed alongside our own tools.
+    const allTools = [
+      ...(tools || []),
+      ...(webSearch ? [{ type: WEB_SEARCH_TOOL }] : [])
+    ];
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
       const result = await this.call({
@@ -105,7 +115,7 @@ class OpenAIProvider {
         input,
         // Omitted entirely for a caller with no tools — sending `tool_choice`
         // with an empty tool list is rejected.
-        ...(tools?.length ? { tools, tool_choice: 'auto' } : {}),
+        ...(allTools.length ? { tools: allTools, tool_choice: 'auto' } : {}),
         // Deterministic-ish: this is a reporting assistant, not a writing one.
         temperature: 0.2,
         max_output_tokens: 1200
@@ -114,8 +124,15 @@ class OpenAIProvider {
       const output = Array.isArray(result.output) ? result.output : [];
       const calls = output.filter((item) => item.type === 'function_call');
 
+      // Collected every round: a later round's answer can cite pages found in
+      // an earlier one.
+      citations = citations.concat(extractCitations(output));
+      if (output.some((item) => String(item.type || '').startsWith('web_search'))) {
+        if (!toolsUsed.includes('webSearch')) toolsUsed.push('webSearch');
+      }
+
       if (!calls.length) {
-        return { text: extractText(result, output), toolsUsed, data: lastData };
+        return { text: extractText(result, output), toolsUsed, data: lastData, citations: dedupe(citations) };
       }
 
       // Echo the calls back, then append each result, exactly as the
@@ -143,9 +160,45 @@ class OpenAIProvider {
     return {
       text: 'تعذّر إكمال الإجابة — تم تجاوز الحد المسموح من الاستعلامات لسؤال واحد. جرّب سؤالاً أكثر تحديداً.',
       toolsUsed,
-      data: lastData
+      data: lastData,
+      citations: dedupe(citations)
     };
   }
+}
+
+/**
+ * The built-in search tool's name.
+ *
+ * Kept configurable because OpenAI has renamed it before
+ * (`web_search_preview` → `web_search`) and which one an account accepts
+ * depends on its model. A rename should be an environment change, not a
+ * redeploy of this file.
+ */
+const WEB_SEARCH_TOOL = process.env.OPENAI_WEB_SEARCH_TOOL || 'web_search';
+
+/**
+ * Pages the answer was built from.
+ *
+ * Surfaced rather than kept internal: the whole point of showing sources is
+ * that a person can check what the model actually read before they save it
+ * into the system.
+ */
+function extractCitations(output) {
+  const found = [];
+  for (const item of output) {
+    if (item.type !== 'message') continue;
+    for (const chunk of item.content || []) {
+      for (const note of chunk.annotations || []) {
+        if (note.url) found.push({ url: note.url, title: note.title || note.url });
+      }
+    }
+  }
+  return found;
+}
+
+function dedupe(list) {
+  const seen = new Set();
+  return list.filter((c) => !seen.has(c.url) && seen.add(c.url)).slice(0, 12);
 }
 
 /** The Responses API exposes `output_text`, but not on every shape. */

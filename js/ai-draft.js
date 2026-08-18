@@ -17,6 +17,12 @@
 export async function openDraft(draft) {
   if (!draft) return;
 
+  if (draft.kind === 'note') {
+    const { openNoteModal } = await import('./knowledge.js');
+    openNoteModal(draft);
+    return;
+  }
+
   if (draft.kind === 'event') {
     const { openEventModal } = await import('./calendar.js');
     openEventModal({

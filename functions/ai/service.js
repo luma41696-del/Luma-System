@@ -69,14 +69,15 @@ class AIService {
    *                                   an assistant with a different job
    * @param {Array}  [options.images]  image URLs to show with the question
    */
-  ask({ question, history = [], tools, runTool, system = SYSTEM_PROMPT, images = [] }) {
+  ask({ question, history = [], tools, runTool, system = SYSTEM_PROMPT, images = [], webSearch = false }) {
     return this.provider.answer({
       system,
       history,
       question,
       images,
       tools,
-      runTool
+      runTool,
+      webSearch
     });
   }
 }
