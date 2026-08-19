@@ -88,6 +88,9 @@ exports.askAccountant = ai.askAccountant;
 const taskAssistant = require('./ai/task-assistant');
 exports.askTaskAssistant = taskAssistant.askTaskAssistant;
 
+const textPolish = require('./ai/text-polish');
+exports.polishTaskText = textPolish.polishTaskText;
+
 const manager = require('./ai/manager');
 exports.askManager = manager.askManager;
 

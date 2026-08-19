@@ -1210,6 +1210,7 @@ function outputFieldsFor(workType, task = null) {
 export async function openTaskModal({ task = null, personal = false, clientId = '', defaults = {} } = {}) {
   const isEdit = !!task;
   const canAssign = can(session.claims, 'tasks.assign') || can(session.claims, 'tasks.create');
+  const canAI = can(session.claims, 'tasks.ai');
 
   const [directory, clients] = await Promise.all([
     canAssign ? getDirectory().catch(() => []) : Promise.resolve([]),
@@ -1236,15 +1237,29 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
       <form id="task-form">
         <div class="field">
           <label class="field__label" for="t-title">عنوان المهمة <span class="req">*</span></label>
-          <input class="input" id="t-title" required maxlength="200"
-                 value="${attr(task?.title || defaults.title || '')}"
-                 placeholder="مثال: تصميم منشورات إنستغرام لشهر آب">
+          <div class="input-group">
+            <input class="input" id="t-title" required maxlength="200"
+                   value="${attr(task?.title || defaults.title || '')}"
+                   placeholder="مثال: تصميم منشورات إنستغرام لشهر آب">
+            ${canAI ? `
+            <button type="button" class="input-group__btn input-group__btn--ai" id="t-title-ai"
+                    title="تصحيح إملائي وصياغة أفضل" aria-label="تصحيح وصياغة العنوان بالذكاء الاصطناعي">
+              <i data-lucide="sparkles"></i>
+            </button>` : ''}
+          </div>
         </div>
 
         <div class="field">
           <label class="field__label" for="t-desc">الوصف</label>
-          <textarea class="textarea" id="t-desc" maxlength="4000" rows="3"
-            placeholder="تفاصيل المهمة والمتطلبات…">${esc(task?.description || defaults.description || '')}</textarea>
+          <div class="input-group input-group--top">
+            <textarea class="textarea" id="t-desc" maxlength="4000" rows="3"
+              placeholder="تفاصيل المهمة والمتطلبات…">${esc(task?.description || defaults.description || '')}</textarea>
+            ${canAI ? `
+            <button type="button" class="input-group__btn input-group__btn--ai" id="t-desc-ai"
+                    title="تصحيح إملائي وصياغة أفضل" aria-label="تصحيح وصياغة الوصف بالذكاء الاصطناعي">
+              <i data-lucide="sparkles"></i>
+            </button>` : ''}
+          </div>
         </div>
 
         <div class="form-grid">
@@ -1326,6 +1341,34 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
       </button>`,
     onMount: (api) => {
       refreshIcons(api.root);
+
+      /* AI polish — spelling and phrasing for the title/description, applied
+         in place. The other field is sent along only as context so the model
+         understands what the text is about; only the clicked field is rewritten. */
+      if (canAI) {
+        const polish = async (field, button) => {
+          const fieldEl = field === 'title' ? api.$('#t-title') : api.$('#t-desc');
+          const text = fieldEl.value.trim();
+          if (!text) return;
+          const other = field === 'title' ? api.$('#t-desc').value : api.$('#t-title').value;
+
+          button.classList.add('is-busy');
+          button.disabled = true;
+          try {
+            const { text: polished } = await callFn('polishTaskText', {
+              field, text, [field === 'title' ? 'description' : 'title']: other
+            });
+            if (polished) fieldEl.value = polished;
+          } catch (err) {
+            toastError(err?.message || 'تعذّر تصحيح النص.');
+          } finally {
+            button.classList.remove('is-busy');
+            button.disabled = false;
+          }
+        };
+        api.$('#t-title-ai')?.addEventListener('click', (e) => polish('title', e.currentTarget));
+        api.$('#t-desc-ai')?.addEventListener('click', (e) => polish('description', e.currentTarget));
+      }
 
       /* client picker — a native <select> cannot show a logo per option */
       const clientBtn = api.$('#t-client-btn');

@@ -314,6 +314,18 @@ html[dir="ltr"] .select { background-position: right var(--sp-3) center; padding
 }
 .input-group--icon .input { padding-inline-start: 42px; }
 
+/* An AI polish button anchored inside a field, alongside the text itself
+   rather than as a separate button below it. Textareas anchor it to the top
+   corner instead of the vertical center used for a single-line input, so it
+   never sits over the middle of typed text. */
+.input-group__btn--ai {
+  color: var(--brand, var(--text-muted));
+}
+.input-group--top .input-group__btn { top: 8px; transform: none; }
+.input-group--top .textarea { padding-inline-end: 44px; }
+.input-group__btn.is-busy { pointer-events: none; opacity: .7; }
+.input-group__btn.is-busy i { animation: spin .8s linear infinite; }
+
 .checkbox, .radio {
   display: inline-flex;
   align-items: center;

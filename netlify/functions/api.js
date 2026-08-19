@@ -42,6 +42,7 @@ const modules = [
   require('../../functions/finance/payroll'),
   require('../../functions/ai'),
   require('../../functions/ai/task-assistant'),
+  require('../../functions/ai/text-polish'),
   require('../../functions/ai/manager')
 ];
 
