@@ -1351,9 +1351,15 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
           const text = fieldEl.value.trim();
           if (!text) return;
           const other = field === 'title' ? api.$('#t-desc').value : api.$('#t-title').value;
+          const group = button.closest('.input-group');
 
           button.classList.add('is-busy');
           button.disabled = true;
+          group?.classList.add('is-polishing');
+          // Read-only rather than disabled: the shimmer plays over the text
+          // as-is, and a keystroke landing mid-request can't be overwritten
+          // by the correction once it lands.
+          fieldEl.readOnly = true;
           try {
             const { text: polished } = await callFn('polishTaskText', {
               field, text, [field === 'title' ? 'description' : 'title']: other
@@ -1364,6 +1370,8 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
           } finally {
             button.classList.remove('is-busy');
             button.disabled = false;
+            group?.classList.remove('is-polishing');
+            fieldEl.readOnly = false;
           }
         };
         api.$('#t-title-ai')?.addEventListener('click', (e) => polish('title', e.currentTarget));
