@@ -233,6 +233,30 @@ export function openAiChat(panel, onDraft) {
 
   paint();
 
+  // Built from real names and counts once the directory and clients load —
+  // a chip naming an employee who does not exist is worse than no chip.
+  (async () => {
+    const [{ buildSuggestions }, { getDirectory, getMany, col, query, orderBy, limit }] =
+      await Promise.all([import('./ai-suggestions.js'), import('./utils/api.js')]);
+    const [directory, clients] = await Promise.all([
+      getDirectory().catch(() => []),
+      getMany(query(col('clients'), orderBy('name'), limit(200))).catch(() => [])
+    ]);
+    SUGGESTIONS = buildSuggestions({ page: 'chat', directory, clients });
+
+    const strip = $('.ai-suggests', panel);
+    if (strip) {
+      strip.innerHTML = SUGGESTIONS.map((s) => `
+        <button type="button" class="ai-suggests__chip" role="listitem"
+                data-suggest="${esc(s)}">${esc(s)}</button>`).join('');
+      $$('.ai-suggests__chip', panel).forEach((chip) => {
+        chip.addEventListener('click', () => send(chip.dataset.suggest));
+      });
+    }
+    // The greeting is only on screen while the conversation is empty.
+    if (!messages.length) paint();
+  })();
+
   // The greeting's chips are re-bound by paint(); these live in the footer,
   // outside the message log, so they are bound once here.
   $$('.ai-suggests__chip', panel).forEach((chip) => {
@@ -264,20 +288,11 @@ export function openAiChat(panel, onDraft) {
 
 /* ------------------------------------------------------------ rendering */
 
-const SUGGESTIONS = [
-  'من هو الأقل انشغالاً؟',
-  'ما المهام المتأخرة؟',
-  'تقرير أداء الفريق',
-  'أنشئ مهمة جديدة',
-  'ما جدول هذا الأسبوع؟',
-  'أضف اجتماعاً غداً',
-  'ما المهام غير المسندة؟',
-  'ابحث في الإنترنت عن…',
-  'لخّص حالة الفريق اليوم',
-  'سجّل موعد تسليم لعميل',
-  'من أنجز أكثر هذا الشهر؟',
-  'اقترح توزيعاً للمهام'
-];
+/**
+ * Filled from the directory and client list once they load. Until then the
+ * strip renders empty rather than showing prompts that name nobody real.
+ */
+let SUGGESTIONS = [];
 
 function emptyGreeting() {
   return `

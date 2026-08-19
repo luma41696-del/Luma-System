@@ -31,6 +31,7 @@ import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 import { dropdown } from './app.js';
 import { mountTaskAssistant } from './task-ai.js';
 import { attachManagerAssistant } from './manager-ai.js';
+import { buildSuggestions } from './ai-suggestions.js';
 import { openDraft } from './ai-draft.js';
 
 const VIEW_KEY = 'luma.taskView';
@@ -134,7 +135,11 @@ async function renderBoard(container, ctx) {
   unsubs.push(attachManagerAssistant({
     button: $('#manager-ai-btn'),
     host: $('#manager-ai'),
-    onDraft: (draft) => openDraft(draft)
+    onDraft: (draft) => openDraft(draft),
+    // A function, not an array: it runs when the panel opens, so the chips
+    // count the tasks that are loaded by then rather than the empty list
+    // this page starts with.
+    panel: { suggestions: () => buildSuggestions({ page: 'tasks', tasks, directory, clients }) }
   }));
 
   /* --------------------------------------------------------- filters */

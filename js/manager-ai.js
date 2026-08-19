@@ -14,26 +14,17 @@ import { sanitizeMultiline, safeUrl } from './utils/sanitize.js';
 const HISTORY_TURNS = 8;
 
 /**
- * Starter prompts.
+ * Fallback prompts, used only when a page passes nothing.
  *
- * The first four also fill the empty greeting; the whole list sits in a strip
- * above the composer that stays there once the conversation starts — the
- * point at which someone most needs a nudge for what else to ask is after the
- * first answer, not before it.
+ * Every real caller passes a function instead (see ai-suggestions.js), which
+ * is resolved when the panel opens so the chips describe the data on screen
+ * at that moment rather than whatever was true when the page loaded.
  */
 const DEFAULT_SUGGESTIONS = [
   'من هو الأقل انشغالاً الآن؟',
-  'وزّع المهام المتأخرة على الفريق',
-  'تقرير أداء الفريق هذا الشهر',
+  'لخّص حالة الفريق اليوم',
   'ما المهام المتوقفة منذ أسبوع؟',
-  'من عنده أكثر مهام متأخرة؟',
-  'أنشئ مهمة تصميم جديدة',
-  'ما المهام غير المسندة لأحد؟',
-  'لخّص لي حالة الفريق اليوم',
-  'أي موظف أنجز أكثر هذا الشهر؟',
-  'اقترح توزيعاً عادلاً للمهام الجديدة',
-  'ما المهام التي تستحق اليوم؟',
-  'أعطني تقريراً عن عمر الصاحب'
+  'من عنده أكثر مهام متأخرة؟'
 ];
 
 /**
@@ -52,6 +43,10 @@ export function mountManagerAssistant(host, onDraft, {
 } = {}) {
   let messages = [];
   let busy = false;
+
+  // Resolved here, not at import: a function reads the page's data as it
+  // stands when the panel is opened, so the counts in the chips are current.
+  const prompts = (typeof suggestions === 'function' ? suggestions() : suggestions) || [];
 
   // A docked panel rather than a card in the page flow: inline, it stretched
   // to the full width and shoved the filters down the page, which made a chat
@@ -76,7 +71,7 @@ export function mountManagerAssistant(host, onDraft, {
         <div class="fw-700 mt-3">كيف أساعدك؟</div>
         <p class="fs-sm text-muted">اسألني عن حِمل العمل، أو اطلب توزيع مهمة، أو تقريراً عن موظف.</p>
         <div class="tag-list" style="justify-content:center">
-          ${suggestions.slice(0, 4).map((s) => `
+          ${prompts.slice(0, 4).map((s) => `
             <button type="button" class="badge" data-suggest="${esc(s)}"
                     style="cursor:pointer">${esc(s)}</button>`).join('')}
         </div>
@@ -85,7 +80,7 @@ export function mountManagerAssistant(host, onDraft, {
 
     <footer class="ai-dock__foot">
       <div class="ai-suggests" role="list" aria-label="اقتراحات">
-        ${suggestions.map((s) => `
+        ${prompts.map((s) => `
           <button type="button" class="ai-suggests__chip" role="listitem"
                   data-suggest="${esc(s)}">${esc(s)}</button>`).join('')}
       </div>

@@ -27,6 +27,7 @@ import {
 import { sanitizeText, sanitizeMultiline } from './utils/sanitize.js';
 import { TASK_STATUSES, isOverdue, myTasksQuery, allTasksQuery, watchTasks } from './utils/task-model.js';
 import { attachManagerAssistant } from './manager-ai.js';
+import { buildSuggestions } from './ai-suggestions.js';
 import { openDraft } from './ai-draft.js';
 
 export const EVENT_TYPES = {
@@ -151,12 +152,7 @@ export async function render(container, ctx) {
     onDraft: (draft) => openDraft(draft),
     panel: {
       subtitle: 'المواعيد والأحداث وتوزيع المهام',
-      suggestions: [
-        'ما جدول هذا الأسبوع؟',
-        'أضف اجتماع مراجعة غداً الساعة 11',
-        'سجّل موعد تسليم لعميل PRALINE',
-        'أضف عيد ميلاد لموظف'
-      ]
+      suggestions: () => buildSuggestions({ page: 'calendar', tasks, directory, clients, events })
     }
   }));
 

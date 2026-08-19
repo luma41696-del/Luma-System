@@ -64,6 +64,10 @@ export async function render(container, ctx) {
   async function attachAssistant() {
     const { attachManagerAssistant } = await import('./manager-ai.js');
     const { openDraft } = await import('./ai-draft.js');
+    const { buildSuggestions } = await import('./ai-suggestions.js');
+    const clients = can(session.claims, 'clients.view')
+      ? await getMany(query(col('clients'), orderBy('name'), limit(200))).catch(() => [])
+      : [];
     unsubs.push(attachManagerAssistant({
       button: $('#kb-ai-btn'),
       host: $('#kb-ai'),
@@ -71,12 +75,7 @@ export async function render(container, ctx) {
       panel: {
         subtitle: 'ابحث في الإنترنت، حلّل، واحفظ الخلاصة',
         placeholder: 'مثال: ابحث عن أحدث مقاسات منشورات إنستغرام 2026',
-        suggestions: [
-          'ابحث عن اتجاهات التصميم هذا العام',
-          'أفضل أوقات النشر في الأردن؟',
-          'لخّص أسعار إعلانات Meta',
-          'ابحث عن منافسي عميل PRALINE'
-        ]
+        suggestions: () => buildSuggestions({ page: 'knowledge', clients })
       }
     }));
   }
