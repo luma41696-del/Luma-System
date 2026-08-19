@@ -412,6 +412,185 @@
   color-scheme: dark;
 }
 
+/* ------------------------------------------------------------ white theme */
+/* Paper rather than screen: a warm off-white ground with pure-white cards
+   sitting on it, so surfaces separate by warmth instead of by borders. The
+   existing Light theme is cool and blue-grey; this one is deliberately warm,
+   which is the whole reason to have both. */
+[data-theme="white"] {
+  --brand: #3B5BDB;
+  --brand-hover: #2F49AF;
+  --brand-light: #5C7CFA;
+  --brand-soft: rgba(59, 91, 219, 0.10);
+  --brand-glow: rgba(59, 91, 219, 0.22);
+  --brand-gradient: linear-gradient(135deg, var(--brand-light) 0%, var(--brand) 55%, var(--brand-hover) 100%);
+  --brand-gradient-hover: linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 60%, #24388A 100%);
+  --brand-gradient-x: linear-gradient(to right, var(--brand-light), var(--brand) 70%, var(--brand-hover));
+
+  --yellow: var(--brand);
+  --yellow-hover: var(--brand-hover);
+  --yellow-soft: var(--brand-soft);
+
+  --bg-app: #FAF9F6;
+  --bg-canvas: #F5F3EE;
+  --bg-surface: #FFFFFF;
+  --bg-surface-2: #FBFAF7;
+  --bg-elevated: #FFFFFF;
+  --bg-inset: rgba(26, 24, 20, 0.035);
+  --bg-hover: rgba(26, 24, 20, 0.05);
+  --bg-active: rgba(59, 91, 219, 0.10);
+  --bg-overlay: rgba(28, 26, 22, 0.42);
+
+  --text-primary: #1A1815;
+  --text-secondary: #4A463F;
+  --text-muted: #8A847A;
+  --text-inverse: #FFFFFF;
+  --text-on-brand: #FFFFFF;
+
+  --border: #E7E3DA;
+  --border-soft: rgba(26, 24, 20, 0.08);
+  --border-strong: #D3CDC0;
+
+  --shadow-xs: 0 1px 2px rgba(60, 52, 38, 0.05);
+  --shadow-sm: 0 2px 10px rgba(60, 52, 38, 0.07);
+  --shadow-md: 0 10px 28px rgba(60, 52, 38, 0.10);
+  --shadow-lg: 0 20px 48px rgba(60, 52, 38, 0.14);
+  --shadow-focus: 0 0 0 3px rgba(59, 91, 219, 0.28);
+
+  --glass-surface-rgb: 255, 255, 255;
+  --glass-elevated-rgb: 255, 255, 255;
+  --glass-overlay-rgb: 28, 26, 22;
+  --glass-dim-scale: 0.6;
+
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------------ black theme */
+/* True black, not dark grey. On an OLED panel #000 is an unlit pixel, so the
+   chrome disappears and only the content is emitting — which is the point of
+   asking for a black theme rather than a darker dark one. */
+[data-theme="black"] {
+  --brand: #4D8DFF;
+  --brand-hover: #3B72D9;
+  --brand-light: #7AAAFF;
+  --brand-soft: rgba(77, 141, 255, 0.14);
+  --brand-glow: rgba(77, 141, 255, 0.3);
+  --brand-gradient: linear-gradient(135deg, var(--brand-light) 0%, var(--brand) 55%, var(--brand-hover) 100%);
+  --brand-gradient-hover: linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 60%, #2C57A8 100%);
+  --brand-gradient-x: linear-gradient(to right, var(--brand-light), var(--brand) 70%, var(--brand-hover));
+
+  --yellow: var(--brand);
+  --yellow-hover: var(--brand-hover);
+  --yellow-soft: var(--brand-soft);
+
+  --bg-app: #000000;
+  --bg-canvas: #050505;
+  --bg-surface: #0D0D0D;
+  --bg-surface-2: #141414;
+  --bg-elevated: #171717;
+  --bg-inset: rgba(255, 255, 255, 0.04);
+  --bg-hover: rgba(255, 255, 255, 0.07);
+  --bg-active: rgba(77, 141, 255, 0.16);
+  --bg-overlay: rgba(0, 0, 0, 0.8);
+
+  --text-primary: #F2F2F2;
+  --text-secondary: #B4B4B4;
+  --text-muted: #6E6E6E;
+  --text-inverse: #000000;
+  --text-on-brand: #04101F;
+
+  --border: #1F1F1F;
+  --border-soft: rgba(255, 255, 255, 0.09);
+  --border-strong: #333333;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.6);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.7);
+  --shadow-lg: 0 22px 54px rgba(0, 0, 0, 0.8);
+  --shadow-focus: 0 0 0 3px rgba(77, 141, 255, 0.35);
+
+  --glass-surface-rgb: 20, 20, 20;
+  --glass-elevated-rgb: 28, 28, 28;
+  --glass-overlay-rgb: 0, 0, 0;
+
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------- classic theme */
+/* Warm paper and bronze — the register of a printed letterhead rather than a
+   dashboard. Kept restrained on purpose: the accent carries the character so
+   the data stays the loudest thing on the page. */
+[data-theme="classic"] {
+  --brand: #A67C3D;
+  --brand-hover: #8A6531;
+  --brand-light: #C39A5A;
+  --brand-soft: rgba(166, 124, 61, 0.14);
+  --brand-glow: rgba(166, 124, 61, 0.26);
+  --brand-gradient: linear-gradient(135deg, var(--brand-light) 0%, var(--brand) 55%, var(--brand-hover) 100%);
+  --brand-gradient-hover: linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 60%, #6E4F26 100%);
+  --brand-gradient-x: linear-gradient(to right, var(--brand-light), var(--brand) 70%, var(--brand-hover));
+
+  --yellow: var(--brand);
+  --yellow-hover: var(--brand-hover);
+  --yellow-soft: var(--brand-soft);
+
+  --bg-app: #EFE8DA;
+  --bg-canvas: #E8DFCD;
+  --bg-surface: #FBF7EF;
+  --bg-surface-2: #F5EFE2;
+  --bg-elevated: #FFFCF6;
+  --bg-inset: rgba(62, 48, 28, 0.05);
+  --bg-hover: rgba(62, 48, 28, 0.07);
+  --bg-active: rgba(166, 124, 61, 0.16);
+  --bg-overlay: rgba(46, 36, 22, 0.45);
+
+  --text-primary: #2E2820;
+  --text-secondary: #574E40;
+  --text-muted: #8C8172;
+  --text-inverse: #FBF7EF;
+  --text-on-brand: #FFFFFF;
+
+  --border: #D9CDB4;
+  --border-soft: rgba(62, 48, 28, 0.12);
+  --border-strong: #C3B393;
+
+  --shadow-xs: 0 1px 2px rgba(74, 58, 34, 0.08);
+  --shadow-sm: 0 2px 10px rgba(74, 58, 34, 0.10);
+  --shadow-md: 0 10px 28px rgba(74, 58, 34, 0.14);
+  --shadow-lg: 0 20px 48px rgba(74, 58, 34, 0.18);
+  --shadow-focus: 0 0 0 3px rgba(166, 124, 61, 0.32);
+
+  --glass-surface-rgb: 251, 247, 239;
+  --glass-elevated-rgb: 255, 252, 246;
+  --glass-overlay-rgb: 46, 36, 22;
+  --glass-dim-scale: 0.62;
+
+  color-scheme: light;
+}
+
+/* ------------------------------------------------------ theme transition */
+/* Cross-fade the whole page when the theme changes.
+   The View Transitions API does this properly — it snapshots the old frame
+   and dissolves it into the new one, so every surface changes together
+   instead of each element racing its own transition. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 380ms;
+  animation-timing-function: var(--ease-out);
+}
+
+/* Fallback where the API is missing: transition the colour properties for the
+   length of the swap, then take it back off. Left on permanently it would tax
+   every hover and repaint in the app. */
+html.theme-swapping,
+html.theme-swapping * {
+  transition:
+    background-color 320ms var(--ease),
+    border-color 320ms var(--ease),
+    color 320ms var(--ease),
+    fill 320ms var(--ease) !important;
+}
+
 /* Users who ask for less motion get less motion. */
 @media (prefers-reduced-motion: reduce) {
   :root {
@@ -419,4 +598,9 @@
     --t-base: 0ms;
     --t-slow: 0ms;
   }
+  /* The theme cross-fade is motion too — swap instantly instead. */
+  ::view-transition-old(root),
+  ::view-transition-new(root) { animation: none; }
+  html.theme-swapping,
+  html.theme-swapping * { transition: none !important; }
 }

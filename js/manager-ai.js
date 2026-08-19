@@ -13,11 +13,27 @@ import { sanitizeMultiline, safeUrl } from './utils/sanitize.js';
 
 const HISTORY_TURNS = 8;
 
+/**
+ * Starter prompts.
+ *
+ * The first four also fill the empty greeting; the whole list sits in a strip
+ * above the composer that stays there once the conversation starts — the
+ * point at which someone most needs a nudge for what else to ask is after the
+ * first answer, not before it.
+ */
 const DEFAULT_SUGGESTIONS = [
   'من هو الأقل انشغالاً الآن؟',
   'وزّع المهام المتأخرة على الفريق',
   'تقرير أداء الفريق هذا الشهر',
-  'ما المهام المتوقفة منذ أسبوع؟'
+  'ما المهام المتوقفة منذ أسبوع؟',
+  'من عنده أكثر مهام متأخرة؟',
+  'أنشئ مهمة تصميم جديدة',
+  'ما المهام غير المسندة لأحد؟',
+  'لخّص لي حالة الفريق اليوم',
+  'أي موظف أنجز أكثر هذا الشهر؟',
+  'اقترح توزيعاً عادلاً للمهام الجديدة',
+  'ما المهام التي تستحق اليوم؟',
+  'أعطني تقريراً عن عمر الصاحب'
 ];
 
 /**
@@ -60,7 +76,7 @@ export function mountManagerAssistant(host, onDraft, {
         <div class="fw-700 mt-3">كيف أساعدك؟</div>
         <p class="fs-sm text-muted">اسألني عن حِمل العمل، أو اطلب توزيع مهمة، أو تقريراً عن موظف.</p>
         <div class="tag-list" style="justify-content:center">
-          ${suggestions.map((s) => `
+          ${suggestions.slice(0, 4).map((s) => `
             <button type="button" class="badge" data-suggest="${esc(s)}"
                     style="cursor:pointer">${esc(s)}</button>`).join('')}
         </div>
@@ -68,6 +84,11 @@ export function mountManagerAssistant(host, onDraft, {
     </div>
 
     <footer class="ai-dock__foot">
+      <div class="ai-suggests" role="list" aria-label="اقتراحات">
+        ${suggestions.map((s) => `
+          <button type="button" class="ai-suggests__chip" role="listitem"
+                  data-suggest="${esc(s)}">${esc(s)}</button>`).join('')}
+      </div>
       <div class="chat-composer">
         <textarea class="textarea" id="mai-input" rows="1"
                   placeholder="${esc(placeholder)}"></textarea>

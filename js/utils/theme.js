@@ -7,13 +7,16 @@
  * re-themes itself on the `luma:theme` event (see utils/charts.js).
  */
 
-export const THEMES = ['dark', 'light', 'space', 'ship'];
+export const THEMES = ['dark', 'light', 'white', 'classic', 'black', 'space', 'ship'];
 
 export const THEME_META = {
-  dark:  { icon: 'moon',     labelKey: 'settings.appearance.theme.dark',  hintKey: 'settings.appearance.theme.dark.hint' },
-  light: { icon: 'sun',      labelKey: 'settings.appearance.theme.light', hintKey: 'settings.appearance.theme.light.hint' },
-  space: { icon: 'sparkles', labelKey: 'settings.appearance.theme.space', hintKey: 'settings.appearance.theme.space.hint' },
-  ship:  { icon: 'rocket',   labelKey: 'settings.appearance.theme.ship',  hintKey: 'settings.appearance.theme.ship.hint' }
+  dark:    { icon: 'moon',       labelKey: 'settings.appearance.theme.dark',    hintKey: 'settings.appearance.theme.dark.hint' },
+  light:   { icon: 'sun',        labelKey: 'settings.appearance.theme.light',   hintKey: 'settings.appearance.theme.light.hint' },
+  white:   { icon: 'feather',    labelKey: 'settings.appearance.theme.white',   hintKey: 'settings.appearance.theme.white.hint' },
+  classic: { icon: 'book',       labelKey: 'settings.appearance.theme.classic', hintKey: 'settings.appearance.theme.classic.hint' },
+  black:   { icon: 'circle',     labelKey: 'settings.appearance.theme.black',   hintKey: 'settings.appearance.theme.black.hint' },
+  space:   { icon: 'sparkles',   labelKey: 'settings.appearance.theme.space',   hintKey: 'settings.appearance.theme.space.hint' },
+  ship:    { icon: 'rocket',     labelKey: 'settings.appearance.theme.ship',    hintKey: 'settings.appearance.theme.ship.hint' }
 };
 
 export function getTheme() {
@@ -21,11 +24,37 @@ export function getTheme() {
   return THEMES.includes(current) ? current : 'dark';
 }
 
+/**
+ * Switch the theme, cross-fading the whole page.
+ *
+ * The View Transitions API snapshots the old frame and dissolves it into the
+ * new one, so every surface changes together. Without it each element would
+ * animate its own colour on its own clock and the swap would ripple. Where
+ * the API is missing, a class turns colour transitions on for the length of
+ * the swap and then takes them back off — leaving them on would tax every
+ * hover and repaint in the app.
+ */
 export function setTheme(next) {
   if (!THEMES.includes(next) || next === getTheme()) return;
-  document.documentElement.dataset.theme = next;
-  try { localStorage.setItem('luma.theme', next); } catch { /* private browsing */ }
-  window.dispatchEvent(new CustomEvent('luma:theme', { detail: next }));
+
+  const commit = () => {
+    document.documentElement.dataset.theme = next;
+    try { localStorage.setItem('luma.theme', next); } catch { /* private browsing */ }
+    window.dispatchEvent(new CustomEvent('luma:theme', { detail: next }));
+  };
+
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (still) return commit();
+
+  if (typeof document.startViewTransition === 'function') {
+    document.startViewTransition(commit);
+    return;
+  }
+
+  const root = document.documentElement;
+  root.classList.add('theme-swapping');
+  commit();
+  setTimeout(() => root.classList.remove('theme-swapping'), 340);
 }
 
 /** Dark → light → space → ship → dark, for the single sidebar toggle button. */

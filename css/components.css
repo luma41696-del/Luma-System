@@ -398,7 +398,13 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .range:focus-visible::-moz-range-thumb { box-shadow: var(--shadow-focus); }
 
 /* ----------------------------------------------------------- theme picker */
-.theme-picker { display: flex; flex-direction: column; gap: var(--sp-2); }
+/* Two columns once there is room: seven themes in one stack is a scroll,
+   and the swatches are what the eye picks from anyway. */
+.theme-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--sp-2);
+}
 .theme-swatch {
   display: flex;
   align-items: center;
@@ -435,6 +441,15 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
     radial-gradient(1px 1px at 35% 75%, #fff, transparent),
     linear-gradient(135deg, #0a2740 0%, #020e1a 100%);
 }
+.theme-swatch--white .theme-swatch__preview {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F5F3EE 100%);
+}
+.theme-swatch--classic .theme-swatch__preview {
+  background: linear-gradient(135deg, #FBF7EF 0%, #E8DFCD 100%);
+}
+.theme-swatch--black .theme-swatch__preview {
+  background: linear-gradient(135deg, #171717 0%, #000000 100%);
+}
 .theme-swatch--ship .theme-swatch__preview {
   background:
     repeating-linear-gradient(0deg, rgba(34, 211, 238, .16) 0 1px, transparent 1px 11px),
@@ -454,6 +469,9 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .theme-swatch--light .theme-swatch__dot { background: #4070C8; }
 .theme-swatch--space .theme-swatch__dot { background: #e8b95c; }
 .theme-swatch--ship .theme-swatch__dot { background: #22d3ee; }
+.theme-swatch--white .theme-swatch__dot { background: #3B5BDB; }
+.theme-swatch--classic .theme-swatch__dot { background: #A67C3D; }
+.theme-swatch--black .theme-swatch__dot { background: #4D8DFF; }
 
 .theme-swatch__text { flex: 1; min-width: 0; }
 .theme-swatch__label { display: block; font-weight: 700; font-size: var(--fs-sm); color: var(--text-primary); }
@@ -1634,6 +1652,41 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
   flex: none;
   padding: var(--sp-3);
   border-top: 1px solid var(--border-soft);
+}
+
+/* Starter prompts above the input.
+   One scrolling row rather than a wrapping block: wrapping a dozen chips
+   would eat half the panel, and the row keeps the message area the tallest
+   thing in it. Faded at the end so it reads as scrollable. */
+.ai-suggests {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: var(--sp-2);
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  mask-image: linear-gradient(to left, transparent, #000 24px);
+}
+html[dir="ltr"] .ai-suggests { mask-image: linear-gradient(to right, transparent, #000 24px); }
+.ai-suggests::-webkit-scrollbar { display: none; }
+.ai-suggests__chip {
+  flex: none;
+  padding: 5px 11px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-soft);
+  background: var(--bg-inset);
+  color: var(--text-secondary);
+  font-size: var(--fs-2xs);
+  font-family: var(--font-base);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease),
+              border-color var(--t-fast) var(--ease);
+}
+.ai-suggests__chip:hover {
+  background: var(--brand-soft);
+  border-color: var(--brand);
+  color: var(--brand-light);
 }
 /* The composer is already a flex row; inside the dock it just needs to stop
    the textarea growing the panel. */

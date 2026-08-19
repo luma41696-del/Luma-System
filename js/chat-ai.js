@@ -101,6 +101,11 @@ export function openAiChat(panel, onDraft) {
     </header>
     <div class="chat-panel__body" id="ai-messages"></div>
     <footer class="chat-panel__foot">
+      <div class="ai-suggests" role="list" aria-label="اقتراحات">
+        ${SUGGESTIONS.map((s) => `
+          <button type="button" class="ai-suggests__chip" role="listitem"
+                  data-suggest="${esc(s)}">${esc(s)}</button>`).join('')}
+      </div>
       <div id="ai-attachments" class="ai-attachments" hidden></div>
       <div class="chat-composer">
         ${uploadsEnabled() ? `
@@ -228,6 +233,12 @@ export function openAiChat(panel, onDraft) {
 
   paint();
 
+  // The greeting's chips are re-bound by paint(); these live in the footer,
+  // outside the message log, so they are bound once here.
+  $$('.ai-suggests__chip', panel).forEach((chip) => {
+    chip.addEventListener('click', () => send(chip.dataset.suggest));
+  });
+
   $('#ai-send-btn', panel).addEventListener('click', () => send());
   $('#ai-msg-input', panel).addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
@@ -257,7 +268,15 @@ const SUGGESTIONS = [
   'من هو الأقل انشغالاً؟',
   'ما المهام المتأخرة؟',
   'تقرير أداء الفريق',
-  'أنشئ مهمة جديدة'
+  'أنشئ مهمة جديدة',
+  'ما جدول هذا الأسبوع؟',
+  'أضف اجتماعاً غداً',
+  'ما المهام غير المسندة؟',
+  'ابحث في الإنترنت عن…',
+  'لخّص حالة الفريق اليوم',
+  'سجّل موعد تسليم لعميل',
+  'من أنجز أكثر هذا الشهر؟',
+  'اقترح توزيعاً للمهام'
 ];
 
 function emptyGreeting() {
@@ -267,7 +286,7 @@ function emptyGreeting() {
       <div class="fw-700 mt-3">Luma AI</div>
       <p class="fs-sm text-muted">اسألني عن حِمل الفريق، أو المهام المتأخرة، أو اطلب إنشاء مهمة.</p>
       <div class="tag-list" style="justify-content:center">
-        ${SUGGESTIONS.map((s) => `
+        ${SUGGESTIONS.slice(0, 4).map((s) => `
           <button type="button" class="badge" data-suggest="${esc(s)}"
                   style="cursor:pointer">${esc(s)}</button>`).join('')}
       </div>
