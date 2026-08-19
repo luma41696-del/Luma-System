@@ -30,7 +30,7 @@ import { uploadsEnabled, UPLOADS_DISABLED_MSG } from './features.js';
 import { createPagedFeed, mountLoadMore } from './utils/paging.js';
 import { dropdown } from './app.js';
 import { mountTaskAssistant } from './task-ai.js';
-import { mountManagerAssistant } from './manager-ai.js';
+import { attachManagerAssistant } from './manager-ai.js';
 import { openDraft } from './ai-draft.js';
 
 const VIEW_KEY = 'luma.taskView';
@@ -94,7 +94,7 @@ async function renderBoard(container, ctx) {
         </div>
       </div>
 
-      ${can(session.claims, 'tasks.ai') ? '<div class="card mt-4" id="manager-ai" hidden></div>' : ''}
+      ${can(session.claims, 'tasks.ai') ? '<div id="manager-ai" hidden></div>' : ''}
 
       <div class="filter-bar">
         <span class="filter-bar__label"><i data-lucide="filter"></i> تصفية</span>
@@ -131,22 +131,11 @@ async function renderBoard(container, ctx) {
   $('#new-task').addEventListener('click', () => openTaskModal({ personal: !can(session.claims, 'tasks.create') }));
 
   /* --------------------------------------------------- manager assistant */
-  // Mounted on first open rather than with the page: most visits to the board
-  // are not to talk to it, and it would otherwise cost a render every time.
-  const aiButton = $('#manager-ai-btn');
-  if (aiButton) {
-    const panel = $('#manager-ai');
-    let teardown = null;
-    aiButton.addEventListener('click', () => {
-      const opening = panel.hidden;
-      panel.hidden = !opening;
-      aiButton.classList.toggle('is-on', opening);
-      if (opening && !teardown) {
-        teardown = mountManagerAssistant(panel, (draft) => openDraft(draft));
-        unsubs.push(() => teardown?.());
-      }
-    });
-  }
+  unsubs.push(attachManagerAssistant({
+    button: $('#manager-ai-btn'),
+    host: $('#manager-ai'),
+    onDraft: (draft) => openDraft(draft)
+  }));
 
   /* --------------------------------------------------------- filters */
   const applyFilters = () => {

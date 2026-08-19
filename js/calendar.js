@@ -26,7 +26,7 @@ import {
 } from './utils/format.js';
 import { sanitizeText, sanitizeMultiline } from './utils/sanitize.js';
 import { TASK_STATUSES, isOverdue, myTasksQuery, allTasksQuery, watchTasks } from './utils/task-model.js';
-import { mountManagerAssistant } from './manager-ai.js';
+import { attachManagerAssistant } from './manager-ai.js';
 import { openDraft } from './ai-draft.js';
 
 export const EVENT_TYPES = {
@@ -81,7 +81,7 @@ export async function render(container, ctx) {
         </div>
       </div>
 
-      ${can(session.claims, 'tasks.ai') ? '<div class="card mt-4" id="cal-ai" hidden></div>' : ''}
+      ${can(session.claims, 'tasks.ai') ? '<div id="cal-ai" hidden></div>' : ''}
 
       <div class="cal-toolbar">
         <div class="cal-nav">
@@ -145,30 +145,20 @@ export async function render(container, ctx) {
   $('#cal-add').addEventListener('click', () => openEventModal({ date: cursor }));
 
   /* ------------------------------------------------------------- Luma AI */
-  // Mounted on first open: most visits to the calendar are not to talk to it.
-  const aiButton = $('#cal-ai-btn');
-  if (aiButton) {
-    const panel = $('#cal-ai');
-    let teardown = null;
-    aiButton.addEventListener('click', () => {
-      const opening = panel.hidden;
-      panel.hidden = !opening;
-      aiButton.classList.toggle('is-on', opening);
-      if (opening && !teardown) {
-        teardown = mountManagerAssistant(panel, (draft) => openDraft(draft), {
-          subtitle: 'المواعيد والأحداث وتوزيع المهام',
-          suggestions: [
-            'ما جدول هذا الأسبوع؟',
-            'أضف اجتماع مراجعة غداً الساعة 11',
-            'سجّل موعد تسليم لعميل PRALINE',
-            'أضف عيد ميلاد لموظف'
-          ]
-        });
-        unsubs.push(() => teardown?.());
-      }
-    });
-  }
-
+  unsubs.push(attachManagerAssistant({
+    button: $('#cal-ai-btn'),
+    host: $('#cal-ai'),
+    onDraft: (draft) => openDraft(draft),
+    panel: {
+      subtitle: 'المواعيد والأحداث وتوزيع المهام',
+      suggestions: [
+        'ما جدول هذا الأسبوع؟',
+        'أضف اجتماع مراجعة غداً الساعة 11',
+        'سجّل موعد تسليم لعميل PRALINE',
+        'أضف عيد ميلاد لموظف'
+      ]
+    }
+  }));
 
   ['#f-employee', '#f-client', '#f-type'].forEach((sel) => {
     $(sel)?.addEventListener('change', () => {

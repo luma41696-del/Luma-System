@@ -1581,6 +1581,74 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
 }
 .kb-note:hover .kb-note__body { max-height: none; }
 
+/* ------------------------------------------------------- Luma AI dock */
+/* Docked to the corner rather than sitting in the page: inline it stretched
+   to full width and pushed the page's own controls down, which made a chat
+   read like a form. Floating keeps the board visible behind it — the thing
+   the user is usually asking about. */
+.ai-dock {
+  position: fixed;
+  inset-block-end: var(--sp-5);
+  inset-inline-end: var(--sp-5);
+  width: min(400px, calc(100vw - 32px));
+  height: min(560px, calc(100vh - 120px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: var(--z-dropdown);
+  animation: ai-dock-in var(--t-slow) var(--ease-out);
+}
+[data-glass="on"] .ai-dock {
+  background: var(--glass-elevated);
+  backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(140%);
+}
+@keyframes ai-dock-in {
+  from { opacity: 0; transform: translateY(12px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) { .ai-dock { animation: none; } }
+
+.ai-dock__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-bottom: 1px solid var(--border-soft);
+  flex: none;
+}
+.ai-dock__log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.ai-dock__foot {
+  flex: none;
+  padding: var(--sp-3);
+  border-top: 1px solid var(--border-soft);
+}
+/* The composer is already a flex row; inside the dock it just needs to stop
+   the textarea growing the panel. */
+.ai-dock__foot .textarea { max-height: 96px; }
+
+/* Full-width sheet on a phone, where a 400px corner panel has nowhere to go. */
+@media (max-width: 640px) {
+  .ai-dock {
+    inset-inline: var(--sp-3);
+    inset-block-end: var(--sp-3);
+    width: auto;
+    height: min(70vh, 520px);
+  }
+}
+
 /* Images staged in the AI composer, before the message is sent. */
 .ai-attachments { display: flex; gap: var(--sp-2); flex-wrap: wrap; padding: 0 0 var(--sp-2); }
 .ai-attachment {

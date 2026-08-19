@@ -44,7 +44,7 @@ export async function render(container, ctx) {
         </div>
       </div>
 
-      ${can(session.claims, 'tasks.ai') ? '<div class="card mt-4" id="kb-ai" hidden></div>' : ''}
+      ${can(session.claims, 'tasks.ai') ? '<div id="kb-ai" hidden></div>' : ''}
 
       <div class="filter-bar mt-4">
         <span class="filter-bar__label"><i data-lucide="search"></i> بحث</span>
@@ -60,31 +60,25 @@ export async function render(container, ctx) {
   $('#kb-new')?.addEventListener('click', () => openNoteModal());
 
   /* ------------------------------------------------------------- Luma AI */
-  const aiButton = $('#kb-ai-btn');
-  if (aiButton) {
-    const panel = $('#kb-ai');
-    let teardown = null;
-    aiButton.addEventListener('click', async () => {
-      const opening = panel.hidden;
-      panel.hidden = !opening;
-      aiButton.classList.toggle('is-on', opening);
-      if (opening && !teardown) {
-        const [{ mountManagerAssistant }, { openDraft }] = await Promise.all([
-          import('./manager-ai.js'), import('./ai-draft.js')
-        ]);
-        teardown = mountManagerAssistant(panel, (draft) => openDraft(draft), {
-          subtitle: 'ابحث في الإنترنت، حلّل، واحفظ الخلاصة',
-          placeholder: 'مثال: ابحث عن أحدث مقاسات منشورات إنستغرام لعام 2026 واحفظ الخلاصة',
-          suggestions: [
-            'ابحث عن اتجاهات التصميم لهذا العام واحفظ ملخصاً',
-            'ما أفضل أوقات النشر على إنستغرام في الأردن؟',
-            'لخّص أسعار الإعلانات على Meta واحفظها',
-            'ابحث عن منافسي عميل PRALINE'
-          ]
-        });
-        unsubs.push(() => teardown?.());
+  attachAssistant();
+  async function attachAssistant() {
+    const { attachManagerAssistant } = await import('./manager-ai.js');
+    const { openDraft } = await import('./ai-draft.js');
+    unsubs.push(attachManagerAssistant({
+      button: $('#kb-ai-btn'),
+      host: $('#kb-ai'),
+      onDraft: (draft) => openDraft(draft),
+      panel: {
+        subtitle: 'ابحث في الإنترنت، حلّل، واحفظ الخلاصة',
+        placeholder: 'مثال: ابحث عن أحدث مقاسات منشورات إنستغرام 2026',
+        suggestions: [
+          'ابحث عن اتجاهات التصميم هذا العام',
+          'أفضل أوقات النشر في الأردن؟',
+          'لخّص أسعار إعلانات Meta',
+          'ابحث عن منافسي عميل PRALINE'
+        ]
       }
-    });
+    }));
   }
 
   /* ---------------------------------------------------------------- data */

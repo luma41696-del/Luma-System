@@ -31,21 +31,35 @@ const DEFAULT_SUGGESTIONS = [
 export function mountManagerAssistant(host, onDraft, {
   subtitle = 'توزيع المهام ومتابعة الفريق',
   suggestions = DEFAULT_SUGGESTIONS,
-  placeholder = 'مثال: أنشئ مهمة تصميم بوست لعميل PRALINE وأسندها للأقل انشغالاً'
+  placeholder = 'اسأل Luma AI…',
+  onClose = null
 } = {}) {
   let messages = [];
   let busy = false;
 
+  // A docked panel rather than a card in the page flow: inline, it stretched
+  // to the full width and shoved the filters down the page, which made a chat
+  // read like a form. Floating keeps the board visible behind it — the thing
+  // you are usually asking about.
+  host.classList.add('ai-dock');
   host.innerHTML = `
-    <div class="card__head">
-      <div class="card__title"><i data-lucide="sparkles"></i> Luma AI</div>
-      <span class="card__sub">${esc(subtitle)}</span>
-    </div>
+    <header class="ai-dock__head">
+      <span class="chat-room__ai-avatar"><i data-lucide="sparkles"></i></span>
+      <div class="flex-1" style="min-width:0">
+        <div class="fw-700">Luma AI</div>
+        <div class="fs-2xs text-muted truncate">${esc(subtitle)}</div>
+      </div>
+      <button class="icon-btn" id="mai-close" aria-label="إغلاق" title="إغلاق">
+        <i data-lucide="x"></i>
+      </button>
+    </header>
 
-    <div id="mai-log" class="task-ai__log">
-      <div class="task-ai__hint">
-        اسألني عن حِمل العمل، أو اطلب توزيع مهمة، أو تقريراً عن موظف.
-        <div class="tag-list mt-3">
+    <div id="mai-log" class="ai-dock__log">
+      <div class="ai-greeting">
+        <span class="chat-room__ai-avatar chat-room__ai-avatar--lg"><i data-lucide="sparkles"></i></span>
+        <div class="fw-700 mt-3">كيف أساعدك؟</div>
+        <p class="fs-sm text-muted">اسألني عن حِمل العمل، أو اطلب توزيع مهمة، أو تقريراً عن موظف.</p>
+        <div class="tag-list" style="justify-content:center">
           ${suggestions.map((s) => `
             <button type="button" class="badge" data-suggest="${esc(s)}"
                     style="cursor:pointer">${esc(s)}</button>`).join('')}
@@ -53,13 +67,15 @@ export function mountManagerAssistant(host, onDraft, {
       </div>
     </div>
 
-    <div class="chat-composer">
-      <textarea class="textarea" id="mai-input" rows="2"
-                placeholder="${esc(placeholder)}"></textarea>
-      <button class="btn btn--primary btn--icon" id="mai-send" aria-label="إرسال">
-        <i data-lucide="send"></i>
-      </button>
-    </div>`;
+    <footer class="ai-dock__foot">
+      <div class="chat-composer">
+        <textarea class="textarea" id="mai-input" rows="1"
+                  placeholder="${esc(placeholder)}"></textarea>
+        <button class="btn btn--primary btn--icon" id="mai-send" aria-label="إرسال">
+          <i data-lucide="send"></i>
+        </button>
+      </div>
+    </footer>`;
 
   refreshIcons(host);
 
@@ -126,11 +142,57 @@ export function mountManagerAssistant(host, onDraft, {
     if (chip) send(chip.dataset.suggest);
   });
   $('#mai-send', host).addEventListener('click', () => send());
+  // Enter sends, Shift+Enter breaks the line — what a chat window does.
   $('#mai-input', host).addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); send(); }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
   });
+  $('#mai-close', host).addEventListener('click', () => onClose?.());
+
+  $('#mai-input', host).focus();
 
   return () => { messages = []; };
+}
+
+/**
+ * Wire a toggle button to the assistant.
+ *
+ * The three screens that offer it were each repeating the same open/close
+ * bookkeeping — mount once, flip `hidden`, flip `is-on`, remember the
+ * teardown. That belongs here, not copied per page.
+ *
+ * @param {object} options
+ * @param {HTMLElement} options.button  the trigger
+ * @param {HTMLElement} options.host    the empty element to become the dock
+ * @param {(draft: object) => void} options.onDraft
+ * @param {object} [options.panel]      subtitle / suggestions / placeholder
+ * @returns {Function} teardown
+ */
+export function attachManagerAssistant({ button, host, onDraft, panel = {} }) {
+  if (!button || !host) return () => {};
+  let teardown = null;
+
+  const close = () => {
+    host.hidden = true;
+    button.classList.remove('is-on');
+  };
+
+  button.addEventListener('click', () => {
+    if (!host.hidden) return close();
+    host.hidden = false;
+    button.classList.add('is-on');
+    // Mounted on first open: most visits to a page are not to talk to it.
+    if (!teardown) teardown = mountManagerAssistant(host, onDraft, { ...panel, onClose: close });
+    else $('#mai-input', host)?.focus();
+  });
+
+  // Escape closes it, like every other overlay in the app.
+  const onKey = (e) => { if (e.key === 'Escape' && !host.hidden) close(); };
+  document.addEventListener('keydown', onKey);
+
+  return () => {
+    document.removeEventListener('keydown', onKey);
+    teardown?.();
+  };
 }
 
 /* ------------------------------------------------------------ rendering */
