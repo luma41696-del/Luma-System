@@ -115,13 +115,13 @@ exports.askTaskAssistant = onCall(opts, async (request) => {
   // Checked here rather than at the top: someone denied this task should be
   // told that, not that the assistant is unconfigured. Cheap, specific
   // rejections first; the one about server setup last.
-  await assertAIConfigured();
+  await assertAIConfigured(caller.uid);
 
   await enforceRateLimit(caller.uid);
 
   const startedAt = Date.now();
   try {
-    const { service, provider, model } = await AIService.fromSettings();
+    const { service, provider, model } = await AIService.fromSettings(caller.uid);
     const result = await service.ask({
       system: SYSTEM_PROMPT,
       history,

@@ -63,17 +63,18 @@ class AIService {
   }
 
   /**
-   * Build the provider chosen in settings.
+   * Build the provider this caller should get.
    *
-   * Async because the choice lives in Firestore rather than the environment.
+   * Async because the choice lives in Firestore rather than the environment:
+   * the caller's own preference if they set one, else the company default.
    * Returns the resolved provider and model alongside the service so callers
    * can record in the audit log which model actually answered — with three
    * providers in play, "the AI said" is no longer specific enough to debug.
    *
    * @returns {Promise<{service: AIService, provider: string, model: string}>}
    */
-  static async fromSettings() {
-    const { provider, model, envKey, configured } = await getAISettings();
+  static async fromSettings(uid = null) {
+    const { provider, model, envKey, configured } = await getAISettings(uid);
     if (!configured) {
       const err = new Error(`${envKey} is not configured.`);
       err.missingKey = envKey;
@@ -88,8 +89,8 @@ class AIService {
   }
 
   /** Which environment variable the selected provider needs, for error text. */
-  static async missingKeyName() {
-    const { envKey, provider } = await getAISettings();
+  static async missingKeyName(uid = null) {
+    const { envKey, provider } = await getAISettings(uid);
     return { envKey, label: CATALOG[provider]?.label || provider };
   }
 

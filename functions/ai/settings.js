@@ -14,7 +14,7 @@
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { REGION, db, FieldValue } = require('../lib/admin');
-const { requireAuth, requirePermission } = require('../lib/permissions');
+const { requireAuth, requirePermission, has } = require('../lib/permissions');
 const { str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const {
@@ -31,20 +31,70 @@ const opts = { region: REGION, cors: true, secrets: AI_SECRETS };
  * Changing the pick is a different matter and stays gated below.
  */
 exports.getAIConfig = onCall(opts, async (request) => {
-  requireAuth(request);
+  const caller = requireAuth(request);
 
-  const current = await getAISettings();
+  // What this caller actually gets, and what everyone gets by default — the
+  // screen shows both, so someone can see they are overriding the company pick.
+  const [mine, company] = await Promise.all([getAISettings(caller.uid), getAISettings(null)]);
+
   return {
     providers: describeProviders(),
     current: {
-      provider: current.provider,
-      model: current.model,
-      configured: current.configured,
+      provider: mine.provider,
+      model: mine.model,
+      configured: mine.configured,
+      // 'personal' when this caller overrode the default, 'company' otherwise.
+      source: mine.source,
       // True when the saved pick had no key and something else answered —
       // the screen says so instead of showing a selection that isn't real.
-      fellBack: current.fellBack
-    }
+      fellBack: mine.fellBack
+    },
+    company: {
+      provider: company.provider,
+      model: company.model,
+      configured: company.configured
+    },
+    canManage: has(caller, 'settings.manage')
   };
+});
+
+/**
+ * Each person's own assistant, set from their own account.
+ *
+ * No permission beyond being signed in: this changes only who answers *this*
+ * caller, and it grants nothing — the provider must already have a key on the
+ * server, which only an operator can add. Passing no provider clears the
+ * override and puts them back on the company default.
+ */
+exports.setMyAIProvider = onCall(opts, async (request) => {
+  const caller = requireAuth(request);
+
+  const raw = str(request.data?.provider, { max: 40, field: 'المزوّد' });
+
+  if (!raw) {
+    await db.collection('users').doc(caller.uid).set({
+      aiPrefs: { provider: FieldValue.delete() }
+    }, { merge: true });
+    invalidateConfigCache(caller.uid);
+    return { provider: null, model: null, source: 'company' };
+  }
+
+  if (!isKnownProvider(raw)) throw new HttpsError('invalid-argument', 'مزوّد غير معروف.');
+  if (!isProviderConfigured(raw)) {
+    throw new HttpsError(
+      'failed-precondition',
+      `لا يمكن اختيار ${CATALOG[raw].label} — لم يتم ضبط مفتاح ${CATALOG[raw].envKey} على الخادم.`
+    );
+  }
+
+  const model = str(request.data?.model, { max: 80, field: 'النموذج' }) || CATALOG[raw].defaultModel;
+
+  await db.collection('users').doc(caller.uid).set({
+    aiPrefs: { provider: raw, models: { [raw]: model } }
+  }, { merge: true });
+  invalidateConfigCache(caller.uid);
+
+  return { provider: raw, model, source: 'personal' };
 });
 
 exports.setAIConfig = onCall(opts, async (request) => {

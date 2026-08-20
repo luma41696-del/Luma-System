@@ -72,10 +72,14 @@ service cloud.firestore {
       allow create, delete: if false;
 
       // An employee may maintain a small set of their own profile fields.
+      // `aiPrefs` is which assistant this person prefers — a provider name and
+      // a model name, same class of thing as `theme`. It carries no key and no
+      // authority: the server re-checks that the named provider exists and has
+      // a key, and falls back to the company default when it does not.
       allow update: if active() && uid() == userId
         && onlyChanged([
              'phone', 'personalEmail', 'photoURL', 'photoPath', 'personalNotes',
-             'birthday', 'notifPrefs', 'theme', 'updatedAt'
+             'birthday', 'notifPrefs', 'theme', 'aiPrefs', 'updatedAt'
            ])
         && notLarger('personalNotes', 2000)
         && notLarger('phone', 32);

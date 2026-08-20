@@ -53,13 +53,13 @@ exports.polishTaskText = onCall(opts, async (request) => {
   const otherSpec = FIELDS[otherField];
   const other = str(request.data?.[otherField], { max: otherSpec.max, field: otherSpec.label });
 
-  await assertAIConfigured();
+  await assertAIConfigured(caller.uid);
 
   await enforceRateLimit(caller.uid);
 
   const startedAt = Date.now();
   try {
-    const { service, provider, model } = await AIService.fromSettings();
+    const { service, provider, model } = await AIService.fromSettings(caller.uid);
     const question = other
       ? `الحقل المطلوب تصحيحه (${spec.label}):\n${text}\n\nالحقل الآخر كسياق فقط، لا تُصحّحه (${otherSpec.label}):\n${other}`
       : `الحقل المطلوب تصحيحه (${spec.label}):\n${text}`;

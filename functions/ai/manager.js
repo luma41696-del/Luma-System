@@ -102,7 +102,7 @@ exports.askManager = onCall(opts, async (request) => {
 
   // After validation and authorisation: someone denied should hear that,
   // not that the assistant is unconfigured.
-  await assertAIConfigured();
+  await assertAIConfigured(caller.uid);
 
   await enforceRateLimit(caller.uid);
 
@@ -110,7 +110,7 @@ exports.askManager = onCall(opts, async (request) => {
   let toolsUsed = [];
 
   try {
-    const { service, provider, model } = await AIService.fromSettings();
+    const { service, provider, model } = await AIService.fromSettings(caller.uid);
     const result = await service.ask({
       system: SYSTEM_PROMPT,
       question,

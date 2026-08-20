@@ -26,7 +26,7 @@ exports.askAccountant = onCall(opts, async (request) => {
   const caller = requireAuth(request);
   requirePermission(caller, 'finance.ai');
 
-  await assertAIConfigured();
+  await assertAIConfigured(caller.uid);
 
   const question = str(request.data?.question, { max: 1000, required: true, field: 'السؤال' });
   assert(question.length >= 2, 'السؤال قصير جداً.');
@@ -45,7 +45,7 @@ exports.askAccountant = onCall(opts, async (request) => {
   let toolsUsed = [];
 
   try {
-    const { service, provider, model } = await AIService.fromSettings();
+    const { service, provider, model } = await AIService.fromSettings(caller.uid);
     const result = await service.ask({
       question,
       history,

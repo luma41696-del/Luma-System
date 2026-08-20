@@ -97,6 +97,7 @@ exports.askManager = manager.askManager;
 const aiSettings = require('./ai/settings');
 exports.getAIConfig = aiSettings.getAIConfig;
 exports.setAIConfig = aiSettings.setAIConfig;
+exports.setMyAIProvider = aiSettings.setMyAIProvider;
 
 /* --------------------------------------------------------- notifications */
 const notifications = require('./notifications');

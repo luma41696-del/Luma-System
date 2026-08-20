@@ -31,9 +31,8 @@ const TABS = [
   { id: 'security',      labelKey: 'settings.tab.security',      icon: 'shield' },
   { id: 'permissions',   labelKey: 'settings.tab.permissions',   icon: 'key-round', perm: 'settings.manage' },
   { id: 'audit',         labelKey: 'settings.tab.audit',         icon: 'scroll-text', perm: 'settings.manage' },
-  // Open to everyone: knowing which assistant is answering is useful to anyone
-  // who uses it. Changing it stays behind settings.manage — the pick is global,
-  // so one person switching it switches it for the whole company.
+  // Open to everyone: each person picks their own assistant here. Only the
+  // company default inside the tab is gated on settings.manage.
   { id: 'ai',            labelKey: 'settings.tab.ai',            icon: 'sparkles' },
   { id: 'system',        labelKey: 'settings.tab.system',        icon: 'server-cog', perm: 'settings.manage' }
 ];
@@ -665,21 +664,18 @@ function summarizeMeta(meta) {
 /* ------------------------------------------------------------- AI provider */
 
 /**
- * Which model answers, chosen here rather than in a deploy.
+ * Which assistant answers you.
  *
- * The list comes from the server, including whether each provider has a key,
- * because only the server knows. A provider with no key is shown but cannot be
- * selected — being told "Gemini has no key yet" beats picking it and finding
- * out at the next question.
+ * Two levels, and everyone sees both. Anyone may pick their own provider from
+ * their own account — it changes only their own questions, so it needs no
+ * permission and cannot affect a colleague. Whoever does not pick gets the
+ * company default, which stays behind `settings.manage` because it does apply
+ * to everyone.
  *
- * No key is ever entered on this screen. Keys are environment variables on the
- * server; what gets saved here is a provider name and a model name.
+ * No key is ever entered here. Keys are environment variables on the server;
+ * what is saved is a provider name and a model name.
  */
 async function aiTab(host) {
-  // Everyone sees which assistant is answering; only settings.manage can move
-  // it. Enforced on the server too — this only decides what the screen offers.
-  const editable = can(session.claims, 'settings.manage') || isAdmin(session.claims);
-
   host.innerHTML = '<div class="skeleton skeleton--row"></div>';
 
   let config;
@@ -692,70 +688,116 @@ async function aiTab(host) {
     return;
   }
 
-  const { providers, current } = config;
-  let chosen = current.provider;
-  const models = {};
+  const { providers, current, company, canManage } = config;
+  const ready = providers.filter((p) => p.configured);
+  const labelOf = (id) => providers.find((p) => p.id === id)?.label || id;
+
+  /* ------------------------------------------------------------ my choice */
+  // '' means "follow the company default" rather than any particular vendor.
+  let mine = current.source === 'personal' ? current.provider : '';
+  const myModels = {};
   providers.forEach((p) => {
-    models[p.id] = p.id === current.provider ? current.model : p.defaultModel;
+    myModels[p.id] = p.id === current.provider ? current.model : p.defaultModel;
   });
 
+  /* --------------------------------------------------------- company pick */
+  let theirs = company.provider;
+  const theirModels = {};
+  providers.forEach((p) => {
+    theirModels[p.id] = p.id === company.provider ? company.model : p.defaultModel;
+  });
+
+  const cardHTML = (p, selectedId, enabled) => `
+    <button type="button"
+            class="provider-card${p.id === selectedId ? ' is-on' : ''}${p.configured && enabled ? '' : ' is-disabled'}"
+            data-pick="${attr(p.id)}" ${p.configured && enabled ? '' : 'disabled'}>
+      <span class="provider-card__name">${esc(p.label)}</span>
+      <span class="provider-card__vendor">${esc(p.vendor)}</span>
+      <span class="provider-card__state">
+        ${p.configured
+          ? '<i data-lucide="check-circle-2" class="icon-sm"></i> جاهز'
+          : `<i data-lucide="key-round" class="icon-sm"></i> ${esc(p.envKey)} غير مضبوط`}
+      </span>
+    </button>`;
+
+  const modelSelect = (id, providerId, models, chosenModel) => {
+    const entry = providers.find((p) => p.id === providerId);
+    const known = (entry?.models || []).some((m) => m.id === chosenModel);
+    return `
+      <div class="field mt-3">
+        <label class="field__label" for="${id}">النموذج</label>
+        <select class="select" id="${id}">
+          ${(entry?.models || []).map((m) => `
+            <option value="${attr(m.id)}" ${chosenModel === m.id ? 'selected' : ''}>${esc(m.label)}</option>`).join('')}
+          <option value="__custom__" ${known ? '' : 'selected'}>أخرى — اكتب الاسم يدوياً</option>
+        </select>
+      </div>
+      <div class="field" id="${id}-custom-field" hidden>
+        <label class="field__label" for="${id}-custom">اسم النموذج</label>
+        <input class="input ltr" id="${id}-custom" maxlength="80"
+               value="${attr(chosenModel || '')}" placeholder="مثال: gpt-4o">
+      </div>`;
+  };
+
   const paint = () => {
-    const active = providers.find((p) => p.id === chosen);
     host.innerHTML = `
       <div class="grid grid-2 mt-4">
+
         <div class="card">
           <div class="card__head"><div class="card__title">
-            <i data-lucide="sparkles"></i> مزوّد الذكاء الاصطناعي
+            <i data-lucide="user-round-cog"></i> المساعد الخاص بك
           </div></div>
 
           ${current.fellBack ? `
           <div class="notice notice--warn mb-3">
             <i data-lucide="triangle-alert"></i>
             المزوّد المحفوظ لا يملك مفتاحاً على الخادم، فيُستخدم
-            <strong>${esc(providers.find((p) => p.id === current.provider)?.label || current.provider)}</strong> بدلاً منه.
+            <strong>${esc(labelOf(current.provider))}</strong> بدلاً منه.
           </div>` : ''}
 
-          <div class="provider-picker">
-            ${providers.map((p) => `
-              <button type="button"
-                      class="provider-card${p.id === chosen ? ' is-on' : ''}${p.configured && editable ? '' : ' is-disabled'}"
-                      data-provider="${attr(p.id)}" ${p.configured && editable ? '' : 'disabled'}>
-                <span class="provider-card__name">${esc(p.label)}</span>
-                <span class="provider-card__vendor">${esc(p.vendor)}</span>
-                <span class="provider-card__state">
-                  ${p.configured
-                    ? '<i data-lucide="check-circle-2" class="icon-sm"></i> جاهز'
-                    : `<i data-lucide="key-round" class="icon-sm"></i> ${esc(p.envKey)} غير مضبوط`}
-                </span>
-              </button>`).join('')}
+          <p class="fs-sm text-secondary mb-3">
+            يخصّك وحدك — لا يؤثر على بقية الفريق.
+          </p>
+
+          <div class="provider-picker" id="my-picker">
+            <button type="button" class="provider-card${mine === '' ? ' is-on' : ''}" data-pick="">
+              <span class="provider-card__name">افتراضي الشركة</span>
+              <span class="provider-card__vendor">${esc(labelOf(company.provider))}</span>
+              <span class="provider-card__state">
+                <i data-lucide="building-2" class="icon-sm"></i> يتبع إعداد الوكالة
+              </span>
+            </button>
+            ${ready.map((p) => cardHTML(p, mine, true)).join('')}
           </div>
 
-          <div class="field mt-3">
-            <label class="field__label" for="ai-model">النموذج</label>
-            <select class="select" id="ai-model" ${editable ? '' : 'disabled'}>
-              ${(active?.models || []).map((m) => `
-                <option value="${attr(m.id)}" ${models[chosen] === m.id ? 'selected' : ''}>${esc(m.label)}</option>`).join('')}
-              ${editable ? `
-              <option value="__custom__" ${
-                (active?.models || []).some((m) => m.id === models[chosen]) ? '' : 'selected'
-              }>أخرى — اكتب الاسم يدوياً</option>` : ''}
-            </select>
+          ${mine ? modelSelect('my-model', mine, myModels, myModels[mine]) : ''}
+
+          <button class="btn btn--primary mt-3" id="my-save">
+            <i data-lucide="save"></i> حفظ اختياري
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card__head"><div class="card__title">
+            <i data-lucide="building-2"></i> افتراضي الشركة
+          </div></div>
+          <p class="fs-sm text-secondary mb-3">
+            يُستخدم لكل من لم يختر مزوّداً خاصاً به.
+          </p>
+
+          <div class="provider-picker" id="co-picker">
+            ${providers.map((p) => cardHTML(p, theirs, canManage)).join('')}
           </div>
 
-          ${editable ? `
-          <div class="field" id="ai-model-custom-field" hidden>
-            <label class="field__label" for="ai-model-custom">اسم النموذج</label>
-            <input class="input ltr" id="ai-model-custom" maxlength="80"
-                   value="${attr(models[chosen] || '')}" placeholder="مثال: gpt-4o">
-          </div>
-
-          <button class="btn btn--primary" id="ai-save" ${active?.configured ? '' : 'disabled'}>
-            <i data-lucide="save"></i> حفظ
-          </button>` : `
-          <div class="field__hint">
-            <i data-lucide="lock" class="icon-sm"></i>
-            تغيير المزوّد يحتاج صلاحية «إدارة إعدادات النظام».
-          </div>`}
+          ${canManage ? `
+            ${modelSelect('co-model', theirs, theirModels, theirModels[theirs])}
+            <button class="btn btn--secondary mt-3" id="co-save">
+              <i data-lucide="save"></i> حفظ الافتراضي
+            </button>` : `
+            <div class="field__hint mt-3">
+              <i data-lucide="lock" class="icon-sm"></i>
+              تغيير افتراضي الشركة يحتاج صلاحية «إدارة إعدادات النظام».
+            </div>`}
         </div>
 
         <div class="card">
@@ -779,49 +821,78 @@ async function aiTab(host) {
       </div>`;
 
     refreshIcons(host);
+    wireModel('my-model', mine, myModels);
+    wireModel('co-model', theirs, theirModels);
 
-    // Read-only view: the cards, the select and the save button are all either
-    // disabled or absent, so there is nothing to wire up.
-    if (!editable) return;
-
-    const select = $('#ai-model', host);
-    const customField = $('#ai-model-custom-field', host);
-    const custom = $('#ai-model-custom', host);
-    const syncCustom = () => { customField.hidden = select.value !== '__custom__'; };
-    syncCustom();
-    select.addEventListener('change', () => {
-      if (select.value !== '__custom__') models[chosen] = select.value;
-      syncCustom();
+    $$('#my-picker [data-pick]', host).forEach((card) => {
+      card.addEventListener('click', () => { mine = card.dataset.pick; paint(); });
     });
-
-    $$('[data-provider]', host).forEach((card) => {
-      card.addEventListener('click', () => {
-        chosen = card.dataset.provider;
-        paint();
+    if (canManage) {
+      $$('#co-picker [data-pick]', host).forEach((card) => {
+        card.addEventListener('click', () => { theirs = card.dataset.pick; paint(); });
       });
-    });
+    }
 
-    $('#ai-save', host).addEventListener('click', async () => {
-      const button = $('#ai-save', host);
-      const model = select.value === '__custom__' ? custom.value.trim() : select.value;
+    $('#my-save', host)?.addEventListener('click', async () => {
+      const button = $('#my-save', host);
       setBusy(button, true);
       try {
-        const saved = await callFn('setAIConfig', { provider: chosen, model });
-        models[chosen] = saved.model;
-        current.provider = saved.provider;
-        current.model = saved.model;
+        const saved = await callFn('setMyAIProvider', mine
+          ? { provider: mine, model: readModel('my-model', myModels[mine]) }
+          : {});
+        current.source = saved.source;
+        current.provider = saved.provider || company.provider;
         current.fellBack = false;
-        toastSuccess(`تم التبديل إلى ${providers.find((p) => p.id === saved.provider)?.label || saved.provider}.`);
+        if (saved.provider) myModels[saved.provider] = saved.model;
+        toastSuccess(saved.provider
+          ? `مساعدك الآن ${labelOf(saved.provider)}.`
+          : 'تتبع الآن افتراضي الشركة.');
+      } catch (err) {
+        toastError(err?.message || 'تعذّر حفظ اختيارك.');
+      } finally { setBusy(button, false); }
+    });
+
+    $('#co-save', host)?.addEventListener('click', async () => {
+      const button = $('#co-save', host);
+      setBusy(button, true);
+      try {
+        const saved = await callFn('setAIConfig', {
+          provider: theirs, model: readModel('co-model', theirModels[theirs])
+        });
+        company.provider = saved.provider;
+        company.model = saved.model;
+        theirModels[saved.provider] = saved.model;
+        toastSuccess(`افتراضي الشركة الآن ${labelOf(saved.provider)}.`);
       } catch (err) {
         toastError(err?.message || 'تعذّر حفظ الإعدادات.');
-      } finally {
-        setBusy(button, false);
-      }
+      } finally { setBusy(button, false); }
     });
   };
 
+  /** Reveals the free-text box only when "أخرى" is picked. */
+  function wireModel(id, providerId, store) {
+    const select = $(`#${id}`, host);
+    if (!select) return;
+    const field = $(`#${id}-custom-field`, host);
+    const sync = () => { field.hidden = select.value !== '__custom__'; };
+    sync();
+    select.addEventListener('change', () => {
+      if (select.value !== '__custom__') store[providerId] = select.value;
+      sync();
+    });
+  }
+
+  function readModel(id, fallback) {
+    const select = $(`#${id}`, host);
+    if (!select) return fallback;
+    return select.value === '__custom__'
+      ? ($(`#${id}-custom`, host)?.value.trim() || fallback)
+      : select.value;
+  }
+
   paint();
 }
+
 
 async function systemTab(host) {
   host.innerHTML = `
