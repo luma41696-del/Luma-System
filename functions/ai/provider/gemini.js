@@ -27,6 +27,15 @@ const REQUEST_TIMEOUT_MS = Number(process.env.AI_TIMEOUT_MS) || 20_000;
 /** Images are inlined into the request body, so they need a sane ceiling. */
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 
+/**
+ * Room for thinking plus the answer.
+ *
+ * The 2.5 models think before replying and those tokens count against this
+ * same budget, so a ceiling sized for the visible answer alone can be spent
+ * entirely on thinking — the call succeeds and comes back with no text in it.
+ */
+const MAX_OUTPUT_TOKENS = Number(process.env.GEMINI_MAX_OUTPUT_TOKENS) || 4096;
+
 class GeminiProvider {
   constructor({ apiKey, model }) {
     if (!apiKey) throw new Error('GEMINI_API_KEY is not configured.');
@@ -88,18 +97,36 @@ class GeminiProvider {
     const steps = [];
 
     const declarations = (tools || []).map(toGeminiDeclaration);
-    const allTools = [
+    let allTools = [
       ...(declarations.length ? [{ functionDeclarations: declarations }] : []),
       ...(webSearch ? [{ googleSearch: {} }] : [])
     ];
 
+    /**
+     * Grounding alongside function declarations is not accepted everywhere,
+     * and when it is refused the refusal takes the whole answer with it. As on
+     * the Claude driver, one 400 with search present is retried without it:
+     * losing web results is a far smaller loss than losing the reply.
+     */
+    const send = () => this.call({
+      contents,
+      ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
+      ...(allTools.length ? { tools: allTools } : {}),
+      generationConfig: { temperature: 0.2, maxOutputTokens: MAX_OUTPUT_TOKENS }
+    });
+
+    const hasSearch = () => allTools.some((t) => t.googleSearch);
+
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-      const result = await this.call({
-        contents,
-        ...(system ? { systemInstruction: { parts: [{ text: system }] } } : {}),
-        ...(allTools.length ? { tools: allTools } : {}),
-        generationConfig: { temperature: 0.2, maxOutputTokens: 1200 }
-      });
+      let result;
+      try {
+        result = await send();
+      } catch (err) {
+        if (err?.status !== 400 || !hasSearch()) throw err;
+        allTools = allTools.filter((t) => !t.googleSearch);
+        steps.push({ kind: 'note', label: 'البحث في الإنترنت غير متاح مع الأدوات لهذا النموذج — تم المتابعة بدونه' });
+        result = await send();
+      }
 
       const candidate = result.candidates?.[0];
       const responseParts = candidate?.content?.parts || [];
@@ -116,7 +143,7 @@ class GeminiProvider {
       const calls = responseParts.filter((p) => p.functionCall).map((p) => p.functionCall);
       if (!calls.length) {
         return {
-          text: extractText(responseParts), toolsUsed, data: lastData,
+          text: extractText(responseParts, candidate, result), toolsUsed, data: lastData,
           citations: dedupe(citations), steps
         };
       }
@@ -227,9 +254,25 @@ function dedupe(list) {
   return list.filter((c) => !seen.has(c.url) && seen.add(c.url)).slice(0, 12);
 }
 
-function extractText(parts) {
+/**
+ * Gemini can return HTTP 200 with nothing in it — the prompt was blocked, or
+ * the whole token budget went on thinking. Saying "I could not answer" hides
+ * which of those happened, so the reason is named when there is one.
+ */
+function extractText(parts, candidate = null, result = null) {
   const text = parts.filter((p) => typeof p.text === 'string').map((p) => p.text).join('\n').trim();
-  return text || 'لم أتمكن من صياغة إجابة لهذا السؤال.';
+  if (text) return text;
+
+  const blocked = result?.promptFeedback?.blockReason;
+  if (blocked) return `رفض النموذج الإجابة على هذا السؤال (${blocked}).`;
+
+  const finish = candidate?.finishReason;
+  if (finish === 'MAX_TOKENS') {
+    return 'انقطعت الإجابة قبل أن تكتمل — استُهلك حد الإخراج. جرّب سؤالاً أقصر.';
+  }
+  if (finish && finish !== 'STOP') return `توقّف النموذج قبل الإجابة (${finish}).`;
+
+  return 'لم أتمكن من صياغة إجابة لهذا السؤال.';
 }
 
 /**

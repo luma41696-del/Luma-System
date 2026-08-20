@@ -133,20 +133,41 @@ class AnthropicProvider {
     const steps = [];
 
     const caps = capabilities(this.model);
-    const allTools = [
+    let allTools = [
       ...(tools || []).map(toAnthropicTool),
       ...(webSearch ? [{ type: caps.searchTool, name: 'web_search', max_uses: 5 }] : [])
     ];
 
+    /**
+     * Web search is an enhancement, not a requirement.
+     *
+     * The server-side search tool has to be enabled on the account, and a tool
+     * type it does not recognise comes back as a 400 that kills the whole
+     * answer — including every part of it that needed no search at all. On
+     * that one failure the request is retried once without search, so the
+     * assistant degrades to "no web results" rather than "no answer".
+     */
+    const send = () => this.call({
+      model: this.model,
+      system,
+      messages,
+      max_tokens: MAX_TOKENS,
+      ...(caps.effort ? { output_config: { effort: EFFORT } } : {}),
+      ...(allTools.length ? { tools: allTools } : {})
+    });
+
+    const hasSearch = () => allTools.some((t) => String(t.type || '').startsWith('web_search'));
+
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-      const result = await this.call({
-        model: this.model,
-        system,
-        messages,
-        max_tokens: MAX_TOKENS,
-        ...(caps.effort ? { output_config: { effort: EFFORT } } : {}),
-        ...(allTools.length ? { tools: allTools } : {})
-      });
+      let result;
+      try {
+        result = await send();
+      } catch (err) {
+        if (err?.status !== 400 || !hasSearch()) throw err;
+        allTools = allTools.filter((t) => !String(t.type || '').startsWith('web_search'));
+        steps.push({ kind: 'note', label: 'البحث في الإنترنت غير متاح لهذا الحساب — تم المتابعة بدونه' });
+        result = await send();
+      }
 
       const content = Array.isArray(result.content) ? result.content : [];
 
