@@ -14,10 +14,12 @@ const { requireAuth, requirePermission } = require('../lib/permissions');
 const { str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const { AIService } = require('./service');
+const { AI_SECRETS } = require('./catalog');
+const { assertAIConfigured } = require('./config');
 const { enforceRateLimit } = require('./rate-limit');
 const { providerError } = require('./errors');
 
-const opts = { region: REGION, cors: true, secrets: ['OPENAI_API_KEY'] };
+const opts = { region: REGION, cors: true, secrets: AI_SECRETS };
 
 const FIELDS = {
   title: { label: 'العنوان', max: 200 },
@@ -51,18 +53,13 @@ exports.polishTaskText = onCall(opts, async (request) => {
   const otherSpec = FIELDS[otherField];
   const other = str(request.data?.[otherField], { max: otherSpec.max, field: otherSpec.label });
 
-  if (!AIService.isConfigured()) {
-    throw new HttpsError(
-      'failed-precondition',
-      'المساعد الذكي غير مُفعّل — لم يتم ضبط مفتاح OPENAI_API_KEY على الخادم.'
-    );
-  }
+  await assertAIConfigured();
 
   await enforceRateLimit(caller.uid);
 
   const startedAt = Date.now();
   try {
-    const service = AIService.fromEnv();
+    const { service, provider, model } = await AIService.fromSettings();
     const question = other
       ? `الحقل المطلوب تصحيحه (${spec.label}):\n${text}\n\nالحقل الآخر كسياق فقط، لا تُصحّحه (${otherSpec.label}):\n${other}`
       : `الحقل المطلوب تصحيحه (${spec.label}):\n${text}`;
@@ -74,7 +71,7 @@ exports.polishTaskText = onCall(opts, async (request) => {
     await writeAudit({
       action: 'ai.polishText',
       caller,
-      meta: { field, length: text.length, durationMs: Date.now() - startedAt, success: true }
+      meta: { field, length: text.length, provider, model, durationMs: Date.now() - startedAt, success: true }
     });
 
     return { text: polished || text };

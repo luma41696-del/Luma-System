@@ -25,11 +25,22 @@ function isHttpsError(err) {
 }
 
 /**
- * @param {Error & {status?: number, name?: string}} err
+ * @param {Error & {status?: number, name?: string, missingKey?: string}} err
+ * @param {{label?: string, envKey?: string}} [ctx]  the provider that answered,
+ *        so a rejected key names the right vendor and variable
  * @returns {HttpsError}
  */
-function providerError(err) {
+function providerError(err, ctx = {}) {
   if (isHttpsError(err)) return err;
+
+  const label = ctx.label || 'المساعد الذكي';
+  const envKey = ctx.envKey || 'مفتاح المزوّد';
+
+  // Thrown by AIService.fromSettings() when the chosen provider has no key.
+  if (err?.missingKey) {
+    return new HttpsError('failed-precondition',
+      `المساعد الذكي غير مُفعّل — لم يتم ضبط مفتاح ${err.missingKey} على الخادم.`);
+  }
 
   // AbortController fires this when REQUEST_TIMEOUT_MS is reached.
   if (err?.name === 'AbortError') {
@@ -41,16 +52,16 @@ function providerError(err) {
     case 401:
     case 403:
       return new HttpsError('failed-precondition',
-        'مفتاح OpenAI مرفوض — غير صالح أو انتهت صلاحيته. راجع OPENAI_API_KEY على الخادم.');
+        `مفتاح ${label} مرفوض — غير صالح أو انتهت صلاحيته. راجع ${envKey} على الخادم.`);
     case 429:
       return new HttpsError('resource-exhausted',
-        'تم تجاوز حصة OpenAI أو معدّل الطلبات المسموح. راجع الرصيد والحدود في حساب OpenAI.');
+        `تم تجاوز حصة ${label} أو معدّل الطلبات المسموح. راجع الرصيد والحدود في حساب ${label}.`);
     case 400:
       return new HttpsError('invalid-argument',
         'رفض المساعد الذكي الطلب. إن كنت أرسلت صوراً، جرّب صورة أقل أو أصغر.');
     case 404:
       return new HttpsError('failed-precondition',
-        'النموذج المطلوب غير متاح لهذا الحساب. راجع قيمة OPENAI_MODEL على الخادم.');
+        `النموذج المطلوب غير متاح لحساب ${label}. جرّب نموذجاً آخر من إعدادات المساعد الذكي.`);
     default:
       break;
   }

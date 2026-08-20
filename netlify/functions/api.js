@@ -43,7 +43,8 @@ const modules = [
   require('../../functions/ai'),
   require('../../functions/ai/task-assistant'),
   require('../../functions/ai/text-polish'),
-  require('../../functions/ai/manager')
+  require('../../functions/ai/manager'),
+  require('../../functions/ai/settings')
 ];
 
 /** name -> onCall handler */

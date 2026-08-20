@@ -12,24 +12,21 @@ const { requireAuth, requirePermission } = require('../lib/permissions');
 const { assert, str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const { AIService } = require('./service');
+const { AI_SECRETS } = require('./catalog');
+const { assertAIConfigured } = require('./config');
 const { DEFINITIONS, runTool } = require('./tools');
 const { enforceRateLimit } = require('./rate-limit');
 const { providerError } = require('./errors');
 
 // The key is read from the environment, never from source. Declaring it in
 // `secrets` makes Cloud Functions mount it and keeps it out of the build.
-const opts = { region: REGION, cors: true, secrets: ['OPENAI_API_KEY'] };
+const opts = { region: REGION, cors: true, secrets: AI_SECRETS };
 
 exports.askAccountant = onCall(opts, async (request) => {
   const caller = requireAuth(request);
   requirePermission(caller, 'finance.ai');
 
-  if (!AIService.isConfigured()) {
-    throw new HttpsError(
-      'failed-precondition',
-      'المساعد الذكي غير مُفعّل — لم يتم ضبط مفتاح OPENAI_API_KEY على الخادم.'
-    );
-  }
+  await assertAIConfigured();
 
   const question = str(request.data?.question, { max: 1000, required: true, field: 'السؤال' });
   assert(question.length >= 2, 'السؤال قصير جداً.');
@@ -48,7 +45,7 @@ exports.askAccountant = onCall(opts, async (request) => {
   let toolsUsed = [];
 
   try {
-    const service = AIService.fromEnv();
+    const { service, provider, model } = await AIService.fromSettings();
     const result = await service.ask({
       question,
       history,
@@ -65,6 +62,8 @@ exports.askAccountant = onCall(opts, async (request) => {
         question: question.slice(0, 300),
         tools: toolsUsed,
         toolCount: toolsUsed.length,
+        provider,
+        model,
         durationMs: Date.now() - startedAt,
         success: true
       }
@@ -74,7 +73,7 @@ exports.askAccountant = onCall(opts, async (request) => {
       text: result.text,
       toolsUsed,
       data: result.data || null,
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini'
+      model
     };
   } catch (err) {
     await writeAudit({

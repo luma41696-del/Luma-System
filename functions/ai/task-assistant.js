@@ -18,10 +18,12 @@ const { requireAuth, requirePermission, has } = require('../lib/permissions');
 const { assert, str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const { AIService } = require('./service');
+const { AI_SECRETS } = require('./catalog');
+const { assertAIConfigured } = require('./config');
 const { enforceRateLimit } = require('./rate-limit');
 const { providerError } = require('./errors');
 
-const opts = { region: REGION, cors: true, secrets: ['OPENAI_API_KEY'] };
+const opts = { region: REGION, cors: true, secrets: AI_SECRETS };
 
 /** Vision costs per image, so a single question cannot ship an album. */
 const MAX_IMAGES = 4;
@@ -113,18 +115,13 @@ exports.askTaskAssistant = onCall(opts, async (request) => {
   // Checked here rather than at the top: someone denied this task should be
   // told that, not that the assistant is unconfigured. Cheap, specific
   // rejections first; the one about server setup last.
-  if (!AIService.isConfigured()) {
-    throw new HttpsError(
-      'failed-precondition',
-      'المساعد الذكي غير مُفعّل — لم يتم ضبط مفتاح OPENAI_API_KEY على الخادم.'
-    );
-  }
+  await assertAIConfigured();
 
   await enforceRateLimit(caller.uid);
 
   const startedAt = Date.now();
   try {
-    const service = AIService.fromEnv();
+    const { service, provider, model } = await AIService.fromSettings();
     const result = await service.ask({
       system: SYSTEM_PROMPT,
       history,
@@ -139,12 +136,14 @@ exports.askTaskAssistant = onCall(opts, async (request) => {
       meta: {
         question: question.slice(0, 300),
         images: images.length,
+        provider,
+        model,
         durationMs: Date.now() - startedAt,
         success: true
       }
     });
 
-    return { text: result.text, images: images.length, model: process.env.OPENAI_MODEL || 'gpt-4o-mini' };
+    return { text: result.text, images: images.length, model };
   } catch (err) {
     await writeAudit({
       action: 'ai.task',

@@ -451,6 +451,59 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .range:focus-visible::-webkit-slider-thumb { box-shadow: var(--shadow-focus); }
 .range:focus-visible::-moz-range-thumb { box-shadow: var(--shadow-focus); }
 
+/* -------------------------------------------------------- provider picker */
+/* Same grid-of-cards shape as the theme picker below, but each card carries a
+   readiness line instead of a colour preview: a provider with no key on the
+   server is shown greyed and unselectable rather than hidden, so the reason it
+   cannot be chosen is on screen next to it. */
+.provider-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: var(--sp-2);
+}
+.provider-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-3);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  background: var(--bg-inset);
+  text-align: start;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+.provider-card:hover:not(.is-disabled) { background: var(--bg-hover); }
+.provider-card.is-on { border-color: var(--brand); background: var(--brand-soft); }
+.provider-card.is-disabled { opacity: .55; cursor: not-allowed; }
+.provider-card__name { font-weight: 700; }
+.provider-card__vendor { font-size: var(--fs-xs); color: var(--text-muted); }
+.provider-card__state {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: var(--sp-2);
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+}
+.provider-card:not(.is-disabled) .provider-card__state { color: var(--success, var(--brand)); }
+
+/* A standing notice inside a card — not a toast, because it describes the
+   state the screen is in rather than something that just happened. */
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-sm);
+}
+.notice--warn {
+  background: var(--warning-soft);
+  color: var(--text-primary);
+  border: 1px solid var(--warning);
+}
+
 /* ----------------------------------------------------------- theme picker */
 /* Two columns once there is room: seven themes in one stack is a scroll,
    and the swatches are what the eye picks from anyway. */

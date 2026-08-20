@@ -94,6 +94,10 @@ exports.polishTaskText = textPolish.polishTaskText;
 const manager = require('./ai/manager');
 exports.askManager = manager.askManager;
 
+const aiSettings = require('./ai/settings');
+exports.getAIConfig = aiSettings.getAIConfig;
+exports.setAIConfig = aiSettings.setAIConfig;
+
 /* --------------------------------------------------------- notifications */
 const notifications = require('./notifications');
 

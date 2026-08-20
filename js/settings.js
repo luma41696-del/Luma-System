@@ -31,6 +31,7 @@ const TABS = [
   { id: 'security',      labelKey: 'settings.tab.security',      icon: 'shield' },
   { id: 'permissions',   labelKey: 'settings.tab.permissions',   icon: 'key-round', perm: 'settings.manage' },
   { id: 'audit',         labelKey: 'settings.tab.audit',         icon: 'scroll-text', perm: 'settings.manage' },
+  { id: 'ai',            labelKey: 'settings.tab.ai',            icon: 'sparkles',   perm: 'settings.manage' },
   { id: 'system',        labelKey: 'settings.tab.system',        icon: 'server-cog', perm: 'settings.manage' }
 ];
 
@@ -76,6 +77,7 @@ export async function render(container, ctx) {
     else if (active === 'security') securityTab(host);
     else if (active === 'permissions') permissionsTab(host, unsubs);
     else if (active === 'audit') auditTab(host, unsubs);
+    else if (active === 'ai') aiTab(host);
     else if (active === 'system') systemTab(host);
     refreshIcons(host);
   }
@@ -656,6 +658,153 @@ function summarizeMeta(meta) {
 }
 
 /* ----------------------------------------------------------------- system */
+
+/* ------------------------------------------------------------- AI provider */
+
+/**
+ * Which model answers, chosen here rather than in a deploy.
+ *
+ * The list comes from the server, including whether each provider has a key,
+ * because only the server knows. A provider with no key is shown but cannot be
+ * selected — being told "Gemini has no key yet" beats picking it and finding
+ * out at the next question.
+ *
+ * No key is ever entered on this screen. Keys are environment variables on the
+ * server; what gets saved here is a provider name and a model name.
+ */
+async function aiTab(host) {
+  host.innerHTML = '<div class="skeleton skeleton--row"></div>';
+
+  let config;
+  try {
+    config = await callFn('getAIConfig', {});
+  } catch (err) {
+    mount(host, emptyState({
+      icon: 'plug-zap', title: 'تعذّر قراءة إعدادات المساعد الذكي', text: err?.message || ''
+    }));
+    return;
+  }
+
+  const { providers, current } = config;
+  let chosen = current.provider;
+  const models = {};
+  providers.forEach((p) => {
+    models[p.id] = p.id === current.provider ? current.model : p.defaultModel;
+  });
+
+  const paint = () => {
+    const active = providers.find((p) => p.id === chosen);
+    host.innerHTML = `
+      <div class="grid grid-2 mt-4">
+        <div class="card">
+          <div class="card__head"><div class="card__title">
+            <i data-lucide="sparkles"></i> مزوّد الذكاء الاصطناعي
+          </div></div>
+
+          ${current.fellBack ? `
+          <div class="notice notice--warn mb-3">
+            <i data-lucide="triangle-alert"></i>
+            المزوّد المحفوظ لا يملك مفتاحاً على الخادم، فيُستخدم
+            <strong>${esc(providers.find((p) => p.id === current.provider)?.label || current.provider)}</strong> بدلاً منه.
+          </div>` : ''}
+
+          <div class="provider-picker">
+            ${providers.map((p) => `
+              <button type="button"
+                      class="provider-card${p.id === chosen ? ' is-on' : ''}${p.configured ? '' : ' is-disabled'}"
+                      data-provider="${attr(p.id)}" ${p.configured ? '' : 'disabled'}>
+                <span class="provider-card__name">${esc(p.label)}</span>
+                <span class="provider-card__vendor">${esc(p.vendor)}</span>
+                <span class="provider-card__state">
+                  ${p.configured
+                    ? '<i data-lucide="check-circle-2" class="icon-sm"></i> جاهز'
+                    : `<i data-lucide="key-round" class="icon-sm"></i> ${esc(p.envKey)} غير مضبوط`}
+                </span>
+              </button>`).join('')}
+          </div>
+
+          <div class="field mt-3">
+            <label class="field__label" for="ai-model">النموذج</label>
+            <select class="select" id="ai-model">
+              ${(active?.models || []).map((m) => `
+                <option value="${attr(m.id)}" ${models[chosen] === m.id ? 'selected' : ''}>${esc(m.label)}</option>`).join('')}
+              <option value="__custom__" ${
+                (active?.models || []).some((m) => m.id === models[chosen]) ? '' : 'selected'
+              }>أخرى — اكتب الاسم يدوياً</option>
+            </select>
+          </div>
+
+          <div class="field" id="ai-model-custom-field" hidden>
+            <label class="field__label" for="ai-model-custom">اسم النموذج</label>
+            <input class="input ltr" id="ai-model-custom" maxlength="80"
+                   value="${attr(models[chosen] || '')}" placeholder="مثال: gpt-4o">
+          </div>
+
+          <button class="btn btn--primary" id="ai-save" ${active?.configured ? '' : 'disabled'}>
+            <i data-lucide="save"></i> حفظ
+          </button>
+        </div>
+
+        <div class="card">
+          <div class="card__head"><div class="card__title">
+            <i data-lucide="shield-check"></i> أين تُحفظ المفاتيح
+          </div></div>
+          <p class="fs-sm text-secondary">
+            مفاتيح المزوّدين ليست جزءاً من هذه الإعدادات ولا تُحفظ في قاعدة البيانات.
+            كل مفتاح متغيّر بيئة على الخادم، وما يُحفظ هنا هو اسم المزوّد واسم النموذج فقط.
+          </p>
+          <div class="list-divider"></div>
+          ${providers.map((p) => `
+            <div class="kv">
+              <span class="kv__k">${esc(p.label)}</span>
+              <span class="kv__v ltr fs-xs">${esc(p.envKey)}</span>
+            </div>`).join('')}
+          <p class="fs-xs text-muted mt-2">
+            لإضافة مفتاح: أضف المتغيّر في Netlify ثم أعد النشر — سيظهر المزوّد جاهزاً هنا.
+          </p>
+        </div>
+      </div>`;
+
+    refreshIcons(host);
+
+    const select = $('#ai-model', host);
+    const customField = $('#ai-model-custom-field', host);
+    const custom = $('#ai-model-custom', host);
+    const syncCustom = () => { customField.hidden = select.value !== '__custom__'; };
+    syncCustom();
+    select.addEventListener('change', () => {
+      if (select.value !== '__custom__') models[chosen] = select.value;
+      syncCustom();
+    });
+
+    $$('[data-provider]', host).forEach((card) => {
+      card.addEventListener('click', () => {
+        chosen = card.dataset.provider;
+        paint();
+      });
+    });
+
+    $('#ai-save', host).addEventListener('click', async () => {
+      const button = $('#ai-save', host);
+      const model = select.value === '__custom__' ? custom.value.trim() : select.value;
+      setBusy(button, true);
+      try {
+        const saved = await callFn('setAIConfig', { provider: chosen, model });
+        models[chosen] = saved.model;
+        current.provider = saved.provider;
+        current.model = saved.model;
+        current.fellBack = false;
+        toastSuccess(`تم التبديل إلى ${providers.find((p) => p.id === saved.provider)?.label || saved.provider}.`);
+      } catch (err) {
+        toastError(err?.message || 'تعذّر حفظ الإعدادات.');
+      } finally {
+        setBusy(button, false);
+      }
+    });
+  };
+
+  paint();
+}
 
 async function systemTab(host) {
   host.innerHTML = `

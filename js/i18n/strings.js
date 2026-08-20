@@ -192,6 +192,7 @@ export const STRINGS = {
     'settings.tab.security': 'الأمان',
     'settings.tab.permissions': 'مصفوفة الصلاحيات',
     'settings.tab.audit': 'سجل التدقيق',
+    'settings.tab.ai': 'المساعد الذكي',
     'settings.tab.system': 'إعدادات النظام',
 
     /* settings — general tab */
@@ -419,6 +420,7 @@ export const STRINGS = {
     'settings.tab.security': 'Security',
     'settings.tab.permissions': 'Permission Matrix',
     'settings.tab.audit': 'Audit Log',
+    'settings.tab.ai': 'AI Assistant',
     'settings.tab.system': 'System Settings',
 
     /* settings — general tab */

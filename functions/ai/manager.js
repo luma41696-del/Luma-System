@@ -16,11 +16,13 @@ const { requireAuth, requirePermission } = require('../lib/permissions');
 const { assert, str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const { AIService } = require('./service');
+const { AI_SECRETS } = require('./catalog');
+const { assertAIConfigured } = require('./config');
 const { DEFINITIONS, runTool } = require('./manager-tools');
 const { enforceRateLimit } = require('./rate-limit');
 const { providerError } = require('./errors');
 
-const opts = { region: REGION, cors: true, secrets: ['OPENAI_API_KEY'] };
+const opts = { region: REGION, cors: true, secrets: AI_SECRETS };
 
 /** Vision is billed per image; the browser caps this too, this enforces it. */
 const MAX_IMAGES = 4;
@@ -100,13 +102,7 @@ exports.askManager = onCall(opts, async (request) => {
 
   // After validation and authorisation: someone denied should hear that,
   // not that the assistant is unconfigured.
-  if (!AIService.isConfigured()) {
-    const { HttpsError } = require('firebase-functions/v2/https');
-    throw new HttpsError(
-      'failed-precondition',
-      'المساعد الذكي غير مُفعّل — لم يتم ضبط مفتاح OPENAI_API_KEY على الخادم.'
-    );
-  }
+  await assertAIConfigured();
 
   await enforceRateLimit(caller.uid);
 
@@ -114,7 +110,7 @@ exports.askManager = onCall(opts, async (request) => {
   let toolsUsed = [];
 
   try {
-    const service = AIService.fromEnv();
+    const { service, provider, model } = await AIService.fromSettings();
     const result = await service.ask({
       system: SYSTEM_PROMPT,
       question,
@@ -136,6 +132,8 @@ exports.askManager = onCall(opts, async (request) => {
         tools: toolsUsed.join(','),
         images: images.length,
         rejectedImages: rawImages.length - images.length,
+        provider,
+        model,
         durationMs: Date.now() - startedAt,
         success: true
       }

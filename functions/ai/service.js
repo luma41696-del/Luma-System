@@ -8,10 +8,16 @@
  */
 
 const { OpenAIProvider } = require('./provider/openai');
+const { AnthropicProvider } = require('./provider/anthropic');
+const { GeminiProvider } = require('./provider/gemini');
 const { nowContext } = require('./context');
+const { getAISettings } = require('./config');
+const { CATALOG, isProviderConfigured } = require('./catalog');
 
 const PROVIDERS = {
-  openai: (config) => new OpenAIProvider(config)
+  openai: (config) => new OpenAIProvider(config),
+  anthropic: (config) => new AnthropicProvider(config),
+  gemini: (config) => new GeminiProvider(config)
 };
 
 /**
@@ -51,17 +57,40 @@ class AIService {
     this.provider = factory({ apiKey, model });
   }
 
+  /** True when at least one provider has a key — something can answer. */
   static isConfigured() {
-    return !!process.env.OPENAI_API_KEY;
+    return Object.keys(PROVIDERS).some(isProviderConfigured);
   }
 
-  /** Build from environment. Keeps key handling in exactly one place. */
-  static fromEnv() {
-    return new AIService({
-      provider: process.env.AI_PROVIDER || 'openai',
-      apiKey: process.env.OPENAI_API_KEY,
-      model: process.env.OPENAI_MODEL || 'gpt-4o-mini'
-    });
+  /**
+   * Build the provider chosen in settings.
+   *
+   * Async because the choice lives in Firestore rather than the environment.
+   * Returns the resolved provider and model alongside the service so callers
+   * can record in the audit log which model actually answered — with three
+   * providers in play, "the AI said" is no longer specific enough to debug.
+   *
+   * @returns {Promise<{service: AIService, provider: string, model: string}>}
+   */
+  static async fromSettings() {
+    const { provider, model, envKey, configured } = await getAISettings();
+    if (!configured) {
+      const err = new Error(`${envKey} is not configured.`);
+      err.missingKey = envKey;
+      err.provider = provider;
+      throw err;
+    }
+    return {
+      service: new AIService({ provider, apiKey: process.env[envKey], model }),
+      provider,
+      model
+    };
+  }
+
+  /** Which environment variable the selected provider needs, for error text. */
+  static async missingKeyName() {
+    const { envKey, provider } = await getAISettings();
+    return { envKey, label: CATALOG[provider]?.label || provider };
   }
 
   /**
