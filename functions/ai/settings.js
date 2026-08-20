@@ -24,9 +24,14 @@ const { getAISettings, invalidateConfigCache } = require('./config');
 
 const opts = { region: REGION, cors: true, secrets: AI_SECRETS };
 
+/**
+ * Readable by anyone signed in: which assistant is answering is useful to
+ * whoever is asking it questions, and nothing here is a secret — the variable
+ * names are already in .env.example, and whether one is set is not sensitive.
+ * Changing the pick is a different matter and stays gated below.
+ */
 exports.getAIConfig = onCall(opts, async (request) => {
-  const caller = requireAuth(request);
-  requirePermission(caller, 'settings.manage');
+  requireAuth(request);
 
   const current = await getAISettings();
   return {

@@ -31,7 +31,10 @@ const TABS = [
   { id: 'security',      labelKey: 'settings.tab.security',      icon: 'shield' },
   { id: 'permissions',   labelKey: 'settings.tab.permissions',   icon: 'key-round', perm: 'settings.manage' },
   { id: 'audit',         labelKey: 'settings.tab.audit',         icon: 'scroll-text', perm: 'settings.manage' },
-  { id: 'ai',            labelKey: 'settings.tab.ai',            icon: 'sparkles',   perm: 'settings.manage' },
+  // Open to everyone: knowing which assistant is answering is useful to anyone
+  // who uses it. Changing it stays behind settings.manage — the pick is global,
+  // so one person switching it switches it for the whole company.
+  { id: 'ai',            labelKey: 'settings.tab.ai',            icon: 'sparkles' },
   { id: 'system',        labelKey: 'settings.tab.system',        icon: 'server-cog', perm: 'settings.manage' }
 ];
 
@@ -673,6 +676,10 @@ function summarizeMeta(meta) {
  * server; what gets saved here is a provider name and a model name.
  */
 async function aiTab(host) {
+  // Everyone sees which assistant is answering; only settings.manage can move
+  // it. Enforced on the server too — this only decides what the screen offers.
+  const editable = can(session.claims, 'settings.manage') || isAdmin(session.claims);
+
   host.innerHTML = '<div class="skeleton skeleton--row"></div>';
 
   let config;
@@ -711,8 +718,8 @@ async function aiTab(host) {
           <div class="provider-picker">
             ${providers.map((p) => `
               <button type="button"
-                      class="provider-card${p.id === chosen ? ' is-on' : ''}${p.configured ? '' : ' is-disabled'}"
-                      data-provider="${attr(p.id)}" ${p.configured ? '' : 'disabled'}>
+                      class="provider-card${p.id === chosen ? ' is-on' : ''}${p.configured && editable ? '' : ' is-disabled'}"
+                      data-provider="${attr(p.id)}" ${p.configured && editable ? '' : 'disabled'}>
                 <span class="provider-card__name">${esc(p.label)}</span>
                 <span class="provider-card__vendor">${esc(p.vendor)}</span>
                 <span class="provider-card__state">
@@ -725,15 +732,17 @@ async function aiTab(host) {
 
           <div class="field mt-3">
             <label class="field__label" for="ai-model">النموذج</label>
-            <select class="select" id="ai-model">
+            <select class="select" id="ai-model" ${editable ? '' : 'disabled'}>
               ${(active?.models || []).map((m) => `
                 <option value="${attr(m.id)}" ${models[chosen] === m.id ? 'selected' : ''}>${esc(m.label)}</option>`).join('')}
+              ${editable ? `
               <option value="__custom__" ${
                 (active?.models || []).some((m) => m.id === models[chosen]) ? '' : 'selected'
-              }>أخرى — اكتب الاسم يدوياً</option>
+              }>أخرى — اكتب الاسم يدوياً</option>` : ''}
             </select>
           </div>
 
+          ${editable ? `
           <div class="field" id="ai-model-custom-field" hidden>
             <label class="field__label" for="ai-model-custom">اسم النموذج</label>
             <input class="input ltr" id="ai-model-custom" maxlength="80"
@@ -742,7 +751,11 @@ async function aiTab(host) {
 
           <button class="btn btn--primary" id="ai-save" ${active?.configured ? '' : 'disabled'}>
             <i data-lucide="save"></i> حفظ
-          </button>
+          </button>` : `
+          <div class="field__hint">
+            <i data-lucide="lock" class="icon-sm"></i>
+            تغيير المزوّد يحتاج صلاحية «إدارة إعدادات النظام».
+          </div>`}
         </div>
 
         <div class="card">
@@ -766,6 +779,10 @@ async function aiTab(host) {
       </div>`;
 
     refreshIcons(host);
+
+    // Read-only view: the cards, the select and the save button are all either
+    // disabled or absent, so there is nothing to wire up.
+    if (!editable) return;
 
     const select = $('#ai-model', host);
     const customField = $('#ai-model-custom-field', host);
