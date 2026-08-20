@@ -58,6 +58,7 @@ class GeminiProvider {
         const safe = detail.replace(/AIza[A-Za-z0-9_-]+/g, 'AIza***');
         const err = new Error(`Gemini ${response.status}: ${safe.slice(0, 300)}`);
         err.status = response.status;
+        err.providerMessage = reasonFrom(safe);
         throw err;
       }
       return await response.json();
@@ -229,6 +230,23 @@ function dedupe(list) {
 function extractText(parts) {
   const text = parts.filter((p) => typeof p.text === 'string').map((p) => p.text).join('\n').trim();
   return text || 'لم أتمكن من صياغة إجابة لهذا السؤال.';
+}
+
+/**
+ * The provider's own description of what it disliked.
+ *
+ * Kept short and key-redacted, then handed to the caller so the person reading
+ * the error learns the actual reason instead of a guess. "Try a smaller image"
+ * is a poor answer to a text-only question that was rejected for an unsupported
+ * parameter.
+ */
+function reasonFrom(detail) {
+  try {
+    const parsed = JSON.parse(detail);
+    const message = parsed?.error?.message || parsed?.error?.[0]?.message || parsed?.message;
+    if (message) return String(message).slice(0, 200);
+  } catch { /* not JSON — fall through to the raw text */ }
+  return String(detail || '').slice(0, 200);
 }
 
 module.exports = { GeminiProvider };

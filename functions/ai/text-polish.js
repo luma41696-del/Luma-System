@@ -14,7 +14,7 @@ const { requireAuth, requirePermission } = require('../lib/permissions');
 const { str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const { AIService } = require('./service');
-const { AI_SECRETS } = require('./catalog');
+const { AI_SECRETS, labelOf, envKeyOf } = require('./catalog');
 const { assertAIConfigured } = require('./config');
 const { enforceRateLimit } = require('./rate-limit');
 const { providerError } = require('./errors');
@@ -58,8 +58,16 @@ exports.polishTaskText = onCall(opts, async (request) => {
   await enforceRateLimit(caller.uid);
 
   const startedAt = Date.now();
+  // Hoisted out of the try: when an answer fails, which provider was being
+  // used is the single most useful fact for the log and the error message.
+  let provider = null;
+  let model = null;
+
   try {
-    const { service, provider, model } = await AIService.fromSettings(caller.uid);
+    const built = await AIService.fromSettings(caller.uid);
+    const service = built.service;
+    provider = built.provider;
+    model = built.model;
     const question = other
       ? `الحقل المطلوب تصحيحه (${spec.label}):\n${text}\n\nالحقل الآخر كسياق فقط، لا تُصحّحه (${otherSpec.label}):\n${other}`
       : `الحقل المطلوب تصحيحه (${spec.label}):\n${text}`;
@@ -80,11 +88,11 @@ exports.polishTaskText = onCall(opts, async (request) => {
       action: 'ai.polishText',
       caller,
       meta: {
-        field, length: text.length, durationMs: Date.now() - startedAt,
-        success: false, error: String(err.message || err).slice(0, 300)
+        field, length: text.length, provider, model,
+        durationMs: Date.now() - startedAt, success: false, error: String(err.message || err).slice(0, 300)
       }
     });
     console.error('[ai] polishTaskText failed', err);
-    throw providerError(err);
+    throw providerError(err, { label: labelOf(provider), envKey: envKeyOf(provider) });
   }
 });

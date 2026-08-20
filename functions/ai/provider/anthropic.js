@@ -45,8 +45,28 @@ const MAX_TOKENS = Number(process.env.ANTHROPIC_MAX_TOKENS) || 4096;
  */
 const EFFORT = process.env.ANTHROPIC_EFFORT || 'low';
 
-/** The search tool's dated type. Current models take the 2026 variant. */
-const WEB_SEARCH_TOOL = process.env.ANTHROPIC_WEB_SEARCH_TOOL || 'web_search_20260209';
+/**
+ * Not every Claude model accepts the same request.
+ *
+ * `output_config.effort` and the dated 2026 search tool are only understood by
+ * the current generation; Haiku 4.5 rejects the effort field outright and
+ * takes the older search variant. Sending them regardless is a 400 on a
+ * perfectly ordinary question — which is exactly what happened when this
+ * driver shipped assuming every model in the picker behaved like Opus 5.
+ *
+ * An unrecognised name (someone typing their own model) gets the conservative
+ * shape: no effort, basic search. Being slightly less tuned beats not working.
+ */
+const MODERN = /^claude-(?:fable-5|mythos-5|opus-(?:5|4-[678])|sonnet-(?:5|4-6))/;
+
+function capabilities(model) {
+  const modern = MODERN.test(String(model || ''));
+  return {
+    effort: modern,
+    searchTool: process.env.ANTHROPIC_WEB_SEARCH_TOOL
+      || (modern ? 'web_search_20260209' : 'web_search_20250305')
+  };
+}
 
 class AnthropicProvider {
   constructor({ apiKey, model }) {
@@ -79,6 +99,7 @@ class AnthropicProvider {
         const safe = detail.replace(/sk-[A-Za-z0-9_*-]+/g, 'sk-***');
         const err = new Error(`Anthropic ${response.status}: ${safe.slice(0, 300)}`);
         err.status = response.status;
+        err.providerMessage = reasonFrom(safe);
         throw err;
       }
       return await response.json();
@@ -111,9 +132,10 @@ class AnthropicProvider {
     let citations = [];
     const steps = [];
 
+    const caps = capabilities(this.model);
     const allTools = [
       ...(tools || []).map(toAnthropicTool),
-      ...(webSearch ? [{ type: WEB_SEARCH_TOOL, name: 'web_search', max_uses: 5 }] : [])
+      ...(webSearch ? [{ type: caps.searchTool, name: 'web_search', max_uses: 5 }] : [])
     ];
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
@@ -122,7 +144,7 @@ class AnthropicProvider {
         system,
         messages,
         max_tokens: MAX_TOKENS,
-        output_config: { effort: EFFORT },
+        ...(caps.effort ? { output_config: { effort: EFFORT } } : {}),
         ...(allTools.length ? { tools: allTools } : {})
       });
 
@@ -215,6 +237,23 @@ function extractText(content) {
     if (block.type === 'text' && block.text) parts.push(block.text);
   }
   return parts.join('\n').trim() || 'لم أتمكن من صياغة إجابة لهذا السؤال.';
+}
+
+/**
+ * The provider's own description of what it disliked.
+ *
+ * Kept short and key-redacted, then handed to the caller so the person reading
+ * the error learns the actual reason instead of a guess. "Try a smaller image"
+ * is a poor answer to a text-only question that was rejected for an unsupported
+ * parameter.
+ */
+function reasonFrom(detail) {
+  try {
+    const parsed = JSON.parse(detail);
+    const message = parsed?.error?.message || parsed?.error?.[0]?.message || parsed?.message;
+    if (message) return String(message).slice(0, 200);
+  } catch { /* not JSON — fall through to the raw text */ }
+  return String(detail || '').slice(0, 200);
 }
 
 module.exports = { AnthropicProvider };

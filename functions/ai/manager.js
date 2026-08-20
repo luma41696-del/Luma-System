@@ -16,7 +16,7 @@ const { requireAuth, requirePermission } = require('../lib/permissions');
 const { assert, str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const { AIService } = require('./service');
-const { AI_SECRETS } = require('./catalog');
+const { AI_SECRETS, labelOf, envKeyOf } = require('./catalog');
 const { assertAIConfigured } = require('./config');
 const { DEFINITIONS, runTool } = require('./manager-tools');
 const { enforceRateLimit } = require('./rate-limit');
@@ -109,8 +109,16 @@ exports.askManager = onCall(opts, async (request) => {
   const startedAt = Date.now();
   let toolsUsed = [];
 
+  // Hoisted out of the try: when an answer fails, which provider was being
+  // used is the single most useful fact for the log and the error message.
+  let provider = null;
+  let model = null;
+
   try {
-    const { service, provider, model } = await AIService.fromSettings(caller.uid);
+    const built = await AIService.fromSettings(caller.uid);
+    const service = built.service;
+    provider = built.provider;
+    model = built.model;
     const result = await service.ask({
       system: SYSTEM_PROMPT,
       question,
@@ -161,11 +169,13 @@ exports.askManager = onCall(opts, async (request) => {
         error: String(err.message || err).slice(0, 300),
         question: question.slice(0, 300),
         tools: toolsUsed.join(','),
+        provider,
+        model,
         durationMs: Date.now() - startedAt,
         success: false
       }
     });
     console.error('[ai] askManager failed', err);
-    throw providerError(err);
+    throw providerError(err, { label: labelOf(provider), envKey: envKeyOf(provider) });
   }
 });

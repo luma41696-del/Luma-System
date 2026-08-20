@@ -56,6 +56,10 @@ const PROVIDER_IDS = Object.keys(CATALOG);
 /** Every secret name the AI callables may need, for the v2 `secrets` option. */
 const AI_SECRETS = PROVIDER_IDS.map((id) => CATALOG[id].envKey);
 
+/** Display name / key name for a provider id, for error messages. */
+const labelOf = (id) => CATALOG[id]?.label || id || 'المساعد الذكي';
+const envKeyOf = (id) => CATALOG[id]?.envKey || '';
+
 const isKnownProvider = (id) => Object.prototype.hasOwnProperty.call(CATALOG, id);
 
 /** A provider is usable only if its key is actually set on this server. */
@@ -86,5 +90,7 @@ module.exports = {
   AI_SECRETS,
   isKnownProvider,
   isProviderConfigured,
+  labelOf,
+  envKeyOf,
   describeProviders
 };

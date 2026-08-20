@@ -57,6 +57,7 @@ class OpenAIProvider {
         const safe = detail.replace(/sk-[A-Za-z0-9_*-]+/g, 'sk-***');
         const err = new Error(`OpenAI ${response.status}: ${safe.slice(0, 300)}`);
         err.status = response.status;
+        err.providerMessage = reasonFrom(safe);
         throw err;
       }
       return await response.json();
@@ -226,6 +227,23 @@ function extractText(result, output) {
     }
   }
   return parts.join('\n').trim() || 'لم أتمكن من صياغة إجابة لهذا السؤال.';
+}
+
+/**
+ * The provider's own description of what it disliked.
+ *
+ * Kept short and key-redacted, then handed to the caller so the person reading
+ * the error learns the actual reason instead of a guess. "Try a smaller image"
+ * is a poor answer to a text-only question that was rejected for an unsupported
+ * parameter.
+ */
+function reasonFrom(detail) {
+  try {
+    const parsed = JSON.parse(detail);
+    const message = parsed?.error?.message || parsed?.error?.[0]?.message || parsed?.message;
+    if (message) return String(message).slice(0, 200);
+  } catch { /* not JSON — fall through to the raw text */ }
+  return String(detail || '').slice(0, 200);
 }
 
 module.exports = { OpenAIProvider };

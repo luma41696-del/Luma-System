@@ -57,8 +57,14 @@ function providerError(err, ctx = {}) {
       return new HttpsError('resource-exhausted',
         `تم تجاوز حصة ${label} أو معدّل الطلبات المسموح. راجع الرصيد والحدود في حساب ${label}.`);
     case 400:
+      // The provider's own words, not a guess. This used to say "try a smaller
+      // image" for every 400, which is actively misleading for a text-only
+      // question rejected over an unsupported parameter — it sent people
+      // looking at their attachments instead of at the reason.
       return new HttpsError('invalid-argument',
-        'رفض المساعد الذكي الطلب. إن كنت أرسلت صوراً، جرّب صورة أقل أو أصغر.');
+        err?.providerMessage
+          ? `رفض ${label} الطلب: ${err.providerMessage}`
+          : `رفض ${label} الطلب. إن كنت أرسلت صوراً، جرّب صورة أقل أو أصغر.`);
     case 404:
       return new HttpsError('failed-precondition',
         `النموذج المطلوب غير متاح لحساب ${label}. جرّب نموذجاً آخر من إعدادات المساعد الذكي.`);

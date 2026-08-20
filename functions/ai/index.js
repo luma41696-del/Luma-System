@@ -12,7 +12,7 @@ const { requireAuth, requirePermission } = require('../lib/permissions');
 const { assert, str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const { AIService } = require('./service');
-const { AI_SECRETS } = require('./catalog');
+const { AI_SECRETS, labelOf, envKeyOf } = require('./catalog');
 const { assertAIConfigured } = require('./config');
 const { DEFINITIONS, runTool } = require('./tools');
 const { enforceRateLimit } = require('./rate-limit');
@@ -44,8 +44,16 @@ exports.askAccountant = onCall(opts, async (request) => {
   const startedAt = Date.now();
   let toolsUsed = [];
 
+  // Hoisted out of the try: when an answer fails, which provider was being
+  // used is the single most useful fact for the log and the error message.
+  let provider = null;
+  let model = null;
+
   try {
-    const { service, provider, model } = await AIService.fromSettings(caller.uid);
+    const built = await AIService.fromSettings(caller.uid);
+    const service = built.service;
+    provider = built.provider;
+    model = built.model;
     const result = await service.ask({
       question,
       history,
@@ -82,6 +90,8 @@ exports.askAccountant = onCall(opts, async (request) => {
       meta: {
         question: question.slice(0, 300),
         tools: toolsUsed,
+        provider,
+        model,
         durationMs: Date.now() - startedAt,
         success: false,
         error: String(err.message || err).slice(0, 300)
@@ -91,6 +101,6 @@ exports.askAccountant = onCall(opts, async (request) => {
     // Upstream detail (including anything echoed back by the provider) stays
     // in the logs rather than going to the browser.
     console.error('[ai] askAccountant failed', err);
-    throw providerError(err);
+    throw providerError(err, { label: labelOf(provider), envKey: envKeyOf(provider) });
   }
 });

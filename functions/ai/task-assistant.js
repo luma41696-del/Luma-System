@@ -18,7 +18,7 @@ const { requireAuth, requirePermission, has } = require('../lib/permissions');
 const { assert, str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const { AIService } = require('./service');
-const { AI_SECRETS } = require('./catalog');
+const { AI_SECRETS, labelOf, envKeyOf } = require('./catalog');
 const { assertAIConfigured } = require('./config');
 const { enforceRateLimit } = require('./rate-limit');
 const { providerError } = require('./errors');
@@ -120,8 +120,16 @@ exports.askTaskAssistant = onCall(opts, async (request) => {
   await enforceRateLimit(caller.uid);
 
   const startedAt = Date.now();
+  // Hoisted out of the try: when an answer fails, which provider was being
+  // used is the single most useful fact for the log and the error message.
+  let provider = null;
+  let model = null;
+
   try {
-    const { service, provider, model } = await AIService.fromSettings(caller.uid);
+    const built = await AIService.fromSettings(caller.uid);
+    const service = built.service;
+    provider = built.provider;
+    model = built.model;
     const result = await service.ask({
       system: SYSTEM_PROMPT,
       history,
@@ -152,6 +160,8 @@ exports.askTaskAssistant = onCall(opts, async (request) => {
       meta: {
         question: question.slice(0, 300),
         images: images.length,
+        provider,
+        model,
         durationMs: Date.now() - startedAt,
         success: false,
         error: String(err.message || err).slice(0, 300)
@@ -160,6 +170,6 @@ exports.askTaskAssistant = onCall(opts, async (request) => {
 
     // Provider detail stays in the logs — it can echo back the request.
     console.error('[ai] askTaskAssistant failed', err);
-    throw providerError(err);
+    throw providerError(err, { label: labelOf(provider), envKey: envKeyOf(provider) });
   }
 });
