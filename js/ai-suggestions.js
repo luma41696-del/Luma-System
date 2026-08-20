@@ -14,6 +14,19 @@
 import { AR_MONTHS } from './utils/format.js';
 import { isOverdue, isOpen } from './utils/task-model.js';
 
+/**
+ * A chip ending in an ellipsis is a sentence to finish, not a question to ask.
+ *
+ * "ابحث في الإنترنت عن…" sent as it stands asks the model to search for
+ * nothing. Those load the composer and wait for the rest; every other chip is
+ * a complete question and goes straight out.
+ */
+export const isTemplate = (text) => /(?:…|\.\.\.)\s*$/.test(String(text || ''));
+
+/** The chip's text with the trailing ellipsis traded for a space to type after. */
+export const templateBody = (text) =>
+  `${String(text || '').replace(/\s*(?:…|\.\.\.)\s*$/, '')} `;
+
 /** Fisher–Yates on a copy — the caller's array is not ours to reorder. */
 function shuffle(list) {
   const out = [...list];

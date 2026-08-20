@@ -14,6 +14,7 @@
 import { session } from './auth.js';
 import { $, $$, esc, attr, refreshIcons } from './utils/dom.js';
 import { callFn } from './utils/api.js';
+import { isTemplate, templateBody } from './ai-suggestions.js';
 import { sanitizeMultiline, safeUrl } from './utils/sanitize.js';
 import { formatTime } from './utils/format.js';
 import { confirmDialog } from './utils/modal.js';
@@ -140,7 +141,7 @@ export function openAiChat(panel, onDraft) {
       });
     });
     $$('[data-suggest]', log).forEach((chip) => {
-      chip.addEventListener('click', () => send(chip.dataset.suggest));
+      chip.addEventListener('click', () => useSuggestion(chip.dataset.suggest));
     });
   }
 
@@ -186,6 +187,20 @@ export function openAiChat(panel, onDraft) {
       paintPending();
     }
   });
+
+  /**
+   * A finished question goes straight out; an unfinished one is handed to the
+   * composer with the caret after it, because it is the person who knows what
+   * they were going to search for.
+   */
+  function useSuggestion(text) {
+    if (!isTemplate(text)) return send(text);
+    const input = $('#ai-msg-input', panel);
+    input.value = templateBody(text);
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    return undefined;
+  }
 
   async function send(raw) {
     const input = $('#ai-msg-input', panel);
@@ -250,7 +265,7 @@ export function openAiChat(panel, onDraft) {
         <button type="button" class="ai-suggests__chip" role="listitem"
                 data-suggest="${esc(s)}">${esc(s)}</button>`).join('');
       $$('.ai-suggests__chip', panel).forEach((chip) => {
-        chip.addEventListener('click', () => send(chip.dataset.suggest));
+        chip.addEventListener('click', () => useSuggestion(chip.dataset.suggest));
       });
     }
     // The greeting is only on screen while the conversation is empty.
@@ -260,7 +275,7 @@ export function openAiChat(panel, onDraft) {
   // The greeting's chips are re-bound by paint(); these live in the footer,
   // outside the message log, so they are bound once here.
   $$('.ai-suggests__chip', panel).forEach((chip) => {
-    chip.addEventListener('click', () => send(chip.dataset.suggest));
+    chip.addEventListener('click', () => useSuggestion(chip.dataset.suggest));
   });
 
   $('#ai-send-btn', panel).addEventListener('click', () => send());

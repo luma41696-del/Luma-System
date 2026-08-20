@@ -9,6 +9,7 @@
 
 import { $, $$, esc, attr, refreshIcons, setBusy } from './utils/dom.js';
 import { callFn } from './utils/api.js';
+import { isTemplate, templateBody } from './ai-suggestions.js';
 import { sanitizeMultiline, safeUrl } from './utils/sanitize.js';
 
 const HISTORY_TURNS = 8;
@@ -113,6 +114,20 @@ export function mountManagerAssistant(host, onDraft, {
     });
   };
 
+  /**
+   * A finished question goes straight out; an unfinished one is handed to the
+   * composer with the caret after it, because it is the person who knows what
+   * they were going to search for.
+   */
+  function useSuggestion(text) {
+    if (!isTemplate(text)) return send(text);
+    const input = $('#mai-input', host);
+    input.value = templateBody(text);
+    input.focus();
+    input.setSelectionRange(input.value.length, input.value.length);
+    return undefined;
+  }
+
   async function send(raw) {
     const question = sanitizeMultiline(raw ?? $('#mai-input', host).value, 1000);
     if (!question || busy) return;
@@ -155,7 +170,7 @@ export function mountManagerAssistant(host, onDraft, {
 
   host.addEventListener('click', (e) => {
     const chip = e.target.closest('[data-suggest]');
-    if (chip) send(chip.dataset.suggest);
+    if (chip) useSuggestion(chip.dataset.suggest);
   });
   $('#mai-send', host).addEventListener('click', () => send());
   // Enter sends, Shift+Enter breaks the line — what a chat window does.
