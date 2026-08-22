@@ -2636,3 +2636,44 @@ html[dir="ltr"] .ai-panel.is-open,
 .ai-modes--drawers { margin-top: calc(var(--sp-2) * -1); }
 .ai-modes--drawers .ai-mode { font-size: var(--fs-2xs); padding: 5px var(--sp-2); }
 .ai-modes--drawers .ai-mode i { width: 12px; height: 12px; }
+
+/* ------------------------------------------- AI page: width + inline tools */
+/* One width for the conversation and the composer, so the text a reply starts
+   at lines up with the box it was typed into. Wide enough for a table or a
+   code block to breathe, capped so long prose does not run the full width of
+   a large monitor and become hard to track back to the next line. */
+.ai-page { --ai-width: min(1040px, 100%); }
+.ai-turn { max-width: var(--ai-width); }
+.ai-page__dock { max-width: var(--ai-width); }
+
+/* The composer is a card, not a strip: the text sits on its own line and the
+   controls sit under it, which is what lets the mode toggles live inside the
+   box instead of floating above it. */
+.ai-bar {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-2);
+  border-radius: 22px;
+  padding: var(--sp-3);
+}
+.ai-bar__input { padding: 2px var(--sp-1, 4px); }
+
+.ai-bar__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+/* The send button is pushed to the far end; everything else stays left of it. */
+.ai-bar__tools .ai-bar__send { margin-inline-start: auto; }
+.ai-bar__tools .ai-modes { margin: 0; justify-content: flex-start; }
+.ai-bar__icon, .ai-bar__send { width: 34px; height: 34px; }
+
+/* Inside the bar the toggles are a quiet control, not a heading. */
+.ai-bar__tools .ai-mode { padding: 5px var(--sp-2); font-size: var(--fs-2xs); }
+.ai-bar__tools .ai-mode i { width: 13px; height: 13px; }
+
+@media (max-width: 560px) {
+  /* Labels are the first thing to go — the icons still say which is which. */
+  .ai-bar__tools .ai-mode { font-size: 0; padding: 6px; gap: 0; }
+  .ai-bar__tools .ai-mode i { width: 15px; height: 15px; }
+}

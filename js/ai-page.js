@@ -109,26 +109,30 @@ export async function render(container, ctx) {
 
         <div id="aip-files" class="ai-attachments" hidden></div>
 
-        <div class="ai-modes" role="tablist" aria-label="الوضع">
-          <button type="button" class="ai-mode is-on" data-mode="ask" role="tab" aria-selected="true">
-            <i data-lucide="message-circle"></i> محادثة
-          </button>
-          <button type="button" class="ai-mode" data-mode="image" role="tab" aria-selected="false">
-            <i data-lucide="image"></i> توليد صورة
-          </button>
-        </div>
-
         <form class="ai-bar" id="aip-form">
-          ${uploadsEnabled() ? `
-          <button type="button" class="ai-bar__icon" id="aip-attach"
-                  title="إرفاق صورة أو ملف" aria-label="إرفاق صورة أو ملف">
-            <i data-lucide="plus"></i>
-          </button>` : ''}
           <textarea class="ai-bar__input" id="aip-input" rows="1"
                     placeholder="اسأل Luma AI" aria-label="اسأل Luma AI"></textarea>
-          <button type="submit" class="ai-bar__send" id="aip-send" aria-label="إرسال">
-            <i data-lucide="arrow-up"></i>
-          </button>
+
+          <div class="ai-bar__tools">
+            ${uploadsEnabled() ? `
+            <button type="button" class="ai-bar__icon" id="aip-attach"
+                    title="إرفاق صورة أو ملف" aria-label="إرفاق صورة أو ملف">
+              <i data-lucide="plus"></i>
+            </button>` : ''}
+
+            <div class="ai-modes" role="tablist" aria-label="الوضع">
+              <button type="button" class="ai-mode is-on" data-mode="ask" role="tab" aria-selected="true">
+                <i data-lucide="message-circle"></i> محادثة
+              </button>
+              <button type="button" class="ai-mode" data-mode="image" role="tab" aria-selected="false">
+                <i data-lucide="image"></i> توليد صورة
+              </button>
+            </div>
+
+            <button type="submit" class="ai-bar__send" id="aip-send" aria-label="إرسال">
+              <i data-lucide="arrow-up"></i>
+            </button>
+          </div>
         </form>
         <p class="ai-page__note">يقترح ولا يحفظ — أنت من يراجع ويؤكّد.</p>
       </div>
