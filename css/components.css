@@ -2677,3 +2677,86 @@ html[dir="ltr"] .ai-panel.is-open,
   .ai-bar__tools .ai-mode { font-size: 0; padding: 6px; gap: 0; }
   .ai-bar__tools .ai-mode i { width: 15px; height: 15px; }
 }
+
+/* ========================================================================== */
+/* Source reader                                                              */
+/* ========================================================================== */
+/* A cited page, opened beside the conversation instead of in another tab.
+   Text only: sites overwhelmingly refuse to be framed, and the ones that
+   allow it would run their own scripts inside this app. */
+
+.reader { position: fixed; inset: 0; z-index: var(--z-modal); display: flex; }
+.reader__scrim {
+  position: absolute;
+  inset: 0;
+  background: var(--glass-overlay, rgba(0, 0, 0, .45));
+  backdrop-filter: blur(2px);
+}
+.reader__panel {
+  position: relative;
+  margin-inline-start: auto;
+  width: min(560px, 100%);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-surface);
+  border-inline-start: 1px solid var(--border-soft);
+  box-shadow: -18px 0 48px -24px rgba(0, 0, 0, .7);
+  animation: reader-in .22s var(--ease, ease) both;
+}
+@keyframes reader-in {
+  from { transform: translateX(-24px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+[dir="rtl"] .reader__panel { margin-inline-start: auto; }
+
+.reader__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-bottom: 1px solid var(--border-soft);
+  flex: none;
+}
+.reader__title {
+  flex: 1;
+  min-width: 0;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.reader__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--sp-4);
+  line-height: 1.85;
+}
+.reader__body p { margin: 0 0 var(--sp-3); }
+.reader__url {
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+  margin-bottom: var(--sp-3);
+  overflow-wrap: anywhere;
+}
+
+/* A source is now a button, but it should still read as a link. */
+.ai-source {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 3px 0;
+  background: none;
+  border: 0;
+  color: var(--text-muted);
+  font-size: var(--fs-2xs);
+  text-align: start;
+  cursor: pointer;
+}
+.ai-source:hover { color: var(--brand); }
+
+@media (prefers-reduced-motion: reduce) {
+  .reader__panel { animation: none; }
+}

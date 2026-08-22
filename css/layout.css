@@ -594,3 +594,28 @@
 @media (prefers-reduced-motion: reduce) {
   .topbar { transition: none; }
 }
+
+/* --------------------------------------------- content beneath the topbar */
+/* Frosting only means something when there is something behind it to frost.
+   Until now `.page` began exactly where the bar ended, so the blur had only
+   the flat page background to work on and the bar read as a solid slab no
+   matter how translucent it was told to be.
+   The bar now floats over the scroll area and the page reserves its height,
+   so real content travels underneath and shows through it. */
+.main { position: relative; }
+
+.topbar {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+}
+
+/* Two classes deep on purpose. responsive.css loads after this file and
+   re-declares `.page { padding: ... }` as a shorthand at three breakpoints,
+   each of which would reset a plain `.page { padding-top }` back to a value
+   that puts the first 68px of every page underneath the bar. */
+.main .page { padding-top: calc(var(--topbar-h) + var(--sp-5)); }
+
+/* With glass off the bar is opaque, so the surface behind it is irrelevant —
+   but it must still not let content show through a solid-looking bar. */
+:root:not([data-glass="on"]) .topbar { background-color: var(--bg-app); }

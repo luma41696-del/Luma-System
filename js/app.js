@@ -8,6 +8,7 @@
 import { session, onSession, requireAuth, signOutUser } from './auth.js';
 import { visibleNavItems, rolesLabel, ROLE_LABELS, can, isManager } from './permissions.js';
 import { startRouter, onRouteChange, navigate, ROUTES } from './router.js';
+import { initReader } from './ai-reader.js';
 import {
   $, $$, esc, attr, el, render, refreshIcons, bootIcons, debounce, avatarHTML
 } from './utils/dom.js';
@@ -79,6 +80,7 @@ function watchPageScroll() {
 
   onRouteChange(onRouteChanged);
   watchPageScroll();
+  initReader();
   await startRouter(pageContainer);
 
   window.addEventListener('beforeunload', () => teardown.forEach((fn) => { try { fn(); } catch {} }));

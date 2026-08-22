@@ -49,9 +49,15 @@ export function renderCitations(citations) {
       </div>
       ${citations.map((c) => {
         const href = safeUrl(c.url);
+        // Opens the reader panel rather than a new tab: the page is fetched
+        // and shown as text inside the app, which is also the only way to
+        // show a site that refuses to be framed.
         return href
-          ? `<a class="fs-2xs truncate" href="${attr(href)}" target="_blank"
-                rel="noopener noreferrer nofollow">${esc(c.title || href)}</a>`
+          ? `<button type="button" class="ai-source" data-read-url="${attr(href)}"
+                     title="${attr(href)}">
+               <i data-lucide="book-open" class="icon-sm"></i>
+               <span class="truncate">${esc(c.title || href)}</span>
+             </button>`
           : '';
       }).join('')}
     </div>`;
@@ -65,7 +71,8 @@ const TOOL_LABELS = {
   listCalendarEvents: 'قرأ التقويم',
   draftTask: 'جهّز مسودة مهمة',
   draftEvent: 'جهّز مسودة حدث',
-  draftNote: 'جهّز مسودة ملاحظة'
+  draftNote: 'جهّز مسودة ملاحظة',
+  readWebPage: 'قرأ صفحة إنترنت'
 };
 
 /** What the assistant did, in order. Collapsed until opened. */

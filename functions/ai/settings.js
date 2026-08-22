@@ -22,6 +22,7 @@ const {
   imageModelOf, labelOf, envKeyOf, describeProviders
 } = require('./catalog');
 const { getAISettings, invalidateConfigCache } = require('./config');
+const { fetchPage } = require('./fetch-page');
 
 const opts = { region: REGION, cors: true, secrets: AI_SECRETS };
 
@@ -237,4 +238,23 @@ exports.setAIConfig = onCall(opts, async (request) => {
   });
 
   return { provider, model };
+});
+
+/**
+ * Read a page for the in-app viewer.
+ *
+ * The same fetcher the assistant uses, so a source opened by a person goes
+ * through exactly the guards a source opened by the model does. Doing this
+ * in the browser instead was never an option: cross-origin reads are blocked,
+ * and most sites refuse to be framed.
+ */
+exports.readPage = onCall({ region: REGION, cors: true }, async (request) => {
+  const caller = requireAuth(request);
+  const url = str(request.data?.url, { max: 2000, required: true, field: 'الرابط' });
+  try {
+    const page = await fetchPage(url);
+    return { url: page.url, title: page.title, text: page.text, truncated: page.truncated };
+  } catch (err) {
+    throw new HttpsError('invalid-argument', err.message || 'تعذّر فتح الصفحة.');
+  }
 });
