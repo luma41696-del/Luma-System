@@ -2548,3 +2548,85 @@ html[dir="ltr"] .ai-panel.is-open,
   color: var(--text-muted);
 }
 .ai-image figcaption a:hover { color: var(--brand); }
+
+/* ------------------------------------------------- drawing-in-progress tile */
+/* Sized and shaped like the picture that will replace it, so the answer slots
+   into a space already held rather than shoving the conversation down. The
+   drifting colour is the point: it reads as paint being mixed, which is a
+   different kind of waiting from a reply being written. */
+
+.ai-image-loading {
+  position: relative;
+  width: min(420px, 100%);
+  aspect-ratio: 1;
+  margin: 0;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  background: var(--bg-inset);
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+}
+
+/* The colour field. Held at partial opacity over the panel background so it
+   stays in the theme instead of glowing out of it. */
+.ai-image-loading__wash {
+  position: absolute;
+  inset: 0;
+  opacity: .55;
+  background: linear-gradient(115deg,
+    var(--brand) 0%,
+    #A855F7 22%,
+    #EC4899 44%,
+    #F59E0B 66%,
+    #22D3EE 84%,
+    var(--brand) 100%);
+  background-size: 320% 320%;
+  filter: blur(18px);
+  animation: ai-image-drift 7s ease-in-out infinite;
+}
+@keyframes ai-image-drift {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* A single pass of light across the tile, slower than the colour drift, so the
+   two never beat against each other. */
+.ai-image-loading__sheen {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg,
+    transparent 40%,
+    rgba(255, 255, 255, .18) 50%,
+    transparent 60%);
+  background-size: 250% 100%;
+  animation: ai-image-sheen 2.4s ease-in-out infinite;
+}
+@keyframes ai-image-sheen {
+  from { background-position: 150% 0; }
+  to   { background-position: -50% 0; }
+}
+
+.ai-image-loading__label {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px var(--sp-3);
+  border-radius: 999px;
+  font-size: var(--fs-xs);
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-surface) 82%, transparent);
+  backdrop-filter: blur(6px);
+}
+.ai-image-loading__label i {
+  width: 14px; height: 14px;
+  animation: ai-mark-pulse 1.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-image-loading__wash { animation: none; }
+  .ai-image-loading__sheen { animation: none; opacity: .3; }
+  .ai-image-loading__label i { animation: none; }
+}

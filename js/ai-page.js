@@ -75,6 +75,9 @@ export async function render(container, ctx) {
 
   let messages = load();
   let busy = false;
+  /** What the wait is for — a drawing takes far longer than a reply, and
+   *  saying which is happening is most of what a spinner is for. */
+  let busyKind = 'ask';
   /** Uploaded and waiting to go with the next question. */
   let pending = [];
   let suggestions = [];
@@ -143,7 +146,7 @@ export async function render(container, ctx) {
     // The greeting only exists while the conversation does not.
     stage.classList.toggle('is-conversing', messages.length > 0 || busy);
 
-    log.innerHTML = messages.map(renderMessage).join('') + (busy ? thinking() : '');
+    log.innerHTML = messages.map(renderMessage).join('') + (busy ? thinking(busyKind) : '');
     refreshIcons(log);
     log.scrollTop = log.scrollHeight;
 
@@ -242,6 +245,7 @@ export async function render(container, ctx) {
     input.value = '';
     autoGrow();
     busy = true;
+    busyKind = 'image';
     paint();
     try {
       const result = await callFn('generateImage', { prompt: promptText });
@@ -289,6 +293,7 @@ export async function render(container, ctx) {
     pending = [];
     paintFiles();
     busy = true;
+    busyKind = 'ask';
     paint();
 
     try {
@@ -443,12 +448,23 @@ function renderMessage(message, index) {
     </div>`;
 }
 
-function thinking() {
+function thinking(kind = 'ask') {
+  // A drawing gets a canvas-shaped placeholder rather than three dots: it is
+  // slower, and it lands as a picture, so the wait is shown at the size and
+  // shape of the thing being waited for and nothing jumps when it arrives.
+  const body = kind === 'image'
+    ? `<figure class="ai-image-loading" role="img" aria-label="جارٍ رسم الصورة">
+         <span class="ai-image-loading__wash" aria-hidden="true"></span>
+         <span class="ai-image-loading__sheen" aria-hidden="true"></span>
+         <figcaption class="ai-image-loading__label">
+           <i data-lucide="sparkles"></i> يرسم الصورة…
+         </figcaption>
+       </figure>`
+    : '<div class="ai-typing"><span></span><span></span><span></span></div>';
+
   return `
     <div class="ai-turn">
       <span class="ai-page__mark ai-page__mark--sm is-thinking"><i data-lucide="sparkles"></i></span>
-      <div class="ai-turn__body">
-        <div class="ai-typing"><span></span><span></span><span></span></div>
-      </div>
+      <div class="ai-turn__body">${body}</div>
     </div>`;
 }
