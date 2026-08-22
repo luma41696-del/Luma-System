@@ -18,7 +18,8 @@ const { requireAuth, requirePermission, has } = require('../lib/permissions');
 const { str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const {
-  AI_SECRETS, CATALOG, isKnownProvider, isProviderConfigured, describeProviders
+  AI_SECRETS, CATALOG, isKnownProvider, isProviderConfigured, canGenerateImages,
+  labelOf, envKeyOf, describeProviders
 } = require('./catalog');
 const { getAISettings, invalidateConfigCache } = require('./config');
 
@@ -45,6 +46,8 @@ exports.getAIConfig = onCall(opts, async (request) => {
       configured: mine.configured,
       // 'personal' when this caller overrode the default, 'company' otherwise.
       source: mine.source,
+      // Empty means "no preference" — the server picks by deadline.
+      imageProvider: canGenerateImages(mine.imageProvider) ? mine.imageProvider : '',
       // True when the saved pick had no key and something else answered —
       // the screen says so instead of showing a selection that isn't real.
       fellBack: mine.fellBack
@@ -95,6 +98,44 @@ exports.setMyAIProvider = onCall(opts, async (request) => {
   invalidateConfigCache(caller.uid);
 
   return { provider: raw, model, source: 'personal' };
+});
+
+/**
+ * Which provider draws this person's images.
+ *
+ * Separate from the conversation provider because they are separate models
+ * with separate quotas: one running out says nothing about the other, and the
+ * whole point of the setting is switching when one does. Passing nothing
+ * clears it and hands the choice back to the server.
+ */
+exports.setMyImageProvider = onCall(opts, async (request) => {
+  const caller = requireAuth(request);
+  const raw = str(request.data?.provider, { max: 40, field: 'المزوّد' });
+
+  if (!raw) {
+    await db.collection('users').doc(caller.uid).set({
+      aiPrefs: { imageProvider: FieldValue.delete() }
+    }, { merge: true });
+    invalidateConfigCache(caller.uid);
+    return { provider: null };
+  }
+
+  if (!isKnownProvider(raw)) throw new HttpsError('invalid-argument', 'مزوّد غير معروف.');
+  if (!canGenerateImages(raw)) {
+    throw new HttpsError(
+      'failed-precondition',
+      CATALOG[raw].imageModel
+        ? `${labelOf(raw)} غير مُفعّل — لم يتم ضبط مفتاح ${envKeyOf(raw)} على الخادم.`
+        : `${labelOf(raw)} لا يولّد الصور.`
+    );
+  }
+
+  await db.collection('users').doc(caller.uid).set({
+    aiPrefs: { imageProvider: raw }
+  }, { merge: true });
+  invalidateConfigCache(caller.uid);
+
+  return { provider: raw };
 });
 
 exports.setAIConfig = onCall(opts, async (request) => {

@@ -158,9 +158,12 @@ exports.generateImage = onCall(opts, async (request) => {
   }
 
   const mine = await getAISettings(caller.uid);
+  const saved = canGenerateImages(mine.imageProvider) ? mine.imageProvider : null;
   const forced = process.env.AI_IMAGE_PROVIDER;
-  // Falls back by deadline only when nobody asked for anything — see BY_SPEED.
+  // Falls back by deadline only when nobody has expressed a choice — a saved
+  // setting counts as one, so BY_SPEED is the last word, not the first.
   const provider = requested
+    || saved
     || (forced && canGenerateImages(forced) ? forced : null)
     || BY_SPEED.find(canGenerateImages)
     || PROVIDER_IDS.find(canGenerateImages);

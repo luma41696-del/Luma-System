@@ -691,6 +691,10 @@ async function aiTab(host) {
 
   const { providers, current, company, canManage } = config;
   const ready = providers.filter((p) => p.configured);
+  // Drawing is a different capability from conversing — Claude has no image
+  // model, so this list is not the same as `ready`.
+  const drawers = providers.filter((p) => p.images);
+  let myDrawer = current.imageProvider || '';
   const labelOf = (id) => providers.find((p) => p.id === id)?.label || id;
 
   /* ------------------------------------------------------------ my choice */
@@ -776,6 +780,33 @@ async function aiTab(host) {
           <button class="btn btn--primary mt-3" id="my-save">
             <i data-lucide="save"></i> حفظ اختياري
           </button>
+
+          ${drawers.length ? `
+            <div class="list-divider"></div>
+            <div class="field__label mb-2">
+              <i data-lucide="image" class="icon-sm"></i> مزوّد توليد الصور
+            </div>
+            <p class="fs-2xs text-muted mb-2">
+              حصة منفصلة عن المحادثة — إن نفدت حصة أحدهما، بدّل هنا.
+            </p>
+            <div class="provider-picker" id="drawer-picker">
+              <button type="button" class="provider-card${myDrawer === '' ? ' is-on' : ''}" data-drawer="">
+                <span class="provider-card__name">تلقائي</span>
+                <span class="provider-card__vendor">الأسرع المتاح</span>
+                <span class="provider-card__state">
+                  <i data-lucide="zap" class="icon-sm"></i> يختاره النظام
+                </span>
+              </button>
+              ${drawers.map((p) => `
+                <button type="button" class="provider-card${p.id === myDrawer ? ' is-on' : ''}"
+                        data-drawer="${attr(p.id)}">
+                  <span class="provider-card__name">${esc(p.label)}</span>
+                  <span class="provider-card__vendor">${esc(p.vendor)}</span>
+                  <span class="provider-card__state">
+                    <i data-lucide="check-circle-2" class="icon-sm"></i> جاهز
+                  </span>
+                </button>`).join('')}
+            </div>` : ''}
         </div>
 
         <div class="card">
@@ -824,6 +855,23 @@ async function aiTab(host) {
     refreshIcons(host);
     wireModel('my-model', mine, myModels);
     wireModel('co-model', theirs, theirModels);
+
+    $$('#drawer-picker [data-drawer]', host).forEach((card) => {
+      card.addEventListener('click', async () => {
+        const wanted = card.dataset.drawer;
+        try {
+          const saved = await callFn('setMyImageProvider', wanted ? { provider: wanted } : {});
+          myDrawer = saved.provider || '';
+          current.imageProvider = myDrawer;
+          paint();
+          toastSuccess(myDrawer
+            ? `ستُرسم صورك بواسطة ${labelOf(myDrawer)}.`
+            : 'يختار النظام مزوّد الصور تلقائياً.');
+        } catch (err) {
+          toastError(err?.message || 'تعذّر حفظ الاختيار.');
+        }
+      });
+    });
 
     $$('#my-picker [data-pick]', host).forEach((card) => {
       card.addEventListener('click', () => { mine = card.dataset.pick; paint(); });

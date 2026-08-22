@@ -104,7 +104,8 @@ async function getAISettings(uid = null) {
     const named = isKnownProvider(wanted) ? wanted : 'openai';
     return {
       provider: named, model: CATALOG[named].defaultModel, envKey: CATALOG[named].envKey,
-      configured: false, source: personal.provider ? 'personal' : 'company', fellBack: false
+      configured: false, imageProvider: personal.imageProvider || null,
+      source: personal.provider ? 'personal' : 'company', fellBack: false
     };
   }
 
@@ -123,6 +124,9 @@ async function getAISettings(uid = null) {
     model,
     envKey: entry.envKey,
     configured: true,
+    // Drawing is a separate choice from conversing — different models, and
+    // often a different quota. Returned raw; image.js decides if it is usable.
+    imageProvider: personal.imageProvider || null,
     source,
     // True when a saved pick could not be honoured and something else answered.
     fellBack: !!wanted && wanted !== provider
