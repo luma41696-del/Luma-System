@@ -21,6 +21,7 @@ import { confirmDialog } from './utils/modal.js';
 import { uploadFile, compressImage, pickFiles, paths } from './utils/upload.js';
 import { uploadsEnabled } from './features.js';
 import { toastError } from './utils/toast.js';
+import { formatText, renderCitations, renderSteps, renderDraft } from './ai-render.js';
 
 /** Vision is billed per image; the server enforces this cap too. */
 const MAX_IMAGES = 4;
@@ -353,71 +354,6 @@ function renderMessage(message, index) {
     </div>`;
 }
 
-const PRIORITIES = { urgent: 'عاجلة', high: 'مرتفعة', medium: 'متوسطة', low: 'منخفضة' };
-const EVENT_KINDS = {
-  meeting: 'اجتماع', deadline: 'موعد تسليم', task: 'مهمة',
-  leave: 'إجازة', event: 'حدث', birthday: 'عيد ميلاد'
-};
-
-const when = (iso) => {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? String(iso) : d.toLocaleString('ar', {
-    dateStyle: 'medium', timeStyle: 'short'
-  });
-};
-
-/** A proposal — task or calendar event — with the action that commits it. */
-function renderDraft(draft, index) {
-  if (!draft) return '';
-  const isEvent = draft.kind === 'event';
-  const isNote = draft.kind === 'note';
-
-  const rows = isNote
-    ? [
-      ['العنوان', draft.title],
-      ['الوسوم', draft.tags?.join('، ') || '—'],
-      ['العميل', draft.clientName || '—'],
-      ['المصادر', draft.sources?.length ? `${draft.sources.length} رابط` : '—']
-    ]
-    : isEvent
-    ? [
-      ['العنوان', draft.title],
-      ['النوع', EVENT_KINDS[draft.type] || draft.type],
-      ['البداية', when(draft.startAt)],
-      ['النهاية', when(draft.endAt)],
-      ['المشاركون', draft.participantNames?.join('، ') || '— لم يُحدَّد —'],
-      ['العميل', draft.clientName || '—'],
-      ['المكان', draft.location || '—']
-    ]
-    : [
-      ['العنوان', draft.title],
-      ['المسؤول', draft.assigneeNames?.join('، ') || '— لم يُحدَّد —'],
-      ['العميل', draft.clientName || '—'],
-      ['الأولوية', PRIORITIES[draft.priority] || draft.priority],
-      ['الموعد', draft.dueAt || '—']
-    ];
-
-  return `
-    <div class="ai-draft">
-      <div class="fs-2xs text-muted mb-2">
-        <i data-lucide="${isNote ? 'book-open' : isEvent ? 'calendar-plus' : 'file-plus'}" class="icon-sm"></i>
-        ${isNote ? 'مسودة ملاحظة' : isEvent ? 'مسودة حدث' : 'مسودة مهمة'} — لم تُحفظ بعد
-      </div>
-      ${rows.map(([k, v]) => `
-        <div class="kv"><span class="kv__k">${esc(k)}</span>
-          <span class="kv__v">${esc(String(v ?? '—'))}</span></div>`).join('')}
-      ${draft.unresolved?.length ? `
-        <div class="fs-2xs mt-2" style="color:var(--warning)">
-          <i data-lucide="alert-triangle" class="icon-sm"></i>
-          تعذّر ربط: ${esc(draft.unresolved.join('، '))}
-        </div>` : ''}
-      <button class="btn btn--primary btn--sm btn--block mt-3" data-open-draft="${index}">
-        <i data-lucide="pencil"></i> راجعها واحفظها
-      </button>
-    </div>`;
-}
-
 function thinking() {
   return `
     <div class="msg">
@@ -426,66 +362,4 @@ function thinking() {
         <div class="ai-typing"><span></span><span></span><span></span></div>
       </div>
     </div>`;
-}
-
-/** Escape first, then allow only bold and bullets back in. */
-function formatText(text) {
-  return esc(text)
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .split('\n')
-    .map((line) => {
-      const trimmed = line.trim();
-      if (!trimmed) return '';
-      if (/^[-•*]\s+/.test(trimmed)) return `<div class="ai-bullet">${trimmed.replace(/^[-•*]\s+/, '')}</div>`;
-      return `<p>${trimmed}</p>`;
-    })
-    .join('');
-}
-
-/** Pages the answer was built from — shown so a reader can check them. */
-function renderCitations(citations) {
-  if (!citations?.length) return '';
-  return `
-    <div class="ai-sources">
-      <div class="fs-2xs text-muted mb-1">
-        <i data-lucide="link" class="icon-sm"></i> المصادر
-      </div>
-      ${citations.map((c) => {
-        const href = safeUrl(c.url);
-        return href
-          ? `<a class="fs-2xs truncate" href="${attr(href)}" target="_blank"
-                rel="noopener noreferrer nofollow">${esc(c.title || href)}</a>`
-          : '';
-      }).join('')}
-    </div>`;
-}
-
-const TOOL_LABELS = {
-  listEmployees: 'قرأ قائمة الموظفين',
-  getTeamWorkload: 'حسب حِمل الفريق',
-  getEmployeeReport: 'أعدّ تقرير موظف',
-  getStaleTasks: 'بحث عن المهام المتوقفة',
-  listCalendarEvents: 'قرأ التقويم',
-  draftTask: 'جهّز مسودة مهمة',
-  draftEvent: 'جهّز مسودة حدث',
-  draftNote: 'جهّز مسودة ملاحظة'
-};
-
-/** What the assistant did, in order. Collapsed until opened. */
-function renderSteps(steps) {
-  if (!steps?.length) return '';
-  return `
-    <details class="ai-steps">
-      <summary>
-        <i data-lucide="list-checks" class="icon-sm"></i>
-        ماذا فعلت؟ (${steps.length})
-      </summary>
-      <ol class="ai-steps__list">
-        ${steps.map((s) => s.kind === 'search'
-          ? `<li><i data-lucide="globe" class="icon-sm"></i>
-               بحث في الإنترنت${s.label ? `: <span class="ai-steps__q">${esc(s.label)}</span>` : ''}</li>`
-          : `<li><i data-lucide="database" class="icon-sm"></i>
-               ${esc(TOOL_LABELS[s.label] || s.label)}</li>`).join('')}
-      </ol>
-    </details>`;
 }

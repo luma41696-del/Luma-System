@@ -229,6 +229,8 @@ export const NAV_ITEMS = [
   { id: 'finance',     route: '#/finance',    labelKey: 'nav.finance',     icon: 'receipt',
     perm: ['finance.view'] },
   { id: 'documents',   route: '#/documents',  labelKey: 'nav.documents',   icon: 'file-text' },
+  { id: 'ai',          route: '#/ai',         labelKey: 'nav.ai',          icon: 'sparkles',
+    perm: ['tasks.ai'] },
   { id: 'chat',        route: '#/chat',       labelKey: 'nav.chat',        icon: 'message-circle' },
   { id: 'knowledge',   route: '#/knowledge',  labelKey: 'nav.knowledge',   icon: 'book-open',
     perm: ['knowledge.view'] },

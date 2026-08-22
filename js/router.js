@@ -33,6 +33,7 @@ const ROUTES = [
   { path: '/finance/:id',   title: 'تفاصيل الفاتورة',    titleKey: 'route.invoiceDetail',   module: () => import('./finance.js'),          perm: ['finance.view'], crumbs: [['المالية', '#/finance']], crumbKeys: [['nav.finance', '#/finance']] },
   { path: '/documents',     title: 'المستندات والطلبات', titleKey: 'route.documents',       module: () => import('./documents.js'),        crumbs: [] },
   { path: '/documents/:id', title: 'تفاصيل الطلب',       titleKey: 'route.documentDetail',  module: () => import('./documents.js'),        crumbs: [['المستندات والطلبات', '#/documents']], crumbKeys: [['nav.documents', '#/documents']] },
+  { path: '/ai',            title: 'Luma AI',            titleKey: 'route.ai',              module: () => import('./ai-page.js'),          perm: ['tasks.ai'], crumbs: [] },
   { path: '/chat',          title: 'الدردشة',            titleKey: 'route.chat',            module: () => import('./chat.js'),             crumbs: [] },
   { path: '/chat/:id',      title: 'الدردشة',            titleKey: 'route.chat',            module: () => import('./chat.js'),             crumbs: [] },
   { path: '/knowledge',     title: 'قاعدة المعرفة',      titleKey: 'route.knowledge',       module: () => import('./knowledge.js'),        perm: ['knowledge.view'], crumbs: [] },

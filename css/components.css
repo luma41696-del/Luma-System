@@ -2178,3 +2178,256 @@ html[dir="ltr"] .ai-panel.is-open,
 @media (max-width: 640px) {
   .ai-panel { width: 100vw; }
 }
+
+/* ========================================================================== */
+/* Luma AI — full page                                                        */
+/* ========================================================================== */
+/* Two states in one column: a greeting centred in the empty space, and a
+   conversation that takes that space over once there is one. The composer
+   does not move between them — it is the fixed point the eye keeps, so the
+   transition reads as the page filling in rather than the UI rearranging. */
+
+.ai-page {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+/* A slow wash of brand colour behind the greeting. Purely atmospheric, so it
+   sits under everything and never intercepts a click. */
+.ai-page__glow {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 60%;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(60% 70% at 50% 30%,
+    color-mix(in srgb, var(--brand) 18%, transparent) 0%,
+    transparent 70%);
+  opacity: 0;
+  animation: ai-glow-in 1.2s var(--ease, ease) forwards;
+}
+@keyframes ai-glow-in { to { opacity: 1; } }
+
+.ai-page__bar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+}
+.ai-page__brand { display: flex; align-items: center; gap: var(--sp-2); }
+
+.ai-page__mark {
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  flex: none;
+  border-radius: 50%;
+  color: #fff;
+  background: linear-gradient(135deg,
+    var(--brand) 0%, color-mix(in srgb, var(--brand) 45%, #A855F7) 100%);
+}
+.ai-page__mark--sm { width: 28px; height: 28px; }
+.ai-page__mark--sm i { width: 15px; height: 15px; }
+.ai-page__mark.is-thinking { animation: ai-mark-pulse 1.4s ease-in-out infinite; }
+@keyframes ai-mark-pulse {
+  0%, 100% { transform: scale(1); opacity: .85; }
+  50% { transform: scale(1.12); opacity: 1; }
+}
+
+.ai-page__stage {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;   /* greeting sits in the middle of the space */
+}
+/* Once there is a conversation the stage stops centring and starts scrolling. */
+.ai-page__stage.is-conversing { justify-content: flex-start; }
+
+.ai-hero {
+  text-align: center;
+  padding: var(--sp-5) var(--sp-4);
+  animation: ai-hero-in .5s var(--ease, ease) both;
+}
+.ai-page__stage.is-conversing .ai-hero { display: none; }
+
+.ai-hero__title {
+  font-size: clamp(28px, 5vw, 44px);
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 0;
+  background: linear-gradient(100deg,
+    var(--text-primary) 0%,
+    color-mix(in srgb, var(--brand) 70%, var(--text-primary)) 50%,
+    var(--text-primary) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ai-sheen 6s linear infinite;
+}
+@keyframes ai-sheen {
+  to { background-position: 200% center; }
+}
+.ai-hero__sub { color: var(--text-muted); margin-top: var(--sp-2); font-size: var(--fs-md); }
+@keyframes ai-hero-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: none; }
+}
+
+.ai-page__log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+.ai-page__stage:not(.is-conversing) .ai-page__log { display: none; }
+
+/* ------------------------------------------------------------------ turns */
+.ai-turn {
+  display: flex;
+  gap: var(--sp-3);
+  max-width: 780px;
+  width: 100%;
+  margin-inline: auto;
+  animation: ai-turn-in .35s var(--ease, ease) both;
+}
+@keyframes ai-turn-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.ai-turn__body { min-width: 0; flex: 1; }
+.ai-turn__text { line-height: 1.75; }
+.ai-turn__meta { font-size: var(--fs-2xs); color: var(--text-muted); margin-top: var(--sp-2); }
+
+/* The person's own turn is a bubble; the assistant's is plain text on the
+   page, which is what makes a long answer readable rather than boxed in. */
+.ai-turn--me { justify-content: flex-end; }
+.ai-turn--me .ai-turn__body {
+  flex: 0 1 auto;
+  max-width: 80%;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-lg, 18px);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-soft);
+}
+.ai-turn__files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------------ dock */
+.ai-page__dock {
+  position: relative;
+  z-index: 1;
+  padding: var(--sp-3) var(--sp-4) var(--sp-4);
+  max-width: 820px;
+  width: 100%;
+  margin-inline: auto;
+}
+
+.ai-chips {
+  display: flex;
+  gap: var(--sp-2);
+  overflow-x: auto;
+  padding-bottom: var(--sp-2);
+  scrollbar-width: none;
+}
+.ai-chips::-webkit-scrollbar { display: none; }
+.ai-chip {
+  flex: none;
+  padding: 7px var(--sp-3);
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--bg-inset);
+  color: var(--text-secondary);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease),
+              transform var(--t-fast) var(--ease);
+}
+.ai-chip:hover {
+  border-color: var(--brand);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+/* The composer: one pill, the shape the whole page is built around. */
+.ai-bar {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--sp-2);
+  padding: var(--sp-2);
+  border-radius: 26px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-soft);
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.ai-bar:focus-within {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 14%, transparent);
+}
+.ai-bar__input {
+  flex: 1;
+  min-width: 0;
+  max-height: 200px;
+  padding: 9px var(--sp-2);
+  border: 0;
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  line-height: 1.6;
+  resize: none;
+  outline: none;
+}
+.ai-bar__icon, .ai-bar__send {
+  flex: none;
+  width: 38px; height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+.ai-bar__icon { color: var(--text-muted); background: none; }
+.ai-bar__icon:hover { background: var(--bg-hover); color: var(--text-primary); }
+.ai-bar__send { color: #fff; background: var(--brand); }
+.ai-bar__send:hover { transform: scale(1.06); }
+
+.ai-page__note {
+  margin-top: var(--sp-2);
+  text-align: center;
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+}
+
+.ai-attachment__doc {
+  display: grid;
+  place-items: center;
+  width: 100%; height: 100%;
+  color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ai-page__glow, .ai-hero, .ai-turn { animation: none; opacity: 1; transform: none; }
+  .ai-hero__title { animation: none; }
+  .ai-page__mark.is-thinking { animation: none; }
+  .ai-chip:hover, .ai-bar__send:hover { transform: none; }
+}
