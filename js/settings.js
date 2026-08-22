@@ -242,7 +242,8 @@ function notificationsTab(host) {
     ['requestNew', 'طلب إداري جديد بانتظار قراري'],
     ['chatMessage', 'رسائل الدردشة الخاصة'],
     ['chatMention', 'الإشارة إليّ في الدردشة'],
-    ['clientUpdated', 'تحديث بيانات عميل']
+    ['clientUpdated', 'تحديث بيانات عميل'],
+    ['announcement', 'إعلانات الوكالة (عدا العاجلة)']
   ];
 
   const permission = notifyPermission();

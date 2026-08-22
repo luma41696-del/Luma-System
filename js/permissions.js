@@ -223,6 +223,8 @@ export function isManager(claims) {
  */
 export const NAV_ITEMS = [
   { id: 'home',        route: '#/',           labelKey: 'nav.home',        icon: 'layout-dashboard' },
+  { id: 'ai',          route: '#/ai',         labelKey: 'nav.ai',          icon: 'sparkles',
+    perm: ['tasks.ai'] },
   { id: 'my-tasks',    route: '#/my-tasks',   labelKey: 'nav.myTasks',     icon: 'check-square' },
   { id: 'calendar',    route: '#/calendar',   labelKey: 'nav.calendar',    icon: 'calendar-days' },
   { id: 'team',        route: '#/team',       labelKey: 'nav.team',        icon: 'users' },
@@ -233,8 +235,6 @@ export const NAV_ITEMS = [
   { id: 'finance',     route: '#/finance',    labelKey: 'nav.finance',     icon: 'receipt',
     perm: ['finance.view'] },
   { id: 'documents',   route: '#/documents',  labelKey: 'nav.documents',   icon: 'file-text' },
-  { id: 'ai',          route: '#/ai',         labelKey: 'nav.ai',          icon: 'sparkles',
-    perm: ['tasks.ai'] },
   { id: 'chat',        route: '#/chat',       labelKey: 'nav.chat',        icon: 'message-circle' },
   { id: 'knowledge',   route: '#/knowledge',  labelKey: 'nav.knowledge',   icon: 'book-open',
     perm: ['knowledge.view'] },

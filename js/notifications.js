@@ -20,6 +20,7 @@ const KINDS = {
   chat_message:    { ar: 'رسالة جديدة',       icon: 'message-circle' },
   chat_mention:    { ar: 'إشارة إليك',        icon: 'at-sign' },
   client_updated:  { ar: 'تحديث بيانات عميل', icon: 'briefcase' },
+  announcement:    { ar: 'إعلان للفريق',      icon: 'megaphone' },
   system:          { ar: 'النظام',            icon: 'bell' }
 };
 
