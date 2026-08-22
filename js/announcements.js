@@ -49,38 +49,39 @@ export function mountAnnouncements(host) {
   const paint = () => {
     const live = items.filter(isLive);
 
-    // Nothing to show and nothing to do: stay out of the way entirely.
-    if (!live.length && !mayPost && !failure) { host.innerHTML = ''; return; }
+    // The board is the announcements, not a container for them: with none to
+    // show it takes no room at all. Posting lives in the quick-add menu, so
+    // an empty card is not needed to keep that reachable.
+    //
+    // A failed read is different from an empty one and is surfaced — but only
+    // to someone who could act on it. Everyone else would get a warning about
+    // a thing they cannot fix, in place of the notices they came for.
+    const showFailure = !!failure && mayPost;
+    if (!live.length && !showFailure) { host.innerHTML = ''; return; }
 
     host.innerHTML = `
       <section class="card announce">
         <div class="card__head">
           <div class="card__title"><i data-lucide="megaphone"></i> إعلانات الوكالة</div>
-          ${mayPost ? `
-            <button class="btn btn--primary btn--sm" id="ann-new">
-              <i data-lucide="plus"></i> إعلان جديد
-            </button>` : ''}
         </div>
 
-        ${failure ? `
+        ${showFailure ? `
           <div class="notice notice--warn">
             <i data-lucide="triangle-alert"></i>
             <span>
               تعذّر قراءة الإعلانات${failure === 'permission-denied'
                 ? ' — قواعد Firestore الخاصة بالإعلانات غير منشورة على المشروع بعد.'
                 : '.'}
-              ${mayPost ? 'يمكنك النشر، لكن القائمة لن تظهر حتى تُحلّ المشكلة.' : ''}
+              يمكنك النشر من زر «+»، لكن القائمة لن تظهر حتى تُحلّ المشكلة.
             </span>
-          </div>` : live.length ? `
+          </div>` : `
           <div class="announce__list">
             ${live.map(renderOne).join('')}
-          </div>` : `
-          <p class="fs-sm text-muted">لا توجد إعلانات حالياً.</p>`}
+          </div>`}
       </section>`;
 
     refreshIcons(host);
 
-    $('#ann-new', host)?.addEventListener('click', () => openAnnouncementModal());
     $$('[data-ann-edit]', host).forEach((b) => b.addEventListener('click', () => {
       openAnnouncementModal(items.find((a) => a.id === b.dataset.annEdit));
     }));

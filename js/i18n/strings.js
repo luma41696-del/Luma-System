@@ -98,6 +98,7 @@ export const STRINGS = {
     'quickAdd.client': 'عميل جديد',
     'quickAdd.employee': 'موظف جديد',
     'quickAdd.request': 'طلب إداري',
+    'quickAdd.announcement': 'إعلان للفريق',
     'quickAdd.event': 'حدث في التقويم',
 
     /* status menu */
@@ -328,6 +329,7 @@ export const STRINGS = {
     'quickAdd.client': 'New client',
     'quickAdd.employee': 'New employee',
     'quickAdd.request': 'Administrative request',
+    'quickAdd.announcement': 'Team announcement',
     'quickAdd.event': 'Calendar event',
 
     /* status menu */

@@ -395,7 +395,9 @@ function openQuickAddMenu(anchor) {
     ${can(claims, 'employees.create')
       ? `<button class="dropdown__item" data-act="employee"><i data-lucide="user-plus"></i> ${esc(t('quickAdd.employee'))}</button>` : ''}
     <button class="dropdown__item" data-act="request"><i data-lucide="file-plus"></i> ${esc(t('quickAdd.request'))}</button>
-    <button class="dropdown__item" data-act="event"><i data-lucide="calendar-plus"></i> ${esc(t('quickAdd.event'))}</button>`,
+    <button class="dropdown__item" data-act="event"><i data-lucide="calendar-plus"></i> ${esc(t('quickAdd.event'))}</button>
+    ${can(claims, 'announcements.manage')
+      ? `<button class="dropdown__item" data-act="announcement"><i data-lucide="megaphone"></i> ${esc(t('quickAdd.announcement'))}</button>` : ''}`,
     async (action, close) => {
       close();
       try {
@@ -404,6 +406,7 @@ function openQuickAddMenu(anchor) {
         if (action === 'employee') return (await import('./employees.js')).openEmployeeModal();
         if (action === 'request') return (await import('./documents.js')).openRequestModal();
         if (action === 'event') return (await import('./calendar.js')).openEventModal();
+        if (action === 'announcement') return (await import('./announcements.js')).openAnnouncementModal();
       } catch (err) { reportError(err, 'quick-add'); }
     });
 }
