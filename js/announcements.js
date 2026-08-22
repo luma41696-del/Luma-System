@@ -43,11 +43,14 @@ const isLive = (a) => {
 export function mountAnnouncements(host) {
   const mayPost = can(session.claims, 'announcements.manage');
   let items = [];
+  /** Set when the list cannot be read — see the snapshot error handler. */
+  let failure = null;
 
   const paint = () => {
     const live = items.filter(isLive);
 
-    if (!live.length && !mayPost) { host.innerHTML = ''; return; }
+    // Nothing to show and nothing to do: stay out of the way entirely.
+    if (!live.length && !mayPost && !failure) { host.innerHTML = ''; return; }
 
     host.innerHTML = `
       <section class="card announce">
@@ -59,7 +62,16 @@ export function mountAnnouncements(host) {
             </button>` : ''}
         </div>
 
-        ${live.length ? `
+        ${failure ? `
+          <div class="notice notice--warn">
+            <i data-lucide="triangle-alert"></i>
+            <span>
+              تعذّر قراءة الإعلانات${failure === 'permission-denied'
+                ? ' — قواعد Firestore الخاصة بالإعلانات غير منشورة على المشروع بعد.'
+                : '.'}
+              ${mayPost ? 'يمكنك النشر، لكن القائمة لن تظهر حتى تُحلّ المشكلة.' : ''}
+            </span>
+          </div>` : live.length ? `
           <div class="announce__list">
             ${live.map(renderOne).join('')}
           </div>` : `
@@ -118,10 +130,20 @@ export function mountAnnouncements(host) {
   const unsub = onSnapshot(
     query(col('announcements'), orderBy('createdAt', 'desc'), limit(20)),
     (snap) => {
+      failure = null;
       items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       paint();
     },
-    () => { host.innerHTML = ''; }
+    (err) => {
+      // Emptying the host on error used to take the compose button with it —
+      // the button appeared on first paint and vanished a moment later, so
+      // the one person who could fix the situation lost the control for
+      // doing so. Failing to read the list says nothing about the right to
+      // publish, and the two are no longer tied together.
+      console.warn('[luma] announcements', err?.code, err?.message);
+      failure = err?.code || 'unknown';
+      paint();
+    }
   );
 
   paint();
