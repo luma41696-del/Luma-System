@@ -55,6 +55,30 @@ const BY_SPEED = ['gemini', 'openai'];
  */
 const OPENAI_QUALITY = process.env.OPENAI_IMAGE_QUALITY || 'low';
 
+/**
+ * The three OpenAI image models do not take the same request.
+ *
+ * `quality` means different things to each: gpt-image-1 takes low/medium/high,
+ * DALL·E 3 takes standard/hd, and DALL·E 2 takes none at all. Sending one
+ * model another's vocabulary is a 400, so the request is shaped per model
+ * rather than assumed to be uniform.
+ */
+function openAIQualityFor(model) {
+  if (/^dall-e-2/.test(model)) return null;
+  if (/^dall-e-3/.test(model)) return process.env.OPENAI_IMAGE_QUALITY_DALLE3 || 'standard';
+  return OPENAI_QUALITY;
+}
+
+/**
+ * Sizes differ too. Only the square is common to all three, so anything else
+ * is dropped back to it rather than rejected by the provider — a picture at a
+ * different shape beats an error about a shape nobody chose.
+ */
+function openAISizeFor(model, size) {
+  if (size === '1024x1024') return size;
+  return /^dall-e-/.test(model) ? '1024x1024' : size;
+}
+
 const SIZES = new Set(['1024x1024', '1536x1024', '1024x1536']);
 
 /* ------------------------------------------------------------- providers */
@@ -66,7 +90,11 @@ async function drawWithOpenAI({ apiKey, model, prompt, size }) {
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt, size, n: 1, quality: OPENAI_QUALITY }),
+      body: JSON.stringify({
+        model, prompt, n: 1,
+        size: openAISizeFor(model, size),
+        ...(openAIQualityFor(model) ? { quality: openAIQualityFor(model) } : {})
+      }),
       signal: controller.signal
     });
     if (!response.ok) throw await failure(response, 'OpenAI', /sk-[A-Za-z0-9_*-]+/g, 'sk-***');
@@ -178,7 +206,10 @@ exports.generateImage = onCall(opts, async (request) => {
 
   await enforceRateLimit(caller.uid);
 
-  const model = imageModelOf(provider);
+  // Whatever the person (or the company) picked for this provider, falling
+  // back to the catalog's default for it.
+  const requestedModel = str(request.data?.model, { max: 80, field: 'النموذج' });
+  const model = requestedModel || mine.imageModel || imageModelOf(provider);
   const startedAt = Date.now();
 
   try {

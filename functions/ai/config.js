@@ -72,6 +72,23 @@ async function readUser(uid) {
 }
 
 /**
+ * The image model for whichever layer supplied the image provider.
+ *
+ * A personal pick brings its own model; falling back to the company provider
+ * means falling back to the company's model for it too, so nobody inherits a
+ * model that was chosen for a different vendor.
+ */
+function imageModelFor(personal, company) {
+  if (personal.imageProvider) {
+    return personal.imageModels?.[personal.imageProvider]
+      || company.imageModels?.[personal.imageProvider]
+      || null;
+  }
+  if (company.imageProvider) return company.imageModels?.[company.imageProvider] || null;
+  return null;
+}
+
+/**
  * First provider in the chain that this server can actually use.
  *
  * Falls back rather than failing at every level: a provider someone chose
@@ -104,7 +121,10 @@ async function getAISettings(uid = null) {
     const named = isKnownProvider(wanted) ? wanted : 'openai';
     return {
       provider: named, model: CATALOG[named].defaultModel, envKey: CATALOG[named].envKey,
-      configured: false, imageProvider: personal.imageProvider || null,
+      configured: false,
+      imageProvider: personal.imageProvider || company.imageProvider || null,
+      companyImageProvider: company.imageProvider || null,
+      imageModel: imageModelFor(personal, company),
       source: personal.provider ? 'personal' : 'company', fellBack: false
     };
   }
@@ -125,8 +145,11 @@ async function getAISettings(uid = null) {
     envKey: entry.envKey,
     configured: true,
     // Drawing is a separate choice from conversing — different models, and
-    // often a different quota. Returned raw; image.js decides if it is usable.
-    imageProvider: personal.imageProvider || null,
+    // often a different quota. Personal overrides company, same as the chat
+    // pick. Returned raw; image.js decides whether either is usable.
+    imageProvider: personal.imageProvider || company.imageProvider || null,
+    companyImageProvider: company.imageProvider || null,
+    imageModel: imageModelFor(personal, company),
     source,
     // True when a saved pick could not be honoured and something else answered.
     fellBack: !!wanted && wanted !== provider

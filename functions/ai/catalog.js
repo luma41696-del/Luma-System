@@ -21,6 +21,11 @@ const CATALOG = {
     // Image generation is a separate endpoint and a separate model from the
     // one that answers questions, so it is named separately.
     imageModel: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1',
+    imageModels: [
+      { id: 'gpt-image-1', label: 'GPT Image 1 — الأحدث' },
+      { id: 'dall-e-3', label: 'DALL·E 3 — تفاصيل أدق' },
+      { id: 'dall-e-2', label: 'DALL·E 2 — الأسرع والأرخص' }
+    ],
     models: [
       { id: 'gpt-4o-mini', label: 'GPT-4o mini — سريع واقتصادي' },
       { id: 'gpt-4o', label: 'GPT-4o — أقوى' }
@@ -47,6 +52,12 @@ const CATALOG = {
     envModel: 'GEMINI_MODEL',
     defaultModel: 'gemini-2.5-flash',
     imageModel: process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image',
+    // Only models served by :generateContent belong here. Imagen answers on
+    // :predict with a different body, so listing one would offer a choice
+    // this driver cannot actually make.
+    imageModels: [
+      { id: 'gemini-2.5-flash-image', label: 'Gemini 2.5 Flash Image — سريع' }
+    ],
     models: [
       { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash — سريع واقتصادي' },
       { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro — أقوى' },
@@ -75,6 +86,7 @@ const isKnownProvider = (id) => Object.prototype.hasOwnProperty.call(CATALOG, id
  */
 const canGenerateImages = (id) => !!CATALOG[id]?.imageModel && isProviderConfigured(id);
 const imageModelOf = (id) => CATALOG[id]?.imageModel || null;
+const imageModelsOf = (id) => CATALOG[id]?.imageModels || [];
 
 /** A provider is usable only if its key is actually set on this server. */
 function isProviderConfigured(id) {
@@ -94,6 +106,8 @@ function describeProviders() {
     envKey: CATALOG[id].envKey,
     configured: isProviderConfigured(id),
     images: canGenerateImages(id),
+    imageModels: CATALOG[id].imageModels || [],
+    defaultImageModel: CATALOG[id].imageModel || null,
     defaultModel: CATALOG[id].defaultModel,
     models: CATALOG[id].models
   }));
@@ -109,5 +123,6 @@ module.exports = {
   envKeyOf,
   canGenerateImages,
   imageModelOf,
+  imageModelsOf,
   describeProviders
 };

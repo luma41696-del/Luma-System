@@ -99,6 +99,7 @@ exports.getAIConfig = aiSettings.getAIConfig;
 exports.setAIConfig = aiSettings.setAIConfig;
 exports.setMyAIProvider = aiSettings.setMyAIProvider;
 exports.setMyImageProvider = aiSettings.setMyImageProvider;
+exports.setCompanyImageProvider = aiSettings.setCompanyImageProvider;
 
 const aiImage = require('./ai/image');
 exports.generateImage = aiImage.generateImage;

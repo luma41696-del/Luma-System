@@ -695,6 +695,37 @@ async function aiTab(host) {
   // model, so this list is not the same as `ready`.
   const drawers = providers.filter((p) => p.images);
   let myDrawer = current.imageProvider || '';
+  let myImageModel = current.imageModel || '';
+  let coDrawer = company.imageProvider || '';
+  let coImageModel = company.imageModel || '';
+
+  /**
+   * The image models a provider offers, plus a free-text escape.
+   *
+   * Same shape as the conversation model picker, and free-text for the same
+   * reason: vendors ship models faster than this catalog is updated, and an
+   * operator who knows the exact name should not wait for a deploy.
+   */
+  const imageModelSelect = (id, providerId, chosen) => {
+    const entry = drawers.find((p) => p.id === providerId);
+    const list = entry?.imageModels || [];
+    const value = chosen || entry?.defaultImageModel || '';
+    const known = list.some((m) => m.id === value);
+    return `
+      <div class="field mt-3">
+        <label class="field__label" for="${id}">نموذج الصور</label>
+        <select class="select" id="${id}">
+          ${list.map((m) => `
+            <option value="${attr(m.id)}" ${value === m.id ? 'selected' : ''}>${esc(m.label)}</option>`).join('')}
+          <option value="__custom__" ${known ? '' : 'selected'}>أخرى — اكتب الاسم يدوياً</option>
+        </select>
+      </div>
+      <div class="field" id="${id}-custom-field" ${known ? 'hidden' : ''}>
+        <label class="field__label" for="${id}-custom">اسم النموذج</label>
+        <input class="input ltr" id="${id}-custom" maxlength="80"
+               value="${attr(value)}" placeholder="مثال: dall-e-3">
+      </div>`;
+  };
   const labelOf = (id) => providers.find((p) => p.id === id)?.label || id;
 
   /* ------------------------------------------------------------ my choice */
@@ -806,7 +837,8 @@ async function aiTab(host) {
                     <i data-lucide="check-circle-2" class="icon-sm"></i> جاهز
                   </span>
                 </button>`).join('')}
-            </div>` : ''}
+            </div>
+            ${myDrawer ? imageModelSelect('my-img-model', myDrawer, myImageModel) : ''}` : ''}
         </div>
 
         <div class="card">
@@ -830,6 +862,36 @@ async function aiTab(host) {
               <i data-lucide="lock" class="icon-sm"></i>
               تغيير افتراضي الشركة يحتاج صلاحية «إدارة إعدادات النظام».
             </div>`}
+
+          ${drawers.length ? `
+            <div class="list-divider"></div>
+            <div class="field__label mb-2">
+              <i data-lucide="image" class="icon-sm"></i> توليد الصور — افتراضي الشركة
+            </div>
+            <p class="fs-2xs text-muted mb-2">
+              لكل من لم يختر مزوّد صور خاصاً به.
+            </p>
+            <div class="provider-picker" id="co-drawer-picker">
+              <button type="button" class="provider-card${coDrawer === '' ? ' is-on' : ''}${canManage ? '' : ' is-disabled'}"
+                      data-co-drawer="" ${canManage ? '' : 'disabled'}>
+                <span class="provider-card__name">تلقائي</span>
+                <span class="provider-card__vendor">الأسرع المتاح</span>
+                <span class="provider-card__state">
+                  <i data-lucide="zap" class="icon-sm"></i> يختاره النظام
+                </span>
+              </button>
+              ${drawers.map((p) => `
+                <button type="button"
+                        class="provider-card${p.id === coDrawer ? ' is-on' : ''}${canManage ? '' : ' is-disabled'}"
+                        data-co-drawer="${attr(p.id)}" ${canManage ? '' : 'disabled'}>
+                  <span class="provider-card__name">${esc(p.label)}</span>
+                  <span class="provider-card__vendor">${esc(p.vendor)}</span>
+                  <span class="provider-card__state">
+                    <i data-lucide="check-circle-2" class="icon-sm"></i> جاهز
+                  </span>
+                </button>`).join('')}
+            </div>
+            ${canManage && coDrawer ? imageModelSelect('co-img-model', coDrawer, coImageModel) : ''}` : ''}
         </div>
 
         <div class="card">
@@ -856,22 +918,82 @@ async function aiTab(host) {
     wireModel('my-model', mine, myModels);
     wireModel('co-model', theirs, theirModels);
 
+    wireModel('my-img-model', myDrawer, { [myDrawer]: myImageModel });
+    wireModel('co-img-model', coDrawer, { [coDrawer]: coImageModel });
+
+    /**
+     * Switching provider saves immediately with that provider's current model;
+     * changing only the model saves the pair again. One path either way, so a
+     * model chosen without re-picking the provider is not silently dropped.
+     */
+    const saveDrawer = async ({ callable, provider, modelFieldId, onSaved, message }) => {
+      try {
+        // No field id means the provider is changing, so its model comes from
+        // the server's default rather than from the box on screen — which is
+        // still showing the *previous* provider's model.
+        const model = provider && modelFieldId ? readModel(modelFieldId, '') : '';
+        const saved = await callFn(callable,
+          provider ? { provider, ...(model ? { model } : {}) } : {});
+        onSaved(saved);
+        paint();
+        toastSuccess(message(saved));
+      } catch (err) {
+        toastError(err?.message || 'تعذّر حفظ الاختيار.');
+      }
+    };
+
     $$('#drawer-picker [data-drawer]', host).forEach((card) => {
-      card.addEventListener('click', async () => {
-        const wanted = card.dataset.drawer;
-        try {
-          const saved = await callFn('setMyImageProvider', wanted ? { provider: wanted } : {});
-          myDrawer = saved.provider || '';
+      card.addEventListener('click', () => saveDrawer({
+        callable: 'setMyImageProvider',
+        provider: card.dataset.drawer,
+        // A different provider means its own model, not the one on screen.
+        modelFieldId: card.dataset.drawer === myDrawer ? 'my-img-model' : '',
+        onSaved: (s) => {
+          myDrawer = s.provider || '';
+          myImageModel = s.model || '';
           current.imageProvider = myDrawer;
-          paint();
-          toastSuccess(myDrawer
-            ? `ستُرسم صورك بواسطة ${labelOf(myDrawer)}.`
-            : 'يختار النظام مزوّد الصور تلقائياً.');
-        } catch (err) {
-          toastError(err?.message || 'تعذّر حفظ الاختيار.');
-        }
-      });
+          current.imageModel = myImageModel;
+        },
+        message: (s) => (s.provider
+          ? `ستُرسم صورك بواسطة ${labelOf(s.provider)}.`
+          : 'يختار النظام مزوّد الصور تلقائياً.')
+      }));
     });
+
+    $('#my-img-model', host)?.addEventListener('change', () => saveDrawer({
+      callable: 'setMyImageProvider',
+      provider: myDrawer,
+      modelFieldId: 'my-img-model',
+      onSaved: (s) => { myImageModel = s.model || ''; current.imageModel = myImageModel; },
+      message: (s) => `نموذج صورك الآن ${s.model}.`
+    }));
+
+    if (canManage) {
+      $$('#co-drawer-picker [data-co-drawer]', host).forEach((card) => {
+        card.addEventListener('click', () => saveDrawer({
+          callable: 'setCompanyImageProvider',
+          provider: card.dataset.coDrawer,
+          modelFieldId: card.dataset.coDrawer === coDrawer ? 'co-img-model' : '',
+          onSaved: (s) => {
+            coDrawer = s.provider || '';
+            coImageModel = s.model || '';
+            company.imageProvider = coDrawer;
+            company.imageModel = coImageModel;
+          },
+          message: (s) => (s.provider
+            ? `افتراضي صور الشركة الآن ${labelOf(s.provider)}.`
+            : 'يختار النظام مزوّد صور الشركة تلقائياً.')
+        }));
+      });
+
+      $('#co-img-model', host)?.addEventListener('change', () => saveDrawer({
+        callable: 'setCompanyImageProvider',
+        provider: coDrawer,
+        modelFieldId: 'co-img-model',
+        onSaved: (s) => { coImageModel = s.model || ''; company.imageModel = coImageModel; },
+        message: (s) => `نموذج صور الشركة الآن ${s.model}.`
+      }));
+    }
 
     $$('#my-picker [data-pick]', host).forEach((card) => {
       card.addEventListener('click', () => { mine = card.dataset.pick; paint(); });

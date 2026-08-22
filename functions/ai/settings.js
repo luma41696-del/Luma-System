@@ -19,7 +19,7 @@ const { str } = require('../lib/validate');
 const { writeAudit } = require('../lib/audit');
 const {
   AI_SECRETS, CATALOG, isKnownProvider, isProviderConfigured, canGenerateImages,
-  labelOf, envKeyOf, describeProviders
+  imageModelOf, labelOf, envKeyOf, describeProviders
 } = require('./catalog');
 const { getAISettings, invalidateConfigCache } = require('./config');
 
@@ -48,6 +48,7 @@ exports.getAIConfig = onCall(opts, async (request) => {
       source: mine.source,
       // Empty means "no preference" — the server picks by deadline.
       imageProvider: canGenerateImages(mine.imageProvider) ? mine.imageProvider : '',
+      imageModel: mine.imageModel || '',
       // True when the saved pick had no key and something else answered —
       // the screen says so instead of showing a selection that isn't real.
       fellBack: mine.fellBack
@@ -55,7 +56,10 @@ exports.getAIConfig = onCall(opts, async (request) => {
     company: {
       provider: company.provider,
       model: company.model,
-      configured: company.configured
+      configured: company.configured,
+      // Empty means the company has expressed no drawing preference either.
+      imageProvider: canGenerateImages(company.companyImageProvider) ? company.companyImageProvider : '',
+      imageModel: company.imageModel || ''
     },
     canManage: has(caller, 'settings.manage')
   };
@@ -130,12 +134,64 @@ exports.setMyImageProvider = onCall(opts, async (request) => {
     );
   }
 
+  const model = str(request.data?.model, { max: 80, field: 'النموذج' }) || imageModelOf(raw);
+
   await db.collection('users').doc(caller.uid).set({
-    aiPrefs: { imageProvider: raw }
+    aiPrefs: { imageProvider: raw, imageModels: { [raw]: model } }
   }, { merge: true });
   invalidateConfigCache(caller.uid);
 
-  return { provider: raw };
+  return { provider: raw, model };
+});
+
+/**
+ * The company's default drawer, for everyone who has not picked one.
+ *
+ * Mirrors setAIConfig: same permission, same shape. Kept separate because
+ * drawing and answering are separate models on separate quotas, and an
+ * operator may well want a different vendor for each.
+ */
+exports.setCompanyImageProvider = onCall(opts, async (request) => {
+  const caller = requireAuth(request);
+  requirePermission(caller, 'settings.manage');
+
+  const raw = str(request.data?.provider, { max: 40, field: 'المزوّد' });
+
+  if (!raw) {
+    await db.collection('settings').doc('ai').set({
+      imageProvider: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
+      updatedBy: caller.uid
+    }, { merge: true });
+    invalidateConfigCache();
+    await writeAudit({ action: 'ai.setCompanyImage', caller, meta: { provider: null } });
+    return { provider: null, model: null };
+  }
+
+  if (!isKnownProvider(raw)) throw new HttpsError('invalid-argument', 'مزوّد غير معروف.');
+  if (!canGenerateImages(raw)) {
+    throw new HttpsError(
+      'failed-precondition',
+      CATALOG[raw].imageModel
+        ? `${labelOf(raw)} غير مُفعّل — لم يتم ضبط مفتاح ${envKeyOf(raw)} على الخادم.`
+        : `${labelOf(raw)} لا يولّد الصور.`
+    );
+  }
+
+  const model = str(request.data?.model, { max: 80, field: 'النموذج' }) || imageModelOf(raw);
+
+  await db.collection('settings').doc('ai').set({
+    imageProvider: raw,
+    imageModels: { [raw]: model },
+    updatedAt: FieldValue.serverTimestamp(),
+    updatedBy: caller.uid
+  }, { merge: true });
+  invalidateConfigCache();
+
+  await writeAudit({
+    action: 'ai.setCompanyImage', caller, targetId: raw, meta: { provider: raw, model }
+  });
+  return { provider: raw, model };
 });
 
 exports.setAIConfig = onCall(opts, async (request) => {
