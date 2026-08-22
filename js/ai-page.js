@@ -252,8 +252,11 @@ export async function render(container, ctx) {
       messages.push({
         role: 'assistant', at: Date.now(),
         image: result.url,
+        // Names the drawer without claiming why — the reason is a deadline,
+        // not a missing capability, and asserting the wrong one is worse than
+        // asserting none.
         content: result.usedFallback
-          ? `رُسمت بواسطة ${result.provider === 'gemini' ? 'Gemini' : 'ChatGPT'} — مزوّدك الحالي لا يولّد صوراً.`
+          ? `رُسمت بواسطة ${result.provider === 'gemini' ? 'Gemini' : 'ChatGPT'}.`
           : ''
       });
     } catch (err) {

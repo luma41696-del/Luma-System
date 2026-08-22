@@ -3,8 +3,12 @@
  *
  * Two providers can draw and one cannot: Claude has no image model, so the
  * caller is told that plainly instead of being handed a failure from an
- * endpoint that was never going to work. If the person's own provider cannot
- * draw, a configured one that can is used and the answer says which.
+ * endpoint that was never going to work.
+ *
+ * Which one draws is decided by the clock, not by who the person chats with.
+ * The platform kills this handler at 26 seconds and not every image model
+ * finishes in that time, so the fastest configured drawer goes first and the
+ * answer reports which one produced the picture.
  *
  * The result is written to Storage and returned as a URL. Both providers hand
  * back base64, and a data URI that size cannot be put in a Firestore document,
@@ -26,8 +30,30 @@ const { providerError } = require('./errors');
 
 const opts = { region: REGION, cors: true, secrets: AI_SECRETS };
 
-/** Generation is slower than a chat reply, but Netlify still kills us at 26s. */
-const TIMEOUT_MS = Number(process.env.AI_IMAGE_TIMEOUT_MS) || 22_000;
+/**
+ * Netlify kills the handler at 26s (netlify.toml [functions.api]). Aborting at
+ * 25 leaves just enough to write the audit entry and return a real error
+ * instead of the platform's opaque one.
+ */
+const TIMEOUT_MS = Number(process.env.AI_IMAGE_TIMEOUT_MS) || 25_000;
+
+/**
+ * Who draws, fastest first.
+ *
+ * This is not a quality ranking — it is a deadline. OpenAI's image model
+ * routinely takes longer than the 26s the platform allows, so asking it first
+ * means the request is killed before any picture exists. Gemini's flash image
+ * model finishes inside the window, so it leads. Which one actually drew is
+ * reported back, and AI_IMAGE_PROVIDER pins a specific one.
+ */
+const BY_SPEED = ['gemini', 'openai'];
+
+/**
+ * gpt-image-1 spends most of its time on fidelity. Inside a 26s ceiling a
+ * lower setting is the difference between a picture and a timeout, so that is
+ * the default — raise it only if the platform budget grows.
+ */
+const OPENAI_QUALITY = process.env.OPENAI_IMAGE_QUALITY || 'low';
 
 const SIZES = new Set(['1024x1024', '1536x1024', '1024x1536']);
 
@@ -40,7 +66,7 @@ async function drawWithOpenAI({ apiKey, model, prompt, size }) {
     const response = await fetch('https://api.openai.com/v1/images/generations', {
       method: 'POST',
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model, prompt, size, n: 1 }),
+      body: JSON.stringify({ model, prompt, size, n: 1, quality: OPENAI_QUALITY }),
       signal: controller.signal
     });
     if (!response.ok) throw await failure(response, 'OpenAI', /sk-[A-Za-z0-9_*-]+/g, 'sk-***');
@@ -118,11 +144,12 @@ exports.generateImage = onCall(opts, async (request) => {
   assert(prompt.length >= 3, 'الوصف قصير جداً.');
   const size = SIZES.has(request.data?.size) ? request.data.size : '1024x1024';
 
-  // The caller's own provider first; otherwise any configured one that draws.
+  // Chosen by which one can finish inside the platform's window — see BY_SPEED.
   const mine = await getAISettings(caller.uid);
-  const provider = canGenerateImages(mine.provider)
-    ? mine.provider
-    : PROVIDER_IDS.find(canGenerateImages);
+  const forced = process.env.AI_IMAGE_PROVIDER;
+  const provider = (forced && canGenerateImages(forced) ? forced : null)
+    || BY_SPEED.find(canGenerateImages)
+    || PROVIDER_IDS.find(canGenerateImages);
 
   if (!provider) {
     const drawers = PROVIDER_IDS.filter((id) => CATALOG[id].imageModel).map(labelOf);
@@ -174,6 +201,20 @@ exports.generateImage = onCall(opts, async (request) => {
       }
     });
     console.error('[ai] generateImage failed', err);
+
+    // "Try a shorter question" is the wrong advice for a drawing that ran out
+    // of wall-clock: the prompt length is not what made it slow.
+    if (err?.name === 'AbortError') {
+      const others = PROVIDER_IDS.filter((id) => id !== provider && canGenerateImages(id));
+      throw new HttpsError(
+        'deadline-exceeded',
+        // The alternative is offered, not advertised: whichever provider is
+        // left is not necessarily the faster one, and saying so when it is not
+        // just sends the next attempt down the same dead end.
+        `تجاوز ${labelOf(provider)} المهلة المسموحة لتوليد الصورة (${Math.round(TIMEOUT_MS / 1000)} ثانية).`
+        + (others.length ? ` يمكنك تجربة ${others.map(labelOf).join(' أو ')} من الإعدادات.` : '')
+      );
+    }
     throw providerError(err, { label: labelOf(provider), envKey: envKeyOf(provider) });
   }
 });
