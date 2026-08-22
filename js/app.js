@@ -33,6 +33,24 @@ const pageContainer = $('#page-container');
 const teardown = [];
 function track(unsub) { if (typeof unsub === 'function') teardown.push(unsub); }
 
+/**
+ * The header only grows an edge once something is behind it.
+ *
+ * Bound once to the scroll container rather than per page: the router swaps
+ * what is inside `#page-container`, never the element itself, so one listener
+ * covers every screen and no page has to remember to opt in.
+ */
+function watchPageScroll() {
+  const main = document.querySelector('.main');
+  if (!pageContainer || !main) return;
+  const sync = () => main.classList.toggle('is-scrolled', pageContainer.scrollTop > 4);
+  pageContainer.addEventListener('scroll', sync, { passive: true });
+  // Also on navigation: a new page starts at the top, and the old page's
+  // scrolled state must not linger over it.
+  onRouteChange?.(sync);
+  sync();
+}
+
 /* ------------------------------------------------------------ bootstrap */
 
 (async function bootstrap() {
@@ -60,6 +78,7 @@ function track(unsub) { if (typeof unsub === 'function') teardown.push(unsub); }
   warmDirectory();
 
   onRouteChange(onRouteChanged);
+  watchPageScroll();
   await startRouter(pageContainer);
 
   window.addEventListener('beforeunload', () => teardown.forEach((fn) => { try { fn(); } catch {} }));

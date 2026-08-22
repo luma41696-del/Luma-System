@@ -334,14 +334,18 @@ export async function render(container, ctx) {
     }
   }
 
-  /** A finished question goes out; an unfinished one waits in the composer. */
+  /**
+   * A suggestion is a head start on writing, not a message.
+   *
+   * It loads the composer and puts the caret at the end so the sentence can be
+   * finished, trimmed or replaced before it goes anywhere. Sending on click
+   * meant a half-right prompt was already spent by the time you read it.
+   */
   function useSuggestion(text) {
-    if (!isTemplate(text)) return send(text);
-    input.value = templateBody(text);
+    input.value = isTemplate(text) ? templateBody(text) : text;
     autoGrow();
     input.focus();
     input.setSelectionRange(input.value.length, input.value.length);
-    return undefined;
   }
 
   /** The bar grows with the text instead of scrolling a one-line box. */

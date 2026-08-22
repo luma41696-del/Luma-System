@@ -574,3 +574,23 @@
   place-items: center;
   z-index: var(--z-sticky);
 }
+
+/* ------------------------------------------------- topbar / page seam */
+/* The bar and the page are one surface, so at rest there is no line between
+   them — the border that used to sit there read as two stacked panels rather
+   than a header belonging to its page.
+   It returns only once something has actually scrolled underneath, which is
+   the only moment the edge carries information. */
+.topbar {
+  border-bottom-color: transparent;
+  transition: border-color var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.main.is-scrolled .topbar {
+  border-bottom-color: var(--border-soft);
+  box-shadow: 0 6px 18px -12px rgba(0, 0, 0, .55);
+}
+[data-theme="ship"] .main.is-scrolled .topbar { border-bottom-color: rgba(34, 211, 238, .22); }
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar { transition: none; }
+}

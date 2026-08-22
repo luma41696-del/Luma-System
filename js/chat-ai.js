@@ -194,13 +194,18 @@ export function openAiChat(panel, onDraft) {
    * composer with the caret after it, because it is the person who knows what
    * they were going to search for.
    */
+  /**
+   * A suggestion is a head start on writing, not a message.
+   *
+   * It loads the composer and puts the caret at the end so the sentence can be
+   * finished, trimmed or replaced before it goes anywhere. Sending on click
+   * meant a half-right prompt was already spent by the time you read it.
+   */
   function useSuggestion(text) {
-    if (!isTemplate(text)) return send(text);
     const input = $('#ai-msg-input', panel);
-    input.value = templateBody(text);
+    input.value = isTemplate(text) ? templateBody(text) : text;
     input.focus();
     input.setSelectionRange(input.value.length, input.value.length);
-    return undefined;
   }
 
   async function send(raw) {
