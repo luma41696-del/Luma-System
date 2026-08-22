@@ -2630,3 +2630,9 @@ html[dir="ltr"] .ai-panel.is-open,
   .ai-image-loading__sheen { animation: none; opacity: .3; }
   .ai-image-loading__label i { animation: none; }
 }
+
+/* The "who draws" row sits under the mode tabs and reads as a sub-choice of
+   them — smaller, quieter, and only present while image mode is on. */
+.ai-modes--drawers { margin-top: calc(var(--sp-2) * -1); }
+.ai-modes--drawers .ai-mode { font-size: var(--fs-2xs); padding: 5px var(--sp-2); }
+.ai-modes--drawers .ai-mode i { width: 12px; height: 12px; }

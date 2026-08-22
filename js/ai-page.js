@@ -81,6 +81,9 @@ export async function render(container, ctx) {
   /** Uploaded and waiting to go with the next question. */
   let pending = [];
   let suggestions = [];
+  /** Providers that can draw, and which one the person picked. */
+  let drawers = [];
+  let drawer = localStorage.getItem('luma.aiDrawer') || '';
 
   container.innerHTML = `
     <div class="ai-page">
@@ -117,6 +120,9 @@ export async function render(container, ctx) {
             <i data-lucide="image"></i> توليد صورة
           </button>
         </div>
+
+        <div class="ai-modes ai-modes--drawers" id="aip-drawers" hidden
+             role="tablist" aria-label="من يرسم"></div>
 
         <form class="ai-bar" id="aip-form">
           ${uploadsEnabled() ? `
@@ -157,6 +163,19 @@ export async function render(container, ctx) {
         if (draft) openDraft(draft);
       });
     });
+  };
+
+  const paintDrawers = () => {
+    const host = $('#aip-drawers', container);
+    // With one drawer there is no choice to offer, so none is shown.
+    if (drawers.length < 2) { host.hidden = true; return; }
+    host.innerHTML = drawers.map((d) => `
+      <button type="button" class="ai-mode${d.id === drawer ? ' is-on' : ''}"
+              data-drawer="${attr(d.id)}" role="tab"
+              aria-selected="${d.id === drawer ? 'true' : 'false'}">
+        <i data-lucide="image"></i> ${esc(d.label)}
+      </button>`).join('');
+    refreshIcons(host);
   };
 
   const paintChips = () => {
@@ -248,7 +267,8 @@ export async function render(container, ctx) {
     busyKind = 'image';
     paint();
     try {
-      const result = await callFn('generateImage', { prompt: promptText });
+      const result = await callFn('generateImage',
+        drawer ? { prompt: promptText, provider: drawer } : { prompt: promptText });
       messages.push({
         role: 'assistant', at: Date.now(),
         image: result.url,
@@ -360,6 +380,14 @@ export async function render(container, ctx) {
     const chip = e.target.closest('[data-suggest]');
     if (chip) return useSuggestion(chip.dataset.suggest);
 
+    const pick = e.target.closest('[data-drawer]');
+    if (pick) {
+      drawer = pick.dataset.drawer;
+      localStorage.setItem('luma.aiDrawer', drawer);
+      paintDrawers();
+      return;
+    }
+
     const tab = e.target.closest('[data-mode]');
     if (!tab) return;
     mode = tab.dataset.mode;
@@ -371,6 +399,7 @@ export async function render(container, ctx) {
     // The placeholder is the only thing telling you what the box will do now.
     input.placeholder = mode === 'image' ? 'صف الصورة التي تريدها' : 'اسأل Luma AI';
     $('#aip-chips', container).hidden = mode === 'image';
+    $('#aip-drawers', container).hidden = mode !== 'image' || drawers.length < 2;
     input.focus();
   });
 
@@ -402,6 +431,16 @@ export async function render(container, ctx) {
     ]);
     suggestions = buildSuggestions({ page: 'chat', tasks, directory, clients, max: 8 });
     paintChips();
+
+    // Only the server knows which providers hold a key, so the row is built
+    // from what it reports rather than from a list kept in step by hand.
+    try {
+      const config = await callFn('getAIConfig', {});
+      drawers = (config.providers || []).filter((p) => p.images);
+      if (!drawers.some((d) => d.id === drawer)) drawer = '';
+      paintDrawers();
+      $('#aip-drawers', container).hidden = mode !== 'image' || drawers.length < 2;
+    } catch { /* the picker stays hidden; the server still chooses one */ }
   })();
 
   return () => { messages = []; pending = []; };

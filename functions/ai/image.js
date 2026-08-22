@@ -144,10 +144,24 @@ exports.generateImage = onCall(opts, async (request) => {
   assert(prompt.length >= 3, 'الوصف قصير جداً.');
   const size = SIZES.has(request.data?.size) ? request.data.size : '1024x1024';
 
-  // Chosen by which one can finish inside the platform's window — see BY_SPEED.
+  // An explicit choice wins. Someone whose usual provider is out of quota
+  // needs a way to say "use the other one" without an operator changing an
+  // environment variable, and only they know which they would rather spend.
+  const requested = str(request.data?.provider, { max: 40, field: 'المزوّد' });
+  if (requested && !canGenerateImages(requested)) {
+    throw new HttpsError(
+      'failed-precondition',
+      CATALOG[requested]?.imageModel
+        ? `${labelOf(requested)} غير مُفعّل — لم يتم ضبط مفتاح ${envKeyOf(requested)} على الخادم.`
+        : `${labelOf(requested)} لا يولّد الصور.`
+    );
+  }
+
   const mine = await getAISettings(caller.uid);
   const forced = process.env.AI_IMAGE_PROVIDER;
-  const provider = (forced && canGenerateImages(forced) ? forced : null)
+  // Falls back by deadline only when nobody asked for anything — see BY_SPEED.
+  const provider = requested
+    || (forced && canGenerateImages(forced) ? forced : null)
     || BY_SPEED.find(canGenerateImages)
     || PROVIDER_IDS.find(canGenerateImages);
 
