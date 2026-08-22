@@ -2431,3 +2431,120 @@ html[dir="ltr"] .ai-panel.is-open,
   .ai-page__mark.is-thinking { animation: none; }
   .ai-chip:hover, .ai-bar__send:hover { transform: none; }
 }
+
+/* ========================================================================== */
+/* Announcements                                                              */
+/* ========================================================================== */
+/* A board, not a feed: a handful of current notices with the kind readable at
+   a glance from the colour of the rail down the side. */
+
+.announce { margin-bottom: var(--sp-4); }
+.announce__list { display: flex; flex-direction: column; gap: var(--sp-2); }
+
+.announce__item {
+  display: flex;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-soft);
+  border-inline-start: 3px solid var(--brand);
+  animation: announce-in .3s var(--ease, ease) both;
+}
+@keyframes announce-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.announce__item--holiday { border-inline-start-color: var(--success); }
+.announce__item--urgent {
+  border-inline-start-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 6%, var(--bg-inset));
+}
+
+.announce__icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+.announce__item--holiday .announce__icon { color: var(--success); }
+.announce__item--urgent .announce__icon { color: var(--danger); }
+
+.announce__body { flex: 1; min-width: 0; }
+.announce__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+.announce__title { font-weight: 700; }
+/* Author-written text: newlines preserved, and it wraps rather than stretching
+   the card when someone pastes a long unbroken string. */
+.announce__text {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: var(--fs-sm);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.announce__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: var(--sp-2);
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+}
+.announce__actions { display: flex; gap: 2px; flex: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .announce__item { animation: none; }
+}
+
+/* --------------------------------------------------- AI mode switch + image */
+.ai-modes {
+  display: flex;
+  gap: var(--sp-1, 4px);
+  margin-bottom: var(--sp-2);
+  justify-content: center;
+}
+.ai-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px var(--sp-3);
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-muted);
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.ai-mode i { width: 14px; height: 14px; }
+.ai-mode:hover { color: var(--text-primary); }
+.ai-mode.is-on {
+  color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 12%, transparent);
+  border-color: color-mix(in srgb, var(--brand) 30%, transparent);
+}
+
+.ai-image { margin: 0; }
+.ai-image img {
+  max-width: min(420px, 100%);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-soft);
+  display: block;
+}
+.ai-image figcaption { margin-top: 6px; font-size: var(--fs-2xs); }
+.ai-image figcaption a {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-muted);
+}
+.ai-image figcaption a:hover { color: var(--brand); }

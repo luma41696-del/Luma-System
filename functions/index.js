@@ -99,6 +99,9 @@ exports.getAIConfig = aiSettings.getAIConfig;
 exports.setAIConfig = aiSettings.setAIConfig;
 exports.setMyAIProvider = aiSettings.setMyAIProvider;
 
+const aiImage = require('./ai/image');
+exports.generateImage = aiImage.generateImage;
+
 /* --------------------------------------------------------- notifications */
 const notifications = require('./notifications');
 
@@ -110,6 +113,7 @@ exports.onRequestDecided = notifications.onRequestDecided;
 exports.onRequestThreadMessage = notifications.onRequestThreadMessage;
 exports.onChatMessage = notifications.onChatMessage;
 exports.onClientUpdated = notifications.onClientUpdated;
+exports.onAnnouncementCreated = notifications.onAnnouncementCreated;
 exports.dailyDeadlineDigest = notifications.dailyDeadlineDigest;
 exports.nightlyMaintenance = notifications.nightlyMaintenance;
 

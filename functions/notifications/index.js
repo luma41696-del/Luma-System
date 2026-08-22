@@ -301,6 +301,42 @@ exports.onChatMessage = onDocumentCreated(
   }
 );
 
+/* ----------------------------------------------------------- announcements */
+
+/**
+ * A new announcement reaches everyone.
+ *
+ * The one fan-out in this file that is not scoped to the people involved in a
+ * document — an announcement is a broadcast by definition, so the recipient
+ * list is the active directory. Disabled accounts are dropped by deliver(),
+ * and the urgent kind ignores the per-user opt-out that the others honour:
+ * an office closure is not a notification anyone should be able to mute.
+ */
+exports.onAnnouncementCreated = onDocumentCreated(
+  { ...region, document: 'announcements/{id}' },
+  async (event) => {
+    const data = event.data?.data();
+    if (!data) return;
+
+    const people = await db.collection('users').where('status', '==', 'active').get()
+      .catch(() => ({ docs: [] }));
+    const recipients = people.docs.map((d) => d.id).filter((uid) => uid !== data.createdBy);
+    if (!recipients.length) return;
+
+    const ICONS = { holiday: 'palmtree', urgent: 'alert-triangle', general: 'megaphone' };
+
+    await notify(recipients, {
+      kind: 'announcement',
+      // Urgent bypasses the opt-out; the rest respect it.
+      prefKey: data.kind === 'urgent' ? null : 'announcement',
+      title: data.title,
+      body: String(data.body || '').slice(0, 140),
+      link: '#/',
+      icon: ICONS[data.kind] || ICONS.general
+    });
+  }
+);
+
 /* ------------------------------------------------------------ client edits */
 
 exports.onClientUpdated = onDocumentUpdated(

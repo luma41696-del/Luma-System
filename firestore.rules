@@ -491,6 +491,26 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // ---------------------------------------------------------- announcements
+    // Everyone reads: an announcement nobody can see is not an announcement.
+    // Posting is a broadcast to the whole company, so it stays behind its own
+    // permission rather than riding on a general editing right.
+    match /announcements/{id} {
+      allow read: if active();
+      allow create: if can('am')
+        && request.resource.data.createdBy == uid()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 160
+        && request.resource.data.body is string
+        && request.resource.data.body.size() <= 4000;
+      allow update: if can('am')
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.title.size() <= 160
+        && request.resource.data.body.size() <= 4000;
+      allow delete: if can('am');
+    }
+
     // --------------------------------------------------------------- settings
     match /settings/{docId} {
       allow read: if active();

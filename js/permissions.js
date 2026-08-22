@@ -75,6 +75,7 @@ export const PERMISSIONS = {
   'finance.treasury':       { code: 'ft',  ar: 'إدارة الصندوق والبنوك',              group: 'finance' },
   'finance.payroll':        { code: 'fp',  ar: 'إعداد وصرف كشوف الرواتب',            group: 'finance' },
 
+  'announcements.manage':   { code: 'am',  ar: 'نشر الإعلانات للموظفين',              group: 'announcements' },
   'settings.manage':        { code: 'sm',  ar: 'إدارة إعدادات النظام',              group: 'settings' }
 };
 
@@ -87,6 +88,7 @@ export const PERMISSION_GROUPS = {
   chat:      'الدردشة',
   reports:   'التقارير',
   finance:   'المالية',
+  announcements: 'الإعلانات',
   settings:  'الإعدادات'
 };
 
@@ -115,6 +117,7 @@ export const PERMISSION_PRESETS = {
       'employees.view', 'employees.create', 'employees.edit',
       'clients.view', 'clients.create', 'clients.edit', 'clients.viewCredentials',
       'tasks.create', 'tasks.assign', 'tasks.editAll', 'tasks.delete', 'tasks.ai', 'knowledge.view', 'knowledge.manage',
+      'announcements.manage',
       'requests.approve', 'chat.manage', 'reports.view', 'reports.export'
     ]
   },
@@ -138,7 +141,8 @@ export const PERMISSION_PRESETS = {
     role: 'manager',
     perms: [
       'dashboard.viewTeam', 'employees.view', 'clients.view',
-      'tasks.create', 'tasks.assign', 'tasks.editAll', 'tasks.ai', 'knowledge.view', 'knowledge.manage', 'reports.view'
+      'tasks.create', 'tasks.assign', 'tasks.editAll', 'tasks.ai', 'knowledge.view', 'knowledge.manage', 'reports.view',
+      'announcements.manage'
     ]
   },
   employee: {

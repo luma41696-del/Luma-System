@@ -18,6 +18,9 @@ const CATALOG = {
     envKey: 'OPENAI_API_KEY',
     envModel: 'OPENAI_MODEL',
     defaultModel: 'gpt-4o-mini',
+    // Image generation is a separate endpoint and a separate model from the
+    // one that answers questions, so it is named separately.
+    imageModel: process.env.OPENAI_IMAGE_MODEL || 'gpt-image-1',
     models: [
       { id: 'gpt-4o-mini', label: 'GPT-4o mini — سريع واقتصادي' },
       { id: 'gpt-4o', label: 'GPT-4o — أقوى' }
@@ -43,6 +46,7 @@ const CATALOG = {
     envKey: 'GEMINI_API_KEY',
     envModel: 'GEMINI_MODEL',
     defaultModel: 'gemini-2.5-flash',
+    imageModel: process.env.GEMINI_IMAGE_MODEL || 'gemini-2.5-flash-image',
     models: [
       { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash — سريع واقتصادي' },
       { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro — أقوى' },
@@ -62,6 +66,16 @@ const envKeyOf = (id) => CATALOG[id]?.envKey || '';
 
 const isKnownProvider = (id) => Object.prototype.hasOwnProperty.call(CATALOG, id);
 
+/**
+ * Can this provider draw?
+ *
+ * Claude does not generate images, and pretending otherwise would surface a
+ * button that always fails. The picker asks this rather than assuming every
+ * configured provider can do everything.
+ */
+const canGenerateImages = (id) => !!CATALOG[id]?.imageModel && isProviderConfigured(id);
+const imageModelOf = (id) => CATALOG[id]?.imageModel || null;
+
 /** A provider is usable only if its key is actually set on this server. */
 function isProviderConfigured(id) {
   const entry = CATALOG[id];
@@ -79,6 +93,7 @@ function describeProviders() {
     vendor: CATALOG[id].vendor,
     envKey: CATALOG[id].envKey,
     configured: isProviderConfigured(id),
+    images: canGenerateImages(id),
     defaultModel: CATALOG[id].defaultModel,
     models: CATALOG[id].models
   }));
@@ -92,5 +107,7 @@ module.exports = {
   isProviderConfigured,
   labelOf,
   envKeyOf,
+  canGenerateImages,
+  imageModelOf,
   describeProviders
 };

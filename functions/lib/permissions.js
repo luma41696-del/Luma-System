@@ -41,6 +41,7 @@ const PERMISSION_CODES = {
   'knowledge.manage': 'km',
   'finance.treasury': 'ft',
   'finance.payroll': 'fp',
+  'announcements.manage': 'am',
   'settings.manage': 'sm'
 };
 

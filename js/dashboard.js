@@ -30,8 +30,17 @@ export async function render(container, ctx) {
   const isManagerView = can(session.claims, 'dashboard.viewCompany');
   const unsubs = [];
 
-  container.innerHTML = `<div class="page__inner" id="dash-root"></div>`;
+  container.innerHTML = `
+    <div class="page__inner">
+      <div id="dash-announce"></div>
+      <div id="dash-root"></div>
+    </div>`;
   const root = $('#dash-root', container);
+
+  // Above everything else on purpose: a notice nobody scrolls to is a notice
+  // nobody read.
+  const { mountAnnouncements } = await import('./announcements.js');
+  unsubs.push(mountAnnouncements($('#dash-announce', container)));
 
   if (isManagerView) await renderManager(root, unsubs);
   else await renderEmployee(root, unsubs);

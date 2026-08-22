@@ -106,6 +106,15 @@ export async function render(container, ctx) {
 
         <div id="aip-files" class="ai-attachments" hidden></div>
 
+        <div class="ai-modes" role="tablist" aria-label="الوضع">
+          <button type="button" class="ai-mode is-on" data-mode="ask" role="tab" aria-selected="true">
+            <i data-lucide="message-circle"></i> محادثة
+          </button>
+          <button type="button" class="ai-mode" data-mode="image" role="tab" aria-selected="false">
+            <i data-lucide="image"></i> توليد صورة
+          </button>
+        </div>
+
         <form class="ai-bar" id="aip-form">
           ${uploadsEnabled() ? `
           <button type="button" class="ai-bar__icon" id="aip-attach"
@@ -225,9 +234,41 @@ export async function render(container, ctx) {
 
   /* ----------------------------------------------------------- conversing */
 
+  /** 'ask' talks to the assistant; 'image' draws. */
+  let mode = 'ask';
+
+  async function drawImage(promptText) {
+    messages.push({ role: 'user', content: promptText, at: Date.now() });
+    input.value = '';
+    autoGrow();
+    busy = true;
+    paint();
+    try {
+      const result = await callFn('generateImage', { prompt: promptText });
+      messages.push({
+        role: 'assistant', at: Date.now(),
+        image: result.url,
+        content: result.usedFallback
+          ? `رُسمت بواسطة ${result.provider === 'gemini' ? 'Gemini' : 'ChatGPT'} — مزوّدك الحالي لا يولّد صوراً.`
+          : ''
+      });
+    } catch (err) {
+      messages.push({
+        role: 'assistant', at: Date.now(), error: true,
+        content: err?.message || 'تعذّر توليد الصورة.'
+      });
+      console.warn('[luma] ai-image', err?.code, err?.message);
+    } finally {
+      busy = false;
+      save(messages);
+      paint();
+    }
+  }
+
   async function send(raw) {
     const typed = sanitizeMultiline(raw ?? input.value, 1000);
     if (!typed || busy) return;
+    if (mode === 'image') return drawImage(typed);
     if (pending.some((p) => p.uploading)) return toastError('انتظر انتهاء رفع الصورة.');
 
     const images = pending.filter((p) => p.kind === 'image').map((p) => p.url).filter(Boolean);
@@ -309,7 +350,20 @@ export async function render(container, ctx) {
 
   container.addEventListener('click', (e) => {
     const chip = e.target.closest('[data-suggest]');
-    if (chip) useSuggestion(chip.dataset.suggest);
+    if (chip) return useSuggestion(chip.dataset.suggest);
+
+    const tab = e.target.closest('[data-mode]');
+    if (!tab) return;
+    mode = tab.dataset.mode;
+    $$('.ai-mode', container).forEach((b) => {
+      const on = b.dataset.mode === mode;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-selected', String(on));
+    });
+    // The placeholder is the only thing telling you what the box will do now.
+    input.placeholder = mode === 'image' ? 'صف الصورة التي تريدها' : 'اسأل Luma AI';
+    $('#aip-chips', container).hidden = mode === 'image';
+    input.focus();
   });
 
   $('#aip-clear', container).addEventListener('click', async () => {
@@ -370,7 +424,17 @@ function renderMessage(message, index) {
       <div class="ai-turn__body">
         ${message.error
           ? `<div class="ai-error"><i data-lucide="alert-triangle"></i> ${esc(message.content)}</div>`
-          : `<div class="ai-turn__text ai-text">${formatText(message.content)}</div>`}
+          : `${message.image ? `
+              <figure class="ai-image">
+                <img src="${attr(message.image)}" alt="صورة مولّدة" loading="lazy">
+                <figcaption>
+                  <a href="${attr(message.image)}" target="_blank"
+                     rel="noopener noreferrer" download>
+                    <i data-lucide="download" class="icon-sm"></i> فتح / تنزيل
+                  </a>
+                </figcaption>
+              </figure>` : ''}
+             ${message.content ? `<div class="ai-turn__text ai-text">${formatText(message.content)}</div>` : ''}`}
         ${renderSteps(message.steps)}
         ${renderCitations(message.citations)}
         ${renderDraft(message.draft, index)}
