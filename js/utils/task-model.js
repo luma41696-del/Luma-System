@@ -94,9 +94,22 @@ export function progressOf(task) {
 /* ----------------------------------------------------------------- queries */
 
 /** Tasks assigned to one employee. */
+/**
+ * Ordered by creation, not by due date.
+ *
+ * Firestore drops any document that lacks the field being ordered on, so
+ * `orderBy('dueAt')` quietly hid every task without a deadline — which is most
+ * personal ones. They existed, they were assigned, they showed up under "all
+ * tasks", and they were missing from the one screen meant to list them.
+ *
+ * `createdAt` is written on every task, so nothing can fall out of the result
+ * for want of a field, and this matches allTasksQuery so the two screens page
+ * through the same order. Display order is a separate concern — sortTasks
+ * handles it, and already puts undated tasks last instead of dropping them.
+ */
 export function myTasksQuery(uid, max = 200) {
   return query(col('tasks'), where('assignees', 'array-contains', uid),
-    orderBy('dueAt', 'asc'), qLimit(max));
+    orderBy('createdAt', 'desc'), qLimit(max));
 }
 
 /** Every task in the company (needs dashboard.viewCompany / tasks.editAll). */
