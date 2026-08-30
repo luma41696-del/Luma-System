@@ -102,6 +102,9 @@ exports.setMyImageProvider = aiSettings.setMyImageProvider;
 exports.setCompanyImageProvider = aiSettings.setCompanyImageProvider;
 exports.readPage = aiSettings.readPage;
 
+const whatsapp = require('./whatsapp/analyse');
+exports.analyseWhatsappChat = whatsapp.analyseWhatsappChat;
+
 const aiImage = require('./ai/image');
 exports.generateImage = aiImage.generateImage;
 

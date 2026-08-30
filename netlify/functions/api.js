@@ -45,7 +45,8 @@ const modules = [
   require('../../functions/ai/text-polish'),
   require('../../functions/ai/manager'),
   require('../../functions/ai/settings'),
-  require('../../functions/ai/image')
+  require('../../functions/ai/image'),
+  require('../../functions/whatsapp/analyse')
 ];
 
 /** name -> onCall handler */

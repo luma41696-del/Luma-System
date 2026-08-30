@@ -511,6 +511,23 @@ service cloud.firestore {
       allow delete: if can('am');
     }
 
+    // -------------------------------------------------------------- whatsapp
+    // Conversations arrive from Meta's webhook through the Admin SDK. Clients
+    // may read them — they are client correspondence, gated on clients.view —
+    // but may never write: a fabricated conversation would become a task
+    // draft that looks like a real client asked for it. `unread` is the one
+    // exception, so opening a chat can clear its badge.
+    match /whatsappChats/{waId} {
+      allow read: if can('cv');
+      allow create, delete: if false;
+      allow update: if can('cv') && onlyChanged(['unread']);
+
+      match /messages/{messageId} {
+        allow read: if can('cv');
+        allow write: if false;
+      }
+    }
+
     // --------------------------------------------------------------- settings
     match /settings/{docId} {
       allow read: if active();
