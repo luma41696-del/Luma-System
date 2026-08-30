@@ -1,5 +1,6 @@
 /**
- * App theme: dark (default), light, and a cosmic "space" palette.
+ * App theme: dark (default) plus a family of light and dark palettes —
+ * light, white, classic, black, space, ship, forest, mocha and dawn.
  *
  * The value is persisted to localStorage and restored before first paint by
  * the inline script in dashboard.html, so this module only needs to update
@@ -7,7 +8,7 @@
  * re-themes itself on the `luma:theme` event (see utils/charts.js).
  */
 
-export const THEMES = ['dark', 'light', 'white', 'classic', 'black', 'space', 'ship'];
+export const THEMES = ['dark', 'light', 'white', 'classic', 'black', 'space', 'ship', 'forest', 'mocha', 'dawn'];
 
 export const THEME_META = {
   dark:    { icon: 'moon',       labelKey: 'settings.appearance.theme.dark',    hintKey: 'settings.appearance.theme.dark.hint' },
@@ -16,7 +17,10 @@ export const THEME_META = {
   classic: { icon: 'book',       labelKey: 'settings.appearance.theme.classic', hintKey: 'settings.appearance.theme.classic.hint' },
   black:   { icon: 'circle',     labelKey: 'settings.appearance.theme.black',   hintKey: 'settings.appearance.theme.black.hint' },
   space:   { icon: 'sparkles',   labelKey: 'settings.appearance.theme.space',   hintKey: 'settings.appearance.theme.space.hint' },
-  ship:    { icon: 'rocket',     labelKey: 'settings.appearance.theme.ship',    hintKey: 'settings.appearance.theme.ship.hint' }
+  ship:    { icon: 'rocket',     labelKey: 'settings.appearance.theme.ship',    hintKey: 'settings.appearance.theme.ship.hint' },
+  forest:  { icon: 'trees',      labelKey: 'settings.appearance.theme.forest',  hintKey: 'settings.appearance.theme.forest.hint' },
+  mocha:   { icon: 'coffee',     labelKey: 'settings.appearance.theme.mocha',   hintKey: 'settings.appearance.theme.mocha.hint' },
+  dawn:    { icon: 'sunrise',    labelKey: 'settings.appearance.theme.dawn',    hintKey: 'settings.appearance.theme.dawn.hint' }
 };
 
 export function getTheme() {
@@ -57,7 +61,7 @@ export function setTheme(next) {
   setTimeout(() => root.classList.remove('theme-swapping'), 340);
 }
 
-/** Dark → light → space → ship → dark, for the single sidebar toggle button. */
+/** Step through THEMES in order and wrap, for the single sidebar toggle button. */
 export function cycleTheme() {
   const next = THEMES[(THEMES.indexOf(getTheme()) + 1) % THEMES.length];
   setTheme(next);

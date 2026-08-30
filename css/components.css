@@ -505,7 +505,7 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 }
 
 /* ----------------------------------------------------------- theme picker */
-/* Two columns once there is room: seven themes in one stack is a scroll,
+/* Two columns once there is room: the full list in one stack is a scroll,
    and the swatches are what the eye picks from anyway. */
 .theme-picker {
   display: grid;
@@ -564,6 +564,19 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
     radial-gradient(18px 12px at 50% 0%, rgba(34, 211, 238, .45), transparent 70%),
     linear-gradient(135deg, #162734 0%, #070d13 100%);
 }
+.theme-swatch--forest .theme-swatch__preview {
+  background:
+    radial-gradient(14px 14px at 78% 22%, rgba(63, 185, 143, .45), transparent 70%),
+    linear-gradient(135deg, #1b352b 0%, #081310 100%);
+}
+.theme-swatch--mocha .theme-swatch__preview {
+  background:
+    radial-gradient(14px 14px at 78% 22%, rgba(217, 160, 102, .45), transparent 70%),
+    linear-gradient(135deg, #352a21 0%, #140f0b 100%);
+}
+.theme-swatch--dawn .theme-swatch__preview {
+  background: linear-gradient(135deg, #FFFFFF 0%, #F7DED9 100%);
+}
 .theme-swatch__dot {
   position: absolute;
   inset-inline-end: 5px;
@@ -579,6 +592,9 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .theme-swatch--white .theme-swatch__dot { background: #3B5BDB; }
 .theme-swatch--classic .theme-swatch__dot { background: #A67C3D; }
 .theme-swatch--black .theme-swatch__dot { background: #4D8DFF; }
+.theme-swatch--forest .theme-swatch__dot { background: #3FB98F; }
+.theme-swatch--mocha .theme-swatch__dot { background: #D9A066; }
+.theme-swatch--dawn .theme-swatch__dot { background: #D24E6B; }
 
 .theme-swatch__text { flex: 1; min-width: 0; }
 .theme-swatch__label { display: block; font-weight: 700; font-size: var(--fs-sm); color: var(--text-primary); }

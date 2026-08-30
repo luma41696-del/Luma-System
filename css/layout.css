@@ -300,6 +300,41 @@
 }
 [data-theme="ship"] .topbar { border-bottom-color: rgba(34, 211, 238, .22); }
 
+/* The palette themes below carry a single soft accent glow on the content
+   surface — enough to give the theme a mood, far too faint to fight the
+   data sitting on top of it. Fixed to the viewport so the sticky topbar
+   shares the same wash. */
+[data-theme="forest"] .main,
+[data-theme="forest"] .topbar {
+  background-color: var(--bg-app);
+  background-image:
+    radial-gradient(1100px 820px at 6% 8%, rgba(63, 185, 143, .10), transparent 60%),
+    radial-gradient(1300px 1000px at 92% 108%, rgba(16, 84, 62, .16), transparent 66%);
+  background-repeat: no-repeat, no-repeat;
+  background-attachment: fixed;
+}
+
+[data-theme="mocha"] .main,
+[data-theme="mocha"] .topbar {
+  background-color: var(--bg-app);
+  background-image:
+    radial-gradient(1000px 760px at 88% -6%, rgba(217, 160, 102, .10), transparent 60%),
+    radial-gradient(1300px 1000px at 4% 110%, rgba(120, 80, 44, .16), transparent 66%);
+  background-repeat: no-repeat, no-repeat;
+  background-attachment: fixed;
+}
+
+[data-theme="dawn"] .main,
+[data-theme="dawn"] .topbar {
+  background-color: var(--bg-app);
+  background-image:
+    radial-gradient(1100px 820px at 92% -8%, rgba(232, 125, 148, .16), transparent 62%),
+    radial-gradient(1200px 900px at 4% 108%, rgba(210, 78, 107, .07), transparent 64%);
+  background-repeat: no-repeat, no-repeat;
+  background-attachment: fixed;
+}
+[data-theme="dawn"] .topbar { border-bottom-color: var(--border-soft); }
+
 /* Frosted topbar — content scrolls visibly under it instead of vanishing
    behind an opaque bar. The themed backdrop is dropped here on purpose: the
    bar becomes translucent, so `.main`'s own fixed background (starfield, hull
