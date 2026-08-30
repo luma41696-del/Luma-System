@@ -4,6 +4,7 @@
  */
 
 import { session, changeOwnPassword } from './auth.js';
+import { mobileTab } from './mobile-link.js';
 import {
   can, isAdmin, PERMISSIONS, PERMISSION_GROUPS, PERMISSION_PRESETS, ROLE_LABELS,
   JOB_ROLES, DEPARTMENTS, rolesLabel
@@ -29,6 +30,9 @@ const TABS = [
   { id: 'general',       labelKey: 'settings.tab.general',       icon: 'sliders-horizontal' },
   { id: 'notifications', labelKey: 'settings.tab.notifications', icon: 'bell' },
   { id: 'security',      labelKey: 'settings.tab.security',      icon: 'shield' },
+  // Everyone links their own phone; the code only ever carries the claims the
+  // browser session already had.
+  { id: 'mobile',        labelKey: 'settings.tab.mobile',        icon: 'smartphone' },
   { id: 'permissions',   labelKey: 'settings.tab.permissions',   icon: 'key-round', perm: 'settings.manage' },
   { id: 'audit',         labelKey: 'settings.tab.audit',         icon: 'scroll-text', perm: 'settings.manage' },
   // Open to everyone: each person picks their own assistant here. Only the
@@ -77,6 +81,7 @@ export async function render(container, ctx) {
     if (active === 'general') generalTab(host);
     else if (active === 'notifications') notificationsTab(host);
     else if (active === 'security') securityTab(host);
+    else if (active === 'mobile') mobileTab(host);
     else if (active === 'permissions') permissionsTab(host, unsubs);
     else if (active === 'audit') auditTab(host, unsubs);
     else if (active === 'ai') aiTab(host);

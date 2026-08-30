@@ -105,6 +105,10 @@ exports.readPage = aiSettings.readPage;
 const whatsapp = require('./whatsapp/analyse');
 exports.analyseWhatsappChat = whatsapp.analyseWhatsappChat;
 
+const pairing = require('./mobile/pairing');
+exports.createPairing = pairing.createPairing;
+exports.redeemPairing = pairing.redeemPairing;
+
 const aiImage = require('./ai/image');
 exports.generateImage = aiImage.generateImage;
 

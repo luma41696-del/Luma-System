@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "1005101836242",
+    "firebase_url": "https://luma-web-d3550-default-rtdb.firebaseio.com",
+    "project_id": "luma-web-d3550",
+    "storage_bucket": "luma-web-d3550.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1005101836242:android:0feb9b7f5799ffc8c1ca0b",
+        "android_client_info": {
+          "package_name": "com.lumaagency.luma"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQvpY9NMfHp70EBkvxlmc6ntty-AYJrfc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -511,6 +511,14 @@ service cloud.firestore {
       allow delete: if can('am');
     }
 
+    // ----------------------------------------------------------- device pairing
+    // A pairing code is a bearer credential for two minutes. Reading one would
+    // be enough to sign in as its owner, so no client touches this collection
+    // at all — both callables run with the Admin SDK.
+    match /pairingCodes/{code} {
+      allow read, write: if false;
+    }
+
     // -------------------------------------------------------------- whatsapp
     // Conversations arrive from Meta's webhook through the Admin SDK. Clients
     // may read them — they are client correspondence, gated on clients.view —

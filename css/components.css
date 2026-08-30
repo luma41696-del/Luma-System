@@ -2776,3 +2776,89 @@ html[dir="ltr"] .ai-panel.is-open,
 @media (prefers-reduced-motion: reduce) {
   .reader__panel { animation: none; }
 }
+
+/* ------------------------------------------------------------------ pairing */
+/* The QR for linking a phone. Sized so it scans from a normal arm's length
+   without filling the card. */
+
+.pair-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+}
+
+.pair-stage__idle,
+.pair-stage__live {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-4);
+  text-align: center;
+}
+
+.pair-stage__placeholder {
+  display: grid;
+  place-items: center;
+  width: 132px;
+  height: 132px;
+  border: 2px dashed var(--border-soft);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+}
+.pair-stage__placeholder i,
+.pair-stage__placeholder svg { width: 44px; height: 44px; }
+.pair-stage__placeholder--dim { opacity: .6; }
+
+/* A white plate under the code regardless of theme — a dark-on-dark QR is not
+   a QR any camera will read. */
+.pair-qr {
+  padding: var(--sp-2);
+  background: #fff;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px -16px rgba(0, 0, 0, .6);
+  animation: pair-in .22s ease-out both;
+}
+/* Square by construction. global.css caps every svg at `max-width: 100%`, so a
+   fixed width and a fixed height disagree on a narrow card and the code comes
+   out stretched — which no camera will read. Height follows the width instead. */
+.pair-qr svg {
+  display: block;
+  width: min(208px, 100%);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+/* Same footprint as the finished code, so the card does not jump when it lands. */
+.pair-qr__pending { width: 224px; height: 224px; border-radius: var(--radius-lg); }
+
+.pair-countdown {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.pair-countdown__time {
+  font-size: var(--fs-lg);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .04em;
+  color: var(--text);
+}
+.pair-countdown__time.is-urgent {
+  color: var(--danger);
+  animation: pair-pulse 1s ease-in-out infinite;
+}
+
+@keyframes pair-in {
+  from { opacity: 0; transform: scale(.94); }
+  to   { opacity: 1; transform: scale(1); }
+}
+@keyframes pair-pulse {
+  50% { opacity: .45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pair-qr { animation: none; }
+  .pair-countdown__time.is-urgent { animation: none; }
+}
