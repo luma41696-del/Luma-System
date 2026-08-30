@@ -24,7 +24,13 @@
   # in client code; access is enforced server-side by Firestore Security
   # Rules and App Check, not by hiding this value. Scope the scanner past it
   # rather than disabling it, so a real accidental leak still gets caught.
-  SECRETS_SCAN_OMIT_PATHS = "js/firebase-config.js,firebase-messaging-sw.js"
+  #
+  # mobile/ is the phone app (google-services.json, GoogleService-Info.plist,
+  # firebase_options.dart). Those carry the Android and iOS client keys, which
+  # are public identifiers for the same reason. Netlify reads the repository,
+  # not just the output, so it sees them even though build.js copies only
+  # assets/, css/ and js/ — nothing under mobile/ is ever published here.
+  SECRETS_SCAN_OMIT_PATHS = "js/firebase-config.js,firebase-messaging-sw.js,mobile/**"
 
 # The adapter in netlify/functions/api.js requires the handlers from functions/,
 # so that tree must be bundled with it.
