@@ -203,10 +203,37 @@ svg.lucide {
 
 /* The brand mark is a single alpha PNG recoloured through a CSS mask, so a
    dark / light / monochrome version is derived without editing the artwork. */
+/* The mark is a mask, not an image, so whatever is painted behind it shows
+   through the logo's shape. That is what lets colour move inside the logo
+   without a second asset or an SVG rewrite: the gradient is the background,
+   the logo is the window. */
 .logo-mark {
   -webkit-mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
   mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
-  background-color: var(--yellow);
+  /* Painted first, so the mark is never invisible if the gradient fails. */
+  background-color: var(--brand);
+  background-image: linear-gradient(
+    115deg,
+    var(--brand-light) 0%,
+    var(--accent-3) 25%,
+    var(--brand) 50%,
+    var(--accent-2) 75%,
+    var(--brand-light) 100%
+  );
+  /* Oversized so there is somewhere to travel; the pass is slow enough to
+     read as a sheen rather than a flicker in the corner of the eye. */
+  background-size: 300% 300%;
+  animation: logo-sheen 8s var(--ease) infinite;
   aspect-ratio: 216 / 604;
   flex: none;
+}
+
+@keyframes logo-sheen {
+  0%,  100% { background-position:   0% 50%; }
+  50%       { background-position: 100% 50%; }
+}
+
+/* A logo that never stops moving is a logo nobody stops noticing. */
+@media (prefers-reduced-motion: reduce) {
+  .logo-mark { animation: none; }
 }

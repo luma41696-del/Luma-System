@@ -52,22 +52,83 @@ function watchPageScroll() {
   sync();
 }
 
+/* ---------------------------------------------------------------- intro */
+
+/**
+ * Take the splash away.
+ *
+ * Called from every exit the bootstrap has, including the failing one: an
+ * intro that outlives the load it was covering is not a flourish, it is a
+ * locked door. The element is removed rather than left hidden so it cannot
+ * catch a stray click once it is invisible.
+ */
+function hideIntro() {
+  const intro = document.getElementById('intro');
+  if (!intro || intro.classList.contains('is-done')) return;
+
+  intro.classList.add('is-done');
+
+  // `transitionend` is the tidy path, but it is not a promise: a browser that
+  // collapses the transition, or a tab throttled in the background, may never
+  // send it. The class alone already makes the overlay invisible and
+  // untouchable, so the timer is only there to take the empty node away.
+  const drop = () => intro.remove();
+  intro.addEventListener('transitionend', drop, { once: true });
+  setTimeout(drop, 1000);
+}
+
+/**
+ * A tap on a sidebar icon animates that icon.
+ *
+ * Delegated, because buildNav() replaces the whole list whenever the session's
+ * permissions change and per-item listeners would go with it. The class is
+ * taken off on animationend so a second tap replays it rather than doing
+ * nothing.
+ */
+function wireNavTaps() {
+  const sidebar = document.querySelector('.sidebar');
+  if (!sidebar) return;
+
+  sidebar.addEventListener('pointerdown', (event) => {
+    const item = event.target.closest('.nav-item');
+    if (!item) return;
+
+    item.classList.remove('is-tapped');
+    // Read a layout property so the removal lands before the class returns;
+    // otherwise the browser coalesces both and the animation never restarts.
+    void item.offsetWidth;
+    item.classList.add('is-tapped');
+  });
+
+  sidebar.addEventListener('animationend', (event) => {
+    if (event.animationName === 'nav-pop') {
+      event.target.closest('.nav-item')?.classList.remove('is-tapped');
+    }
+  });
+}
+
 /* ------------------------------------------------------------ bootstrap */
 
 (async function bootstrap() {
   bootIcons();
   applyStaticI18n();
   initSound();
-  if (!(await requireAuth())) return;
+  if (!(await requireAuth())) {
+    // Heading to the login page — let the intro go with this document.
+    hideIntro();
+    return;
+  }
 
   // A temporary password must be replaced before anything else loads.
   if (session.profile?.mustChangePassword) {
+    hideIntro();
     location.replace('index.html');
     return;
   }
 
   applyStoredSidebarState();
   wireChrome();
+  wireNavTaps();
   paintIdentity();
   buildNav();
 
@@ -82,10 +143,12 @@ function watchPageScroll() {
   watchPageScroll();
   initReader();
   await startRouter(pageContainer);
+  hideIntro();
 
   window.addEventListener('beforeunload', () => teardown.forEach((fn) => { try { fn(); } catch {} }));
 })().catch((err) => {
   console.error('[luma] bootstrap failed', err);
+  hideIntro();
   render(pageContainer, `
     <div class="page__inner"><div class="empty-state error-state">
       <div class="empty-state__icon"><i data-lucide="alert-triangle"></i></div>

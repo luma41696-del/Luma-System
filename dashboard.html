@@ -58,6 +58,20 @@
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js" defer></script>
 </head>
 <body>
+  <!-- Painted by the markup, not by a script, so it is already on screen
+       before any module has parsed. app.js removes it once the first page is
+       rendered; the inline failsafe below clears it if that never happens, so
+       a bad load leaves a broken app rather than a locked door. -->
+  <div class="intro" id="intro" aria-hidden="true">
+    <span class="intro__mark logo-mark"></span>
+  </div>
+  <script>
+    setTimeout(function () {
+      var intro = document.getElementById('intro');
+      if (intro) intro.classList.add('is-done');
+    }, 8000);
+  </script>
+
   <a class="skip-link" href="#page-container" data-i18n="shell.skipToContent">تخطّي إلى المحتوى</a>
 
   <div class="app-shell" id="app-shell">

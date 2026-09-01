@@ -654,3 +654,83 @@
 /* With glass off the bar is opaque, so the surface behind it is irrelevant —
    but it must still not let content show through a solid-looking bar. */
 :root:not([data-glass="on"]) .topbar { background-color: var(--bg-app); }
+
+/* ------------------------------------------------------- nav icon feedback */
+/* A tap should land somewhere. The icon dips, overshoots and settles — the
+   whole thing is under half a second, because feedback that outlasts the
+   thought behind it stops being feedback and becomes a wait. */
+@keyframes nav-pop {
+  0%   { transform: scale(1)    rotate(0deg); }
+  30%  { transform: scale(.82)  rotate(-7deg); }
+  62%  { transform: scale(1.16) rotate(4deg); }
+  100% { transform: scale(1)    rotate(0deg); }
+}
+
+.nav-item > svg,
+.nav-item > [data-lucide] {
+  transition: transform var(--t-fast) var(--ease);
+  transform-origin: center;
+}
+.nav-item:hover > svg,
+.nav-item:hover > [data-lucide] { transform: scale(1.08); }
+
+.nav-item.is-tapped > svg,
+.nav-item.is-tapped > [data-lucide] {
+  animation: nav-pop 0.42s var(--ease);
+}
+
+/* A ring that leaves from under the icon, so the press has somewhere to go
+   on a collapsed sidebar where there is no label to highlight. */
+.nav-item { position: relative; }
+.nav-item.is-tapped::after {
+  content: "";
+  position: absolute;
+  inset-inline-start: 10px;
+  top: 50%;
+  width: 30px;
+  height: 30px;
+  margin-top: -15px;
+  border-radius: 50%;
+  border: 2px solid var(--brand-light);
+  animation: nav-ring 0.5s var(--ease) forwards;
+  pointer-events: none;
+}
+@keyframes nav-ring {
+  from { transform: scale(.4); opacity: .55; }
+  to   { transform: scale(1.5); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-item.is-tapped > svg,
+  .nav-item.is-tapped > [data-lucide] { animation: none; }
+  .nav-item.is-tapped::after { animation: none; content: none; }
+  .nav-item:hover > svg,
+  .nav-item:hover > [data-lucide] { transform: none; }
+}
+
+/* ------------------------------------------------------------------ intro */
+/* Covers the app while it authenticates and loads. It is the logo and nothing
+   else: a splash that explains itself is a splash that stayed too long. */
+.intro {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: var(--bg-app);
+  transition: opacity 0.45s var(--ease), visibility 0.45s;
+}
+/* The logo is the whole screen and the whole loading indicator: the colour
+   travelling through the mark is what says "working", so there is no bar
+   underneath repeating it. */
+.intro__mark {
+  height: clamp(84px, 18vh, 132px);
+  /* Faster than the sidebar's, because this one is doing the waiting. */
+  animation-duration: 2.6s;
+}
+
+.intro.is-done {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
