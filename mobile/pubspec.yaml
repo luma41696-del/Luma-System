@@ -44,6 +44,7 @@ dependencies:
   shared_preferences: ^2.5.5
   flutter_localizations:
     sdk: flutter
+  firebase_database: ^12.5.0
 
 dev_dependencies:
   flutter_test:
@@ -55,6 +56,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -66,6 +68,24 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  assets:
+    - assets/logo/
+
+  # The same face the website uses, so the two read as one product. Four
+  # weights rather than the family's seven: these are the ones the UI asks for,
+  # and each unused weight is ~150 KB of APK for nothing.
+  fonts:
+    - family: DIN Next Arabic
+      fonts:
+        - asset: assets/fonts/DINNextArabic-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/DINNextArabic-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/DINNextArabic-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/DINNextArabic-Black.ttf
+          weight: 800
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -97,3 +117,18 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# Launcher icons, generated from the same mark the website uses so the phone
+# and the browser tab are visibly one product:
+#   dart run flutter_launcher_icons
+#
+# The adaptive background is the icon's own navy (sampled from the artwork),
+# so Android's circular mask leaves no seam where the layers meet.
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/logo/app-icon.png"
+  adaptive_icon_background: "#141B34"
+  adaptive_icon_foreground: "assets/logo/app-icon.png"
+  # iOS rejects an icon with an alpha channel; the corners are transparent.
+  remove_alpha_ios: true

@@ -26,6 +26,17 @@ class PairingPayload {
   /// The host, for showing a person what they are about to talk to.
   String get host => Uri.parse(apiBase).host;
 
+  /// The body `redeemPairing` expects.
+  ///
+  /// It lives here, beside the thing that knows the code, because the first
+  /// build shipped without it: the call sent only the device name and the
+  /// server answered "الرمز مطلوب". Building the request where the code is
+  /// makes that omission impossible to repeat, and testable.
+  Map<String, dynamic> redeemRequest(String device) => {
+        'code': code,
+        'device': device,
+      };
+
   /// Returns null for anything that is not one of our codes, so the scanner
   /// can keep looking instead of failing on the first stray barcode.
   static PairingPayload? tryParse(String raw) {

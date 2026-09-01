@@ -141,6 +141,12 @@
   --warning-soft: rgba(251, 191, 36, 0.14);
   --danger: #F87171;
   --danger-soft: rgba(248, 113, 113, 0.14);
+  /* Red for *text* sitting on that tint. On the dark themes `--danger` itself
+     reads fine, so this is the same colour; the light themes override it,
+     because a red mixed for a navy card measures 2.8:1 on a white one. A
+     separate token rather than a change to `--danger`, so nothing that
+     already uses the red as a fill or a border shifts. */
+  --danger-ink: var(--danger);
   --info: #60A5FA;
   --info-soft: rgba(96, 165, 250, 0.14);
   --purple: #A78BFA;
@@ -770,4 +776,15 @@ html.theme-swapping * {
   ::view-transition-new(root) { animation: none; }
   html.theme-swapping,
   html.theme-swapping * { transition: none !important; }
+}
+
+/* ---------------------------------------------------------------- contrast */
+/* The light themes inherit their status colours from the dark palette, where a
+   pale red belongs. Text drawn in it on a white card is hard to read, so the
+   ink version is darkened for those four. */
+[data-theme="light"],
+[data-theme="white"],
+[data-theme="classic"],
+[data-theme="dawn"] {
+  --danger-ink: #B3261E;
 }

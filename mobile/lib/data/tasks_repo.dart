@@ -55,24 +55,65 @@ class TasksRepo {
   }
 }
 
-/// The counts the home screen leads with.
+/// The counts the home screen leads with, and the ones the profile shows.
+///
+/// The same buckets the website's employee profile uses, so a person reading
+/// their numbers on a phone sees what their manager sees on a desktop.
 class TaskSummary {
   const TaskSummary({
+    required this.total,
     required this.open,
     required this.dueToday,
     required this.overdue,
     required this.completed,
+    required this.completedToday,
+    required this.completedWeek,
+    required this.completedMonth,
+    required this.completedYear,
   });
 
+  final int total;
   final int open;
   final int dueToday;
   final int overdue;
   final int completed;
+  final int completedToday;
+  final int completedWeek;
+  final int completedMonth;
+  final int completedYear;
 
-  factory TaskSummary.of(List<Task> tasks) => TaskSummary(
-        open: tasks.where((task) => task.status.isOpen).length,
-        dueToday: tasks.where((task) => task.isDueToday).length,
-        overdue: tasks.where((task) => task.isOverdue).length,
-        completed: tasks.where((task) => task.status == TaskStatus.completed).length,
-      );
+  /// Whole percent, and zero rather than a division by zero for someone who
+  /// has no tasks at all.
+  int get completionRate =>
+      total == 0 ? 0 : ((completed / total) * 100).round();
+
+  factory TaskSummary.of(List<Task> tasks) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    // The website counts weeks from Sunday; Dart numbers Monday as 1, so
+    // `weekday % 7` is the number of days since the last Sunday.
+    final week = today.subtract(Duration(days: now.weekday % 7));
+    final month = DateTime(now.year, now.month);
+    final year = DateTime(now.year);
+
+    int finishedSince(DateTime from) => tasks
+        .where((task) =>
+            task.status == TaskStatus.completed &&
+            task.completedAt != null &&
+            !task.completedAt!.isBefore(from))
+        .length;
+
+    return TaskSummary(
+      total: tasks.length,
+      open: tasks.where((task) => task.status.isOpen).length,
+      dueToday: tasks.where((task) => task.isDueToday).length,
+      overdue: tasks.where((task) => task.isOverdue).length,
+      completed:
+          tasks.where((task) => task.status == TaskStatus.completed).length,
+      completedToday: finishedSince(today),
+      completedWeek: finishedSince(week),
+      completedMonth: finishedSince(month),
+      completedYear: finishedSince(year),
+    );
+  }
 }

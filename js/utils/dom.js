@@ -185,10 +185,56 @@ export function avatarHTML(user = {}, size = '') {
   const hue = [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360;
   const cls = size ? `avatar avatar--${size}` : 'avatar';
   if (user.photoURL) {
-    return `<span class="${cls}"><img src="${attr(user.photoURL)}" alt="${attr(name)}" loading="lazy"></span>`;
+    // The initials travel with the photo so a dead URL can fall back to them
+    // instead of leaving a broken-image glyph where a face should be.
+    return `<span class="${cls}" style="background:hsl(${hue} 62% 42%);color:#fff">` +
+      `<img src="${attr(user.photoURL)}" alt="${attr(name)}" loading="lazy" ` +
+      `data-initials="${attr(initials)}"></span>`;
   }
   return `<span class="${cls}" style="background:hsl(${hue} 62% 42%);color:#fff" aria-label="${attr(name)}">${esc(initials)}</span>`;
 }
+
+/**
+ * Replace images that fail to load.
+ *
+ * A deleted client logo or a stale photo URL used to leave the browser's
+ * broken-image icon sitting in the layout — the one piece of a card nobody
+ * designed. There is no per-image handler here because `error` does not
+ * bubble: one capturing listener on the document catches every image in the
+ * app, including ones rendered long after this runs.
+ *
+ * An image says what it wants instead: `data-initials` for a person,
+ * `data-fallback` naming a lucide icon for anything else.
+ */
+function initImageFallbacks() {
+  document.addEventListener('error', (event) => {
+    const img = event.target;
+    if (!(img instanceof HTMLImageElement) || img.dataset.fellBack) return;
+    img.dataset.fellBack = '1';
+
+    const { initials, fallback } = img.dataset;
+
+    if (initials) {
+      const holder = img.parentElement;
+      img.remove();
+      if (holder) holder.textContent = initials;
+      return;
+    }
+
+    if (fallback) {
+      const icon = document.createElement('i');
+      icon.setAttribute('data-lucide', fallback);
+      icon.className = img.className;
+      img.replaceWith(icon);
+      refreshIcons(icon.parentElement || document);
+      return;
+    }
+
+    img.remove();
+  }, true);
+}
+
+initImageFallbacks();
 
 /** Avatar with a live presence dot. */
 export function avatarWithPresence(user = {}, state = 'offline', size = '') {

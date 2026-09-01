@@ -288,7 +288,14 @@ html[dir="ltr"] .select { background-position: right var(--sp-3) center; padding
 .client-picker__chevron { flex: none; color: var(--text-muted); width: 16px; height: 16px; }
 
 /* Client branding shown on a task card, next to its name. */
-.task-card__client-logo { width: 16px; height: 16px; border-radius: 4px; object-fit: cover; flex: none; }
+.task-card__client-logo {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex: none;
+  background: var(--bg-inset);
+}
 
 .input-group { position: relative; }
 .input-group .input { padding-inline-end: 44px; }
@@ -1031,27 +1038,119 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .task-group--today .task-group__count { background: var(--brand-soft); color: var(--brand-light); }
 
 /* ============================================================== TASK CARD */
+/* The card carries one job: let someone scan a board and know what needs
+   doing. Everything here serves that — the priority stripe is readable from
+   the edge of vision, the deadline turns red before anything else does, and
+   the rest is kept quiet so those two can be seen. */
 .task-card {
+  position: relative;
   background: var(--bg-surface);
   border: 1px solid var(--border-soft);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   padding: var(--sp-4);
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
   cursor: pointer;
-  transition: transform var(--t-base) var(--ease), border-color var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease);
-  border-inline-start: 3px solid var(--border-strong);
+  overflow: hidden;
+  transition:
+    transform var(--t-base) var(--ease),
+    border-color var(--t-base) var(--ease),
+    box-shadow var(--t-base) var(--ease);
 }
-.task-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: var(--border-strong); }
-.task-card[data-priority="urgent"] { border-inline-start-color: var(--danger); }
-.task-card[data-priority="high"] { border-inline-start-color: var(--warning); }
-.task-card[data-priority="medium"] { border-inline-start-color: var(--info); }
-.task-card[data-priority="low"] { border-inline-start-color: var(--gray); }
+
+/* The priority stripe is drawn rather than bordered, so the card keeps one
+   even radius on all four corners instead of a flat edge on one side. */
+.task-card::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 4px;
+  background: var(--border-strong);
+  transition: width var(--t-base) var(--ease);
+}
+.task-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-strong);
+}
+.task-card:hover::before { width: 6px; }
+.task-card:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+.task-card[data-priority="urgent"]::before { background: var(--danger); }
+.task-card[data-priority="high"]::before  { background: var(--warning); }
+.task-card[data-priority="medium"]::before { background: var(--info); }
+.task-card[data-priority="low"]::before   { background: var(--gray); }
+
+/* The priority dot in the chip takes the same colour as the stripe, so the
+   word and the edge are obviously the same fact rather than two. */
+.task-card[data-priority="urgent"] .task-chip__dot { background: var(--danger); }
+.task-card[data-priority="high"] .task-chip__dot   { background: var(--warning); }
+.task-card[data-priority="medium"] .task-chip__dot { background: var(--info); }
+.task-card[data-priority="low"] .task-chip__dot    { background: var(--gray); }
 .task-card__top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--sp-2); }
-.task-card__title { font-size: var(--fs-md); font-weight: 700; line-height: 1.4; }
-.task-card__meta { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; font-size: var(--fs-xs); color: var(--text-muted); }
-.task-card__meta span { display: inline-flex; align-items: center; gap: 4px; }
+.task-card__title { font-size: var(--fs-md); font-weight: 700; line-height: 1.45; }
+.task-card__desc { font-size: var(--fs-sm); color: var(--text-muted); line-height: 1.6; }
+
+.task-card__client {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  min-width: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-muted);
+}
+
+/* The bar and its number share a row: the width is the glanceable half, the
+   figure is there for when the widths are too close to call. */
+.task-card__progress { display: flex; align-items: center; gap: var(--sp-2); }
+.task-card__progress .progress { flex: 1; }
+.task-card__pct {
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  min-width: 30px;
+  text-align: end;
+}
+
+/* Metadata as chips rather than a run-on line: each fact gets its own shape,
+   and a narrow card wraps them instead of stacking bare words. */
+.task-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.task-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-inset);
+  font-size: var(--fs-2xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.task-chip [data-lucide], .task-chip svg { width: 13px; height: 13px; }
+.task-chip__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--gray);
+  flex: none;
+}
+/* A deadline that has passed is the one thing on the card that should shout. */
+.task-chip--danger {
+  background: var(--danger-soft);
+  color: var(--danger-ink);
+}
 .task-card__foot { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
 /* Who worked on the task — one quiet line, truncated rather than wrapped so a
    long list can never push the card out of shape. */
@@ -1064,7 +1163,10 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
   color: var(--text-muted);
 }
 .task-card__workers [data-lucide] { flex: none; color: var(--brand-light); }
-.task-card.is-overdue { border-inline-start-color: var(--danger); background: linear-gradient(180deg, var(--danger-soft), transparent 60%), var(--bg-surface); }
+.task-card.is-overdue::before { background: var(--danger); }
+.task-card.is-overdue {
+  background: linear-gradient(180deg, var(--danger-soft), transparent 60%), var(--bg-surface);
+}
 
 /* ------------------------------------------------- work happening now */
 /* "قيد التنفيذ" is the one status describing something in motion right now

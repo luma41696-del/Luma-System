@@ -41,6 +41,17 @@ void main() {
       expect(PairingPayload.tryParse('luma-pair:1::https://a.com'), isNull);
     });
 
+    test('the redeem request actually carries the code', () {
+      // The first build sent only the device name, and every scan failed with
+      // "الرمز مطلوب" from the server's validator.
+      final payload =
+          PairingPayload.tryParse('luma-pair:1:$code:https://luma.example.com/api')!;
+      final request = payload.redeemRequest('Pixel 8');
+
+      expect(request['code'], code);
+      expect(request['device'], 'Pixel 8');
+    });
+
     test('refuses to send a token over plain http on the open internet', () {
       expect(
         PairingPayload.tryParse('luma-pair:1:$code:http://evil.example.com/api'),
@@ -61,6 +72,12 @@ void main() {
   });
 
   group('task rules', () {
+    // "Now" is a terrible test deadline: it is due today, and a microsecond
+    // later it is also overdue, so the same task lands in two buckets and the
+    // result depends on how busy the machine is. Late today is unambiguous.
+    final now = DateTime.now();
+    final laterToday = DateTime(now.year, now.month, now.day, 23, 59);
+
     Task make({
       DateTime? dueAt,
       TaskStatus status = TaskStatus.assigned,
@@ -91,9 +108,17 @@ void main() {
     });
 
     test('due today counts only live work', () {
-      final now = DateTime.now();
-      expect(make(dueAt: now).isDueToday, isTrue);
-      expect(make(dueAt: now, status: TaskStatus.completed).isDueToday, isFalse);
+      expect(make(dueAt: laterToday).isDueToday, isTrue);
+      expect(
+        make(dueAt: laterToday, status: TaskStatus.completed).isDueToday,
+        isFalse,
+      );
+    });
+
+    test('a deadline later today is due but not yet overdue', () {
+      final task = make(dueAt: laterToday);
+      expect(task.isDueToday, isTrue);
+      expect(task.isOverdue, isFalse);
     });
 
     test('an unknown status falls back rather than throwing', () {
@@ -104,8 +129,8 @@ void main() {
     test('the summary counts each bucket independently', () {
       final summary = TaskSummary.of([
         make(),
-        make(dueAt: DateTime.now()),
-        make(dueAt: DateTime.now().subtract(const Duration(days: 2))),
+        make(dueAt: laterToday),
+        make(dueAt: now.subtract(const Duration(days: 2))),
         make(status: TaskStatus.completed),
       ]);
 

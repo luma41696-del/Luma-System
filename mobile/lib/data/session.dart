@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
+import '../core/permissions.dart';
+
 /// Who is signed in, and what they are allowed to do.
 ///
 /// Permissions arrive as short codes in the Firebase ID token's custom claims,
@@ -35,10 +37,24 @@ class Session extends ChangeNotifier {
 
   bool get isAdmin => _claims['role'] == 'admin';
 
+  bool get isActive {
+    final status = _claims['status'];
+    return status == null || status == 'active';
+  }
+
   List<String> get permissions =>
       (_claims['perms'] as List?)?.whereType<String>().toList() ?? const [];
 
-  bool can(String permission) => isAdmin || permissions.contains(permission);
+  /// Takes the readable name and checks the short code the token carries.
+  /// An unknown name denies, so a typo cannot open a screen by accident.
+  bool can(String permission) {
+    if (isAdmin) return true;
+    if (!isActive) return false;
+    final code = Perm.code(permission);
+    return code != null && permissions.contains(code);
+  }
+
+  bool canAny(List<String> permissions) => permissions.any(can);
 
   /// Starts watching auth. Called once, before the first frame is drawn.
   Future<void> start() async {
@@ -76,6 +92,10 @@ class Session extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  /// Re-reads the profile after the person edits it, so the screens behind
+  /// the form show the new values without a restart.
+  Future<void> refresh() => _onUser(FirebaseAuth.instance.currentUser);
 
   Future<void> signOut() => FirebaseAuth.instance.signOut();
 }

@@ -18,7 +18,7 @@ class TaskTile extends StatelessWidget {
     final overdue = task.isOverdue;
 
     return Material(
-      color: AppColors.surface,
+      color: AppColors.bgSurface,
       borderRadius: BorderRadius.circular(AppRadius.tile),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.tile),
@@ -67,7 +67,7 @@ class TaskTile extends StatelessWidget {
                           ),
                         ),
                         if (due != null) ...[
-                          const Text(
+                          Text(
                             ' · ',
                             style: TextStyle(color: AppColors.textMuted),
                           ),
@@ -120,7 +120,7 @@ class _PriorityPip extends StatelessWidget {
             decoration: BoxDecoration(
               color: i < priority.weight
                   ? priority.color
-                  : AppColors.divider,
+                  : AppColors.border,
               borderRadius: BorderRadius.circular(2),
             ),
           ),

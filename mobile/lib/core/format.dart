@@ -5,10 +5,16 @@ abstract final class Fmt {
   static final _day = DateFormat('d MMMM', 'ar');
   static final _dayTime = DateFormat('d MMMM · HH:mm', 'ar');
   static final _weekday = DateFormat('EEEE', 'ar');
+  static final _monthYear = DateFormat('MMMM yyyy', 'ar');
+  static final _dayMonth = DateFormat('d MMMM', 'ar');
+  static final _shortWeekday = DateFormat('E', 'ar');
 
   static String date(DateTime value) => _day.format(value);
   static String dateTime(DateTime value) => _dayTime.format(value);
   static String weekday(DateTime value) => _weekday.format(value);
+  static String monthAndYear(DateTime value) => _monthYear.format(value);
+  static String dayAndMonth(DateTime value) => _dayMonth.format(value);
+  static String shortWeekday(DateTime value) => _shortWeekday.format(value);
 
   /// "منذ ٣ ساعات" and friends.
   ///

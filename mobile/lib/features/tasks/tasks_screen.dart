@@ -39,7 +39,7 @@ class _TasksScreenState extends State<TasksScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffold,
+      backgroundColor: AppColors.bgApp,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -92,8 +92,8 @@ class _TasksScreenState extends State<TasksScreen> {
                     );
                   }
                   if (!snapshot.hasData) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: AppColors.ink),
+                    return Center(
+                      child: CircularProgressIndicator(color: AppColors.brand),
                     );
                   }
 
@@ -134,7 +134,7 @@ class _ScopeToggle extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.bgSurface,
         borderRadius: BorderRadius.circular(AppRadius.chip),
       ),
       child: Row(
@@ -147,7 +147,7 @@ class _ScopeToggle extends StatelessWidget {
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
                 decoration: BoxDecoration(
-                  color: option == scope ? AppColors.ink : Colors.transparent,
+                  color: option == scope ? AppColors.brand : Colors.transparent,
                   borderRadius: BorderRadius.circular(AppRadius.chip),
                 ),
                 child: Text(
@@ -156,7 +156,7 @@ class _ScopeToggle extends StatelessWidget {
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     color: option == scope
-                        ? Colors.white
+                        ? AppColors.onBrand
                         : AppColors.textSecondary,
                   ),
                 ),
@@ -188,7 +188,7 @@ class _Chip extends StatelessWidget {
         alignment: Alignment.center,
         padding: const EdgeInsets.symmetric(horizontal: 18),
         decoration: BoxDecoration(
-          color: active ? AppColors.lime : Colors.white,
+          color: active ? AppColors.brand : AppColors.bgSurface,
           borderRadius: BorderRadius.circular(AppRadius.chip),
         ),
         child: Text(
@@ -196,7 +196,7 @@ class _Chip extends StatelessWidget {
           style: TextStyle(
             fontSize: 13.5,
             fontWeight: FontWeight.w700,
-            color: active ? AppColors.ink : AppColors.textSecondary,
+            color: active ? AppColors.onBrand : AppColors.textSecondary,
           ),
         ),
       ),
@@ -234,7 +234,7 @@ class _Message extends StatelessWidget {
             Text(
               text,
               textAlign: TextAlign.center,
-              style: const TextStyle(
+              style: TextStyle(
                 color: AppColors.textSecondary,
                 fontSize: 13,
               ),

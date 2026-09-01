@@ -14,7 +14,7 @@ class NotificationsScreen extends StatelessWidget {
     final uid = Session.instance.uid;
 
     return Scaffold(
-      backgroundColor: AppColors.scaffold,
+      backgroundColor: AppColors.bgApp,
       body: SafeArea(
         bottom: false,
         child: Column(
@@ -37,14 +37,14 @@ class NotificationsScreen extends StatelessWidget {
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
-                    return const Center(
-                      child: CircularProgressIndicator(color: AppColors.ink),
+                    return Center(
+                      child: CircularProgressIndicator(color: AppColors.bgElevated),
                     );
                   }
 
                   final docs = snapshot.data!.docs;
                   if (docs.isEmpty) {
-                    return const Center(
+                    return Center(
                       child: Padding(
                         padding: EdgeInsets.only(bottom: 90),
                         child: Column(
@@ -94,7 +94,7 @@ class _NotificationRow extends StatelessWidget {
     final created = data['createdAt'];
 
     return Material(
-      color: unread ? AppColors.limeTint : AppColors.surface,
+      color: unread ? AppColors.brandTint : AppColors.bgSurface,
       borderRadius: BorderRadius.circular(AppRadius.tile),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppRadius.tile),
@@ -111,7 +111,7 @@ class _NotificationRow extends StatelessWidget {
                 height: 8,
                 margin: const EdgeInsets.only(top: 6),
                 decoration: BoxDecoration(
-                  color: unread ? AppColors.limeDark : Colors.transparent,
+                  color: unread ? AppColors.brandLight : Colors.transparent,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -132,7 +132,7 @@ class _NotificationRow extends StatelessWidget {
                       const SizedBox(height: 3),
                       Text(
                         data['body'] as String,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13.5,
                           color: AppColors.textSecondary,
                           height: 1.5,
@@ -143,7 +143,7 @@ class _NotificationRow extends StatelessWidget {
                       const SizedBox(height: 6),
                       Text(
                         Fmt.ago(created.toDate()),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11.5,
                           color: AppColors.textMuted,
                         ),

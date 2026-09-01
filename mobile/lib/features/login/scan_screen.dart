@@ -58,7 +58,7 @@ class _ScanScreenState extends State<ScanScreen> {
     try {
       final result = await LumaApi.instance.call(
         'redeemPairing',
-        payload: {'device': _deviceLabel()},
+        payload: payload.redeemRequest(_deviceLabel()),
         overrideBase: payload.apiBase,
       );
 
@@ -96,7 +96,7 @@ class _ScanScreenState extends State<ScanScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.ink,
+      backgroundColor: AppColors.bgApp,
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -144,7 +144,7 @@ class _Status extends StatelessWidget {
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 250),
       child: switch ((busy, message)) {
-        (true, _) => const Column(
+        (true, _) => Column(
             key: ValueKey('busy'),
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -153,7 +153,7 @@ class _Status extends StatelessWidget {
                 height: 26,
                 child: CircularProgressIndicator(
                   strokeWidth: 2.5,
-                  color: AppColors.lime,
+                  color: AppColors.brand,
                 ),
               ),
               SizedBox(height: 14),
@@ -236,7 +236,7 @@ class _ViewfinderScrim extends StatelessWidget {
               width: side,
               height: side,
               decoration: BoxDecoration(
-                border: Border.all(color: AppColors.lime, width: 3),
+                border: Border.all(color: AppColors.brand, width: 3),
                 borderRadius: BorderRadius.circular(28),
               ),
             ),

@@ -1,17 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-import '../../core/app_colors.dart';
+import '../../data/presence.dart';
 import '../../data/push.dart';
 import '../../data/session.dart';
+import '../../widgets/pill_nav.dart';
 import '../home/home_screen.dart';
+import '../more/more_screen.dart';
 import '../notifications/notifications_screen.dart';
-import '../profile/profile_screen.dart';
 import '../tasks/task_detail_screen.dart';
 import '../tasks/tasks_screen.dart';
 import 'today_sheet.dart';
 
-/// The four screens, behind the floating pill bar from the design.
+/// The four tabs, behind the floating pill bar from the design.
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -25,9 +26,10 @@ class _AppShellState extends State<AppShell> {
   @override
   void initState() {
     super.initState();
-    // Push is started here rather than at launch: registering this device
-    // needs a signed-in caller, and this screen only exists once there is one.
+    // Push starts here rather than at launch: registering this device needs a
+    // signed-in caller, and this screen only exists once there is one.
     Push.instance.start();
+    Presence.instance.start();
     WidgetsBinding.instance.addPostFrameCallback((_) => _openPendingTask());
   }
 
@@ -51,155 +53,42 @@ class _AppShellState extends State<AppShell> {
           HomeScreen(),
           TasksScreen(),
           NotificationsScreen(),
-          ProfileScreen(),
+          MoreScreen(),
         ],
       ),
-      bottomNavigationBar: _PillNav(
-        index: _index,
-        onSelect: (value) => setState(() => _index = value),
-        onToday: () => showTodaySheet(context),
-      ),
-    );
-  }
-}
-
-/// The dark floating pill with a raised centre button.
-class _PillNav extends StatelessWidget {
-  const _PillNav({
-    required this.index,
-    required this.onSelect,
-    required this.onToday,
-  });
-
-  final int index;
-  final ValueChanged<int> onSelect;
-  final VoidCallback onToday;
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      minimum: const EdgeInsets.only(bottom: 16),
-      child: Center(
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-          decoration: BoxDecoration(
-            color: AppColors.ink,
-            borderRadius: BorderRadius.circular(40),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: .25),
-                blurRadius: 24,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _NavIcon(
-                icon: Icons.home_rounded,
-                label: 'الرئيسية',
-                active: index == 0,
-                onTap: () => onSelect(0),
-              ),
-              _NavIcon(
-                icon: Icons.checklist_rounded,
-                label: 'المهام',
-                active: index == 1,
-                onTap: () => onSelect(1),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: GestureDetector(
-                  onTap: onToday,
-                  child: Container(
-                    width: 48,
-                    height: 48,
-                    decoration: const BoxDecoration(
-                      color: AppColors.lime,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.bolt_rounded,
-                      color: AppColors.ink,
-                      size: 24,
-                    ),
-                  ),
-                ),
-              ),
-              _UnreadDot(
-                child: _NavIcon(
-                  icon: Icons.notifications_rounded,
-                  label: 'الإشعارات',
-                  active: index == 2,
-                  onTap: () => onSelect(2),
-                ),
-              ),
-              _NavIcon(
-                icon: Icons.person_rounded,
-                label: 'حسابي',
-                active: index == 3,
-                onTap: () => onSelect(3),
-              ),
-            ],
-          ),
+      bottomNavigationBar: _UnreadCount(
+        builder: (unread) => PillNav(
+          index: _index,
+          onSelect: (value) => setState(() => _index = value),
+          onCentre: () => showTodaySheet(context),
+          centreIcon: Icons.bolt_rounded,
+          centreLabel: 'تركيز اليوم',
+          items: [
+            const NavItem(icon: Icons.home_rounded, label: 'الرئيسية'),
+            const NavItem(icon: Icons.checklist_rounded, label: 'المهام'),
+            NavItem(
+              icon: Icons.notifications_rounded,
+              label: 'الإشعارات',
+              badge: unread > 0,
+            ),
+            const NavItem(icon: Icons.grid_view_rounded, label: 'المزيد'),
+          ],
         ),
       ),
     );
   }
 }
 
-class _NavIcon extends StatelessWidget {
-  const _NavIcon({
-    required this.icon,
-    required this.label,
-    required this.active,
-    required this.onTap,
-  });
+/// Feeds the unread dot on the bell.
+class _UnreadCount extends StatelessWidget {
+  const _UnreadCount({required this.builder});
 
-  final IconData icon;
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: label,
-      selected: active,
-      button: true,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOut,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: active ? Colors.white10 : Colors.transparent,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Icon(
-            icon,
-            size: 23,
-            color: active ? AppColors.lime : Colors.white54,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// A dot on the bell while anything is unread.
-class _UnreadDot extends StatelessWidget {
-  const _UnreadDot({required this.child});
-
-  final Widget child;
+  final Widget Function(int unread) builder;
 
   @override
   Widget build(BuildContext context) {
     final uid = Session.instance.uid;
-    if (uid.isEmpty) return child;
+    if (uid.isEmpty) return builder(0);
 
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
       stream: FirebaseFirestore.instance
@@ -208,29 +97,7 @@ class _UnreadDot extends StatelessWidget {
           .where('read', isEqualTo: false)
           .limit(20)
           .snapshots(),
-      builder: (context, snapshot) {
-        final count = snapshot.data?.docs.length ?? 0;
-        return Stack(
-          clipBehavior: Clip.none,
-          children: [
-            child,
-            if (count > 0)
-              PositionedDirectional(
-                top: 6,
-                end: 8,
-                child: Container(
-                  width: 9,
-                  height: 9,
-                  decoration: BoxDecoration(
-                    color: AppColors.lime,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.ink, width: 1.5),
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
+      builder: (context, snapshot) => builder(snapshot.data?.docs.length ?? 0),
     );
   }
 }

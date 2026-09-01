@@ -11,7 +11,7 @@ import '../../widgets/task_tile.dart';
 Future<void> showTodaySheet(BuildContext context) {
   return showModalBottomSheet<void>(
     context: context,
-    backgroundColor: AppColors.scaffold,
+    backgroundColor: AppColors.bgCanvas,
     isScrollControlled: true,
     showDragHandle: true,
     shape: const RoundedRectangleBorder(
@@ -58,19 +58,19 @@ class _TodaySheet extends StatelessWidget {
               ),
               const SizedBox(height: 20),
               if (!snapshot.hasData)
-                const Center(
+                Center(
                   child: Padding(
                     padding: EdgeInsets.all(40),
-                    child: CircularProgressIndicator(color: AppColors.ink),
+                    child: CircularProgressIndicator(color: AppColors.brand),
                   ),
                 )
               else if (overdue.isEmpty && today.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 50),
                   child: Column(
                     children: [
                       Icon(Icons.wb_sunny_rounded,
-                          size: 42, color: AppColors.lime),
+                          size: 42, color: AppColors.brand),
                       SizedBox(height: 12),
                       Text(
                         'لا شيء مستحق اليوم',
@@ -84,7 +84,7 @@ class _TodaySheet extends StatelessWidget {
                 )
               else ...[
                 if (overdue.isNotEmpty) ...[
-                  const _SectionLabel(
+                  _SectionLabel(
                     text: 'متأخرة',
                     color: AppColors.danger,
                   ),
@@ -96,7 +96,7 @@ class _TodaySheet extends StatelessWidget {
                   const SizedBox(height: 14),
                 ],
                 if (today.isNotEmpty) ...[
-                  const _SectionLabel(
+                  _SectionLabel(
                     text: 'اليوم',
                     color: AppColors.textSecondary,
                   ),

@@ -7,20 +7,29 @@ import '../../core/app_colors.dart';
 /// The same work has to read the same way on both screens, so the labels and
 /// the colours are copied across rather than reinvented here.
 enum TaskStatus {
-  newTask('new', 'جديدة', AppColors.grey, Icons.circle_outlined),
-  assigned('assigned', 'مُسندة', AppColors.info, Icons.how_to_reg_rounded),
-  inprogress('inprogress', 'قيد التنفيذ', AppColors.warning, Icons.autorenew_rounded),
-  waiting('waiting', 'بانتظار', AppColors.purple, Icons.pause_circle_outline_rounded),
-  review('review', 'قيد المراجعة', AppColors.warning, Icons.visibility_outlined),
-  completed('completed', 'مكتملة', AppColors.success, Icons.check_circle_outline_rounded),
-  cancelled('cancelled', 'ملغاة', AppColors.grey, Icons.cancel_outlined);
+  newTask('new', 'جديدة', Icons.circle_outlined),
+  assigned('assigned', 'مُسندة', Icons.how_to_reg_rounded),
+  inprogress('inprogress', 'قيد التنفيذ', Icons.autorenew_rounded),
+  waiting('waiting', 'بانتظار', Icons.pause_circle_outline_rounded),
+  review('review', 'قيد المراجعة', Icons.visibility_outlined),
+  completed('completed', 'مكتملة', Icons.check_circle_outline_rounded),
+  cancelled('cancelled', 'ملغاة', Icons.cancel_outlined);
 
-  const TaskStatus(this.id, this.label, this.color, this.icon);
+  const TaskStatus(this.id, this.label, this.icon);
 
   final String id;
   final String label;
-  final Color color;
   final IconData icon;
+
+  /// Read from the live theme rather than stored on the value: enum entries
+  /// must be compile-time constants, and a themed colour is not one.
+  Color get color => switch (this) {
+        TaskStatus.newTask || TaskStatus.cancelled => AppColors.grey,
+        TaskStatus.assigned => AppColors.info,
+        TaskStatus.inprogress || TaskStatus.review => AppColors.warning,
+        TaskStatus.waiting => AppColors.purple,
+        TaskStatus.completed => AppColors.success,
+      };
 
   static TaskStatus from(String? id) => values.firstWhere(
         (status) => status.id == id,
@@ -31,17 +40,23 @@ enum TaskStatus {
 }
 
 enum TaskPriority {
-  urgent('urgent', 'عاجلة', AppColors.danger, 4),
-  high('high', 'مرتفعة', AppColors.warning, 3),
-  medium('medium', 'متوسطة', AppColors.info, 2),
-  low('low', 'منخفضة', AppColors.grey, 1);
+  urgent('urgent', 'عاجلة', 4),
+  high('high', 'مرتفعة', 3),
+  medium('medium', 'متوسطة', 2),
+  low('low', 'منخفضة', 1);
 
-  const TaskPriority(this.id, this.label, this.color, this.weight);
+  const TaskPriority(this.id, this.label, this.weight);
 
   final String id;
   final String label;
-  final Color color;
   final int weight;
+
+  Color get color => switch (this) {
+        TaskPriority.urgent => AppColors.danger,
+        TaskPriority.high => AppColors.warning,
+        TaskPriority.medium => AppColors.info,
+        TaskPriority.low => AppColors.grey,
+      };
 
   static TaskPriority from(String? id) => values.firstWhere(
         (priority) => priority.id == id,
@@ -59,6 +74,7 @@ class Task {
     required this.assignees,
     this.dueAt,
     this.createdAt,
+    this.completedAt,
     this.createdBy = '',
     this.clientId,
     this.workType,
@@ -72,6 +88,7 @@ class Task {
   final List<String> assignees;
   final DateTime? dueAt;
   final DateTime? createdAt;
+  final DateTime? completedAt;
   final String createdBy;
   final String? clientId;
   final String? workType;
@@ -91,6 +108,7 @@ class Task {
       assignees: (data['assignees'] as List?)?.whereType<String>().toList() ?? const [],
       dueAt: _date(data['dueAt']),
       createdAt: _date(data['createdAt']),
+      completedAt: _date(data['completedAt']),
       createdBy: (data['createdBy'] as String?) ?? '',
       clientId: data['clientId'] as String?,
       workType: data['workType'] as String?,

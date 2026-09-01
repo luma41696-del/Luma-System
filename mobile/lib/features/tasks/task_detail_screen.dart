@@ -20,10 +20,11 @@ class TaskDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.scaffold,
+      backgroundColor: AppColors.bgApp,
       appBar: AppBar(
-        backgroundColor: AppColors.scaffold,
+        backgroundColor: AppColors.bgApp,
         surfaceTintColor: Colors.transparent,
+        foregroundColor: AppColors.textPrimary,
         elevation: 0,
         title: const Text(
           'تفاصيل المهمة',
@@ -35,7 +36,7 @@ class TaskDetailScreen extends StatelessWidget {
         initialData: initial,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(
+            return Center(
               child: Padding(
                 padding: EdgeInsets.all(32),
                 child: Text(
@@ -49,8 +50,8 @@ class TaskDetailScreen extends StatelessWidget {
 
           final task = snapshot.data;
           if (task == null) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.ink),
+            return Center(
+              child: CircularProgressIndicator(color: AppColors.brand),
             );
           }
 
@@ -96,7 +97,7 @@ class TaskDetailScreen extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: AppColors.bgSurface,
                     borderRadius: BorderRadius.circular(AppRadius.tile),
                   ),
                   child: Text(
@@ -156,7 +157,7 @@ class _StatusPicker extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: status == task.status ? AppColors.ink : Colors.white,
+                color: status == task.status ? AppColors.brand : AppColors.bgSurface,
                 borderRadius: BorderRadius.circular(AppRadius.chip),
               ),
               child: Row(
@@ -166,7 +167,7 @@ class _StatusPicker extends StatelessWidget {
                     status.icon,
                     size: 16,
                     color: status == task.status
-                        ? AppColors.lime
+                        ? AppColors.onBrand
                         : status.color,
                   ),
                   const SizedBox(width: 6),
@@ -176,7 +177,7 @@ class _StatusPicker extends StatelessWidget {
                       fontSize: 13.5,
                       fontWeight: FontWeight.w700,
                       color: status == task.status
-                          ? Colors.white
+                          ? AppColors.onBrand
                           : AppColors.textPrimary,
                     ),
                   ),

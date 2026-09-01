@@ -50,8 +50,8 @@ class LoginScreen extends StatelessWidget {
                 icon: const Icon(Icons.qr_code_scanner_rounded),
                 label: const Text('مسح رمز الدخول'),
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.lime,
-                  foregroundColor: AppColors.ink,
+                  backgroundColor: AppColors.brand,
+                  foregroundColor: AppColors.onBrand,
                   minimumSize: const Size.fromHeight(58),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(AppRadius.chip),
@@ -63,7 +63,7 @@ class LoginScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 14),
-              const Text(
+              Text(
                 'لا تحتاج كلمة مرور — الرمز صالح لدقيقتين فقط.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12.5, color: AppColors.textMuted),
@@ -114,8 +114,8 @@ class _PairingMarkState extends State<_PairingMark>
             painter: _PairingPainter(animate ? _controller.value : .35),
             child: child,
           ),
-          child: const Center(
-            child: Icon(Icons.qr_code_2_rounded, size: 88, color: AppColors.ink),
+          child: Center(
+            child: Icon(Icons.qr_code_2_rounded, size: 88, color: AppColors.onBrand),
           ),
         ),
       ),
@@ -133,16 +133,16 @@ class _PairingPainter extends CustomPainter {
     final centre = size.center(Offset.zero);
     final maxRadius = size.shortestSide / 2;
 
-    // A lime disc behind the glyph, so the mark reads as one object.
+    // A brand-coloured disc behind the glyph, so the mark reads as one object.
     canvas.drawCircle(
       centre,
       maxRadius * .34,
-      Paint()..color = AppColors.limeTint,
+      Paint()..color = AppColors.brandTint,
     );
     canvas.drawCircle(
       centre,
       maxRadius * .26,
-      Paint()..color = AppColors.lime,
+      Paint()..color = AppColors.brand,
     );
 
     // Three rings, evenly spaced through one cycle, fading as they grow.
@@ -158,7 +158,7 @@ class _PairingPainter extends CustomPainter {
         Paint()
           ..style = PaintingStyle.stroke
           ..strokeWidth = 2
-          ..color = AppColors.limeDark.withValues(alpha: opacity),
+          ..color = AppColors.brandHover.withValues(alpha: opacity),
       );
     }
 
@@ -167,7 +167,7 @@ class _PairingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
-      ..color = AppColors.ink.withValues(alpha: .18);
+      ..color = AppColors.borderStrong;
 
     final inset = maxRadius * .12;
     final arm = maxRadius * .22;
@@ -191,7 +191,7 @@ class _PairingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
       ..strokeCap = StrokeCap.round
-      ..color = AppColors.ink;
+      ..color = AppColors.brandLight;
     canvas.drawArc(
       Rect.fromCircle(center: centre, radius: maxRadius * .46),
       progress * 2 * math.pi,

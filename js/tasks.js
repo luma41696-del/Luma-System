@@ -357,30 +357,38 @@ function taskCard(task, people, clientsById = {}) {
              data-priority="${attr(task.priority)}"
              data-task="${attr(task.id)}" tabindex="0">
       <div class="task-card__top">
-        <div class="flex-1">
+        <div class="flex-1 min-w-0">
           <div class="task-card__title clamp-2">${esc(task.title)}</div>
-          ${task.clientName ? `<div class="fs-xs text-muted mt-2 flex items-center gap-2">
+          ${task.clientName ? `<div class="task-card__client">
             ${clientLogo
-              ? `<img class="task-card__client-logo" src="${attr(clientLogo)}" alt="${attr(task.clientName)}" loading="lazy">`
-              : '<i data-lucide="briefcase" class="icon-sm"></i>'}
+              ? `<img class="task-card__client-logo" src="${attr(clientLogo)}"
+                     alt="" loading="lazy" data-fallback="briefcase">`
+              : '<i data-lucide="briefcase" class="task-card__client-logo"></i>'}
             <span class="truncate">${esc(task.clientName)}</span>
           </div>` : ''}
         </div>
         ${statusBadge(task)}
       </div>
 
-      ${task.description ? `<div class="fs-sm text-muted clamp-2">${esc(task.description)}</div>` : ''}
+      ${task.description ? `<div class="task-card__desc clamp-2">${esc(task.description)}</div>` : ''}
 
-      <div class="progress"><div class="progress__bar${progress === 100 ? ' progress__bar--success' : ''}"
-        style="width:${progress}%"></div></div>
+      <div class="task-card__progress">
+        <div class="progress"><div class="progress__bar${progress === 100 ? ' progress__bar--success' : ''}"
+          style="width:${progress}%"></div></div>
+        <span class="task-card__pct">${progress}%</span>
+      </div>
 
       <div class="task-card__meta">
-        ${task.dueAt ? `<span><i data-lucide="calendar" class="icon-sm"></i> ${esc(formatDate(task.dueAt, { short: true }))}</span>` : ''}
-        <span><i data-lucide="flag" class="icon-sm"></i> ${esc(priorityLabel(task.priority))}</span>
-        ${task.checklist?.length ? `<span><i data-lucide="check-square" class="icon-sm"></i>
+        ${task.dueAt ? `<span class="task-chip${overdue ? ' task-chip--danger' : ''}">
+          <i data-lucide="calendar" class="icon-sm"></i> ${esc(formatDate(task.dueAt, { short: true }))}
+        </span>` : ''}
+        <span class="task-chip task-chip--priority">
+          <span class="task-chip__dot"></span> ${esc(priorityLabel(task.priority))}
+        </span>
+        ${task.checklist?.length ? `<span class="task-chip"><i data-lucide="check-square" class="icon-sm"></i>
           ${task.checklist.filter((i) => i.done).length}/${task.checklist.length}</span>` : ''}
-        ${task.commentCount ? `<span><i data-lucide="message-square" class="icon-sm"></i> ${task.commentCount}</span>` : ''}
-        ${task.attachments?.length ? `<span><i data-lucide="paperclip" class="icon-sm"></i> ${task.attachments.length}</span>` : ''}
+        ${task.commentCount ? `<span class="task-chip"><i data-lucide="message-square" class="icon-sm"></i> ${task.commentCount}</span>` : ''}
+        ${task.attachments?.length ? `<span class="task-chip"><i data-lucide="paperclip" class="icon-sm"></i> ${task.attachments.length}</span>` : ''}
       </div>
 
       ${workers.length ? `

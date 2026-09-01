@@ -1,37 +1,55 @@
 import 'package:flutter/material.dart';
 
-/// The palette from the Paytin design, carried over to Luma.
+import 'palettes.dart';
+import 'theme_controller.dart';
+
+/// The colours of whichever theme is currently on.
 ///
-/// The design is built on one loud accent against near-black, with everything
-/// else kept quiet. That only works if the accent stays rare — it marks the
-/// single most important thing on a screen and nothing else, which is why
-/// there is no "secondary" accent here to reach for.
+/// These read through to the live palette rather than being constants, which
+/// is what lets the ten website themes work at all — the trade is that nothing
+/// using them can be `const`, and the analyzer enforces that for us.
+///
+/// The accent stays rare on purpose: it marks the single most important thing
+/// on a screen, and a second thing wearing it makes the first one ordinary.
 abstract final class AppColors {
-  static const lime = Color(0xFFC6EC4E);
-  static const limeDark = Color(0xFFB4DB3C);
-  static const limeSoft = Color(0xFFE4F2B4);
-  static const limeTint = Color(0xFFEAF4D4);
+  static LumaPalette get _p => ThemeController.instance.palette;
 
-  /// Used for the hero card, the nav pill and anything that should read as
-  /// "the app itself" rather than content.
-  static const ink = Color(0xFF1C1C1E);
-  static const inkSoft = Color(0xFF2E2E30);
+  static Color get brand => _p.brand;
+  static Color get brandHover => _p.brandHover;
+  /// Adaptive: the pale shade on dark themes, the solid one on light themes,
+  /// so an accent on a card is legible under all ten palettes.
+  static Color get brandLight => _p.accentOn(_p.bgSurface);
 
-  static const scaffold = Color(0xFFF2F6EA);
-  static const surface = Colors.white;
+  /// The same choice, made against the floating nav pill's own ground.
+  static Color get brandOnElevated => _p.accentOn(_p.bgElevated);
+  static Color get onBrand => _p.onBrand;
 
-  static const textPrimary = Color(0xFF1B1B1B);
-  static const textSecondary = Color(0xFF8B9082);
-  static const textMuted = Color(0xFFA7AC9E);
+  /// Translucent, so it tints whatever surface it sits on instead of fighting
+  /// it — and so it survives a theme swap without a second value.
+  static Color get brandTint => _p.brand.withValues(alpha: .14);
 
-  static const divider = Color(0xFFE7EBDD);
+  static Color get bgApp => _p.bgApp;
+  static Color get bgCanvas => _p.bgCanvas;
+  static Color get bgSurface => _p.bgSurface;
+  static Color get bgSurface2 => _p.bgSurface2;
+  static Color get bgElevated => _p.bgElevated;
 
-  // Status colours, matched to the web app's task statuses so the same work
-  // looks the same on both screens.
-  static const danger = Color(0xFFE5484D);
-  static const warning = Color(0xFFE8A33D);
-  static const info = Color(0xFF3B82F6);
-  static const success = Color(0xFF2FA76B);
-  static const purple = Color(0xFF8B5CF6);
-  static const grey = Color(0xFF9AA08F);
+  static Color get textPrimary => _p.textPrimary;
+  static Color get textSecondary => _p.textSecondary;
+  static Color get textMuted => _p.textMuted;
+
+  static Color get border => _p.border;
+  static Color get borderStrong => _p.borderStrong;
+
+  // Status colours are adjusted to stay readable on the current theme's cards.
+  // See ReadableColour: the hue is the site's, the lightness is whatever it
+  // takes to actually see it.
+  static Color get danger => _readable(_p.danger);
+  static Color get warning => _readable(_p.warning);
+  static Color get info => _readable(_p.info);
+  static Color get success => _readable(_p.success);
+  static Color get purple => _readable(_p.purple);
+  static Color get grey => _readable(_p.grey);
+
+  static Color _readable(Color colour) => colour.readableOn(_p.bgSurface);
 }

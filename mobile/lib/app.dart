@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'core/app_theme.dart';
+import 'core/theme_controller.dart';
 import 'data/session.dart';
 import 'features/login/login_screen.dart';
 import 'features/shell/app_shell.dart';
@@ -11,21 +13,43 @@ class LumaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'لوما',
-      debugShowCheckedModeBanner: false,
-      theme: buildAppTheme(),
-      // Arabic throughout, which also puts the whole app in right-to-left —
-      // Material reads the direction from the locale, so no screen has to ask
-      // for it and none can forget to.
-      locale: const Locale('ar'),
-      supportedLocales: const [Locale('ar'), Locale('en')],
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: const _AuthGate(),
+    return ListenableBuilder(
+      listenable: ThemeController.instance,
+      builder: (context, _) {
+        final palette = ThemeController.instance.palette;
+
+        // The status bar sits on the app's own background, so its icons have
+        // to follow the theme or they vanish into it.
+        SystemChrome.setSystemUIOverlayStyle(
+          SystemUiOverlayStyle(
+            statusBarColor: Colors.transparent,
+            statusBarIconBrightness:
+                palette.isDark ? Brightness.light : Brightness.dark,
+            statusBarBrightness:
+                palette.isDark ? Brightness.dark : Brightness.light,
+            systemNavigationBarColor: palette.bgApp,
+            systemNavigationBarIconBrightness:
+                palette.isDark ? Brightness.light : Brightness.dark,
+          ),
+        );
+
+        return MaterialApp(
+          title: 'لوما',
+          debugShowCheckedModeBanner: false,
+          theme: buildAppTheme(palette),
+          // Arabic throughout, which also puts the whole app in right-to-left —
+          // Material reads the direction from the locale, so no screen has to
+          // ask for it and none can forget to.
+          locale: const Locale('ar'),
+          supportedLocales: const [Locale('ar'), Locale('en')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const _AuthGate(),
+        );
+      },
     );
   }
 }
