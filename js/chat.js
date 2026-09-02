@@ -20,7 +20,7 @@ import { toastSuccess, toastError, reportError } from './utils/toast.js';
 import { openModal, confirmDialog, promptDialog, lightbox } from './utils/modal.js';
 import {
   col, ref, query, where, orderBy, limit, onSnapshot, addDoc, updateDoc, deleteDoc, announce,
-  getDirectory, getUsers, getMany, ts
+  getDirectory, getUsers, getMany, ts, callFn
 } from './utils/api.js';
 import { formatTime, formatDate, timeAgo, toMillis, isToday, formatBytes } from './utils/format.js';
 import { renderMessageBody, sanitizeText, sanitizeMultiline, extractFirstLink, linkHost, safeUrl }
