@@ -16,7 +16,7 @@ import { can } from './permissions.js';
 import { $, $$, esc, attr, refreshIcons, setBusy } from './utils/dom.js';
 import {
   col, ref, doc, query, where, orderBy, limit, onSnapshot,
-  addDoc, updateDoc, deleteDoc, ts
+  addDoc, updateDoc, deleteDoc, ts, announce
 } from './utils/api.js';
 import { openModal, confirmDialog } from './utils/modal.js';
 import { toastSuccess, toastError, reportError } from './utils/toast.js';
@@ -230,12 +230,13 @@ export async function openAnnouncementModal(existing = null) {
             });
             toastSuccess('تم حفظ الإعلان.');
           } else {
-            await addDoc(col('announcements'), {
+            const created = await addDoc(col('announcements'), {
               ...payload,
               createdBy: session.uid,
               createdByName: session.profile?.displayName || '',
               createdAt: ts()
             });
+            announce('announcement.created', created.id);
             toastSuccess('نُشر الإعلان ووصل إشعار للفريق.');
           }
           api.close();

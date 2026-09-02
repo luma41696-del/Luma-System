@@ -75,6 +75,28 @@ export async function callFn(name, payload = {}) {
   return result.data;
 }
 
+/**
+ * Tell the server that something worth a notification just happened.
+ *
+ * Firestore triggers would notice this by themselves, but they need the Blaze
+ * plan and this deployment serves its callables from Netlify, which only
+ * answers HTTP. So the client reports the event and the server decides who
+ * hears about it and what it says — see functions/notifications/dispatch.js.
+ *
+ * Deliberately not awaited and deliberately silent: the write it follows has
+ * already succeeded, and nobody should see an error about a notification they
+ * were not waiting for. Repeat calls are refused server-side, so a retry or a
+ * second tab cannot notify twice.
+ *
+ * @param {string} event    one of the names dispatch.js knows
+ * @param {string} id       the document the event is about
+ * @param {string} [childId] the comment or message, for subcollection events
+ */
+export function announce(event, id, childId) {
+  callFn('dispatchNotification', { event, id, ...(childId ? { childId } : {}) })
+    .catch((err) => console.warn('[luma] notification not sent:', event, err.message));
+}
+
 /* ------------------------------------------------------- firestore sugar */
 
 export const ts = serverTimestamp;

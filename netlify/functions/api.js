@@ -47,7 +47,10 @@ const modules = [
   require('../../functions/ai/settings'),
   require('../../functions/ai/image'),
   require('../../functions/whatsapp/analyse'),
-  require('../../functions/mobile/pairing')
+  require('../../functions/mobile/pairing'),
+  // Firestore triggers cannot be served over HTTP, so this callable does the
+  // notification fan-out they would have done.
+  require('../../functions/notifications/dispatch')
 ];
 
 /** name -> onCall handler */

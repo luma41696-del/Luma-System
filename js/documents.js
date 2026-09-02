@@ -13,7 +13,7 @@ import { toastSuccess, toastError, reportError } from './utils/toast.js';
 import { openModal, confirmDialog } from './utils/modal.js';
 import {
   col, ref, query, where, orderBy, limit, onSnapshot, getOne, getUsers, getDirectory,
-  addDoc, updateDoc, callFn, ts
+  addDoc, updateDoc, callFn, ts, announce
 } from './utils/api.js';
 import {
   formatDate, formatDateTime, timeAgo, daysBetween, toDateInput, formatMoney, formatBytes
@@ -749,6 +749,7 @@ export function openRequestModal({ type = 'leave' } = {}) {
         setBusy(button, true);
         try {
           const created = await addDoc(col('requests'), payload);
+          announce('request.created', created.id);
 
           if (attachment) {
             const uploaded = await uploadFile(attachment, paths.request(session.uid, attachment), {

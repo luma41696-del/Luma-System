@@ -13,7 +13,8 @@ import { toastSuccess, toastError, reportError } from './utils/toast.js';
 import { openModal, confirmDialog, promptDialog, lightbox } from './utils/modal.js';
 import {
   col, ref, query, where, orderBy, limit, onSnapshot, getOne, getMany, getUsers,
-  getDirectory, addDoc, updateDoc, deleteDoc, setDoc, doc, ts, callFn, arrayUnion
+  getDirectory, addDoc, updateDoc, deleteDoc, setDoc, doc, ts, callFn, arrayUnion,
+  announce
 } from './utils/api.js';
 import {
   TASK_STATUSES, PRIORITIES, WORK_TYPES, BOARD_COLUMNS, summarize, sortTasks, filterTasks,
@@ -909,12 +910,13 @@ async function paintDetail(root, task, unsubs) {
     if (!body) return;
     input.value = '';
     try {
-      await addDoc(col('tasks', task.id, 'comments'), {
+      const comment = await addDoc(col('tasks', task.id, 'comments'), {
         authorId: session.uid,
         authorName: session.profile?.displayName || '',
         body,
         createdAt: ts()
       });
+      announce('task.comment', task.id, comment.id);
       await updateDoc(ref('tasks', task.id), {
         commentCount: (task.commentCount || 0) + 1,
         updatedAt: ts()
@@ -1514,6 +1516,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
               deleted: false
             });
             await logActivity(created.id, 'create', 'أنشأ المهمة');
+            announce('task.created', created.id);
             toastSuccess('تم إنشاء المهمة بنجاح.');
           }
           api.close();

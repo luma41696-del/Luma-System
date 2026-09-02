@@ -19,7 +19,7 @@ import {
 import { toastSuccess, toastError, reportError } from './utils/toast.js';
 import { openModal, confirmDialog, promptDialog, lightbox } from './utils/modal.js';
 import {
-  col, ref, query, where, orderBy, limit, onSnapshot, addDoc, updateDoc, deleteDoc,
+  col, ref, query, where, orderBy, limit, onSnapshot, addDoc, updateDoc, deleteDoc, announce,
   getDirectory, getUsers, getMany, ts
 } from './utils/api.js';
 import { formatTime, formatDate, timeAgo, toMillis, isToday, formatBytes } from './utils/format.js';
@@ -490,7 +490,7 @@ export async function render(container, ctx) {
   const stopTypingSoon = debounce((chatId) => setTyping(chatId, session.uid, false), 2500);
 
   async function postMessage(chat, { body = '', attachment = null, replyTo: reply = null }) {
-    await addDoc(col('chats', chat.id, 'messages'), {
+    const message = await addDoc(col('chats', chat.id, 'messages'), {
       senderId: session.uid,
       senderName: session.profile?.displayName || '',
       body,
@@ -500,6 +500,7 @@ export async function render(container, ctx) {
       deleted: false,
       createdAt: ts()
     });
+    announce('chat.message', chat.id, message.id);
 
     const preview = body ? body.slice(0, 80) : (attachment ? '📎 مرفق' : '');
     const unread = { ...(chat.unread || {}) };

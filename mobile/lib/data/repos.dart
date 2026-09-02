@@ -1,5 +1,9 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
+
+import 'api.dart';
 import 'models/records.dart';
 import 'session.dart';
 
@@ -63,12 +67,29 @@ class Repos {
     final uid = Session.instance.uid;
     final now = FieldValue.serverTimestamp();
 
-    await _db.collection('chats').doc(chatId).collection('messages').add({
+    final message =
+        await _db.collection('chats').doc(chatId).collection('messages').add({
       'senderId': uid,
+      'senderName': Session.instance.displayName,
       'body': body,
       'createdAt': now,
       'readBy': [uid],
     });
+
+    // Firestore triggers cannot run on this plan, so the server is told that
+    // a message exists and works out who should hear about it. Not awaited
+    // and never surfaced: the message is already sent, and a failed
+    // notification is not the sender's problem to see.
+    unawaited(
+      LumaApi.instance.call('dispatchNotification', payload: {
+        'event': 'chat.message',
+        'id': chatId,
+        'childId': message.id,
+      }).catchError((Object error) {
+        debugPrint('[luma] notification not sent: $error');
+        return <String, dynamic>{};
+      }),
+    );
 
     // Keeps the conversation list ordered and previewable without reading
     // every thread's messages.

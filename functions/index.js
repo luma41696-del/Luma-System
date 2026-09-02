@@ -124,6 +124,11 @@ exports.onRequestThreadMessage = notifications.onRequestThreadMessage;
 exports.onChatMessage = notifications.onChatMessage;
 exports.onClientUpdated = notifications.onClientUpdated;
 exports.onAnnouncementCreated = notifications.onAnnouncementCreated;
+
+// The same fan-out, asked for over HTTP. Needed where Firestore triggers
+// cannot run; harmless where they can, because it refuses to notify twice.
+const dispatch = require('./notifications/dispatch');
+exports.dispatchNotification = dispatch.dispatchNotification;
 exports.dailyDeadlineDigest = notifications.dailyDeadlineDigest;
 exports.nightlyMaintenance = notifications.nightlyMaintenance;
 
