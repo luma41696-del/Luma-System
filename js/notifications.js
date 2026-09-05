@@ -173,14 +173,14 @@ export async function render(container) {
       return `
         <div class="notif-row${n.read ? '' : ' is-unread'}" data-notif="${attr(n.id)}">
           <span class="notif-row__icon"><i data-lucide="${attr(n.icon || kind.icon)}"></i></span>
-          <div class="flex-1" style="min-width:0">
+          <div class="notif-row__body">
             <div class="notif-row__title">${esc(n.title || kind.ar)}</div>
             <div class="notif-row__text">${esc(n.body || '')}</div>
-            <div class="notif-row__time" title="${attr(formatDateTime(n.createdAt))}">
-              ${esc(timeAgo(n.createdAt))}
-            </div>
           </div>
-          <div class="flex gap-1">
+          <span class="notif-row__time" title="${attr(formatDateTime(n.createdAt))}">
+            ${esc(timeAgo(n.createdAt))}
+          </span>
+          <div class="notif-row__actions">
             ${n.link ? `<a class="icon-btn" href="${attr(n.link)}" data-open="${attr(n.id)}"
               aria-label="فتح"><i data-lucide="arrow-left"></i></a>` : ''}
             ${!n.read ? `<button class="icon-btn" data-read="${attr(n.id)}" aria-label="تعليم كمقروء">

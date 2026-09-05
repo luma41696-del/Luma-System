@@ -91,6 +91,35 @@ export function progressOf(task) {
   return { new: 0, assigned: 10, inprogress: 45, waiting: 45, review: 80 }[task.status] || 0;
 }
 
+/**
+ * The dated fields a brand-new task needs, given the status it is born with.
+ *
+ * Work is often logged after it is done, so a task can be created already
+ * finished or already under way. Assuming every new task starts fresh was
+ * wrong in three places at once: the completion carried no date, so it counted
+ * in none of the employee's totals; the card drew 0% under a "completed"
+ * badge; and no start time was recorded for work that had clearly begun.
+ *
+ * `now` is passed in rather than taken here because the caller supplies a
+ * Firestore server timestamp, and the client's clock is not trusted for dates
+ * anyone is measured by.
+ *
+ * @param {string} status         the status chosen on the form
+ * @param {{now: *, startedAt?: *}} options
+ */
+export function birthFields(status, { now, startedAt = null }) {
+  const done = status === 'completed';
+  const active = status === 'inprogress';
+
+  return {
+    lastStatusAt: now,
+    completedAt: done ? now : null,
+    // An explicit start date on the form always wins over an inferred one.
+    startedAt: startedAt || (done || active ? now : null),
+    progress: done ? 100 : 0
+  };
+}
+
 /* ----------------------------------------------------------------- queries */
 
 /** Tasks assigned to one employee. */

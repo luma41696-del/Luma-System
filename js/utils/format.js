@@ -176,6 +176,29 @@ export function toDateTimeInput(value) {
   return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}`;
 }
 
+/**
+ * Make a value safe to put in a `datetime-local` input.
+ *
+ * That input accepts only `YYYY-MM-DDTHH:MM`. Handed a bare date it does not
+ * complain — it drops the value, shows an empty field, and the form then saves
+ * no deadline at all. The AI assistant drafts deadlines as dates without
+ * times, so its dates were disappearing on the way into the form and every
+ * task it drafted was created with no due date.
+ *
+ * A date with no time means the end of that day. Midnight would be the start
+ * of it, which would make a task due "on the 12th" overdue from its first
+ * minute.
+ */
+export function toDateTimeValue(value) {
+  const text = String(value || '').trim();
+  if (!text) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return `${text}T23:59`;
+  // Anything already carrying a time is passed through, seconds trimmed off
+  // because the input rejects them unless it is asking for seconds.
+  const match = text.match(/^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2})/);
+  return match ? match[1] : '';
+}
+
 const RELATIVE_UNITS = [
   [60_000, 'ثانية', 1000],
   [3_600_000, 'دقيقة', 60_000],

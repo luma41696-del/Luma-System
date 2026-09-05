@@ -1105,19 +1105,6 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
   color: var(--text-muted);
 }
 
-/* The bar and its number share a row: the width is the glanceable half, the
-   figure is there for when the widths are too close to call. */
-.task-card__progress { display: flex; align-items: center; gap: var(--sp-2); }
-.task-card__progress .progress { flex: 1; }
-.task-card__pct {
-  font-size: var(--fs-2xs);
-  font-weight: 700;
-  color: var(--text-muted);
-  font-variant-numeric: tabular-nums;
-  min-width: 30px;
-  text-align: end;
-}
-
 /* Metadata as chips rather than a run-on line: each fact gets its own shape,
    and a narrow card wraps them instead of stacking bare words. */
 .task-card__meta {
@@ -1619,9 +1606,57 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
 .list-divider { height: 1px; background: var(--border-soft); margin: var(--sp-2) 0; }
 
 /* ------------------------------------------------------ notification row */
-.notif-row { display: flex; gap: var(--sp-3); padding: var(--sp-3); border-radius: var(--radius-sm); cursor: pointer; }
+/* A full-width row used to leave a lake of empty space between the text and
+   the buttons at the far edge. The time now sits between them, so the width
+   carries something, and the row reads left to right as: what, when, what to
+   do about it. */
+.notif-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  position: relative;
+  transition: background var(--t-fast) var(--ease);
+}
+.notif-row + .notif-row { margin-top: 4px; }
 .notif-row:hover { background: var(--bg-hover); }
+
+/* Unread is marked by a stripe rather than by flooding the whole row: when
+   everything is unread, a tint on everything says nothing. */
 .notif-row.is-unread { background: var(--bg-active); }
+.notif-row.is-unread::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: var(--brand);
+}
+
+.notif-row__body { flex: 1; min-width: 0; }
+
+.notif-row__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  flex: none;
+  /* Room for all three buttons even when only two are drawn — a read row has
+     no "mark read" button, and without this its timestamp sat 36px off from
+     the row above it. */
+  min-width: 110px;
+}
+/* Quiet until wanted — but only where there is a pointer to hover with, or a
+   touch user would never see them at all. */
+@media (hover: hover) {
+  .notif-row__actions { opacity: 0; transition: opacity var(--t-fast) var(--ease); }
+  .notif-row:hover .notif-row__actions,
+  .notif-row:focus-within .notif-row__actions { opacity: 1; }
+}
 .notif-row__icon {
   width: 36px; height: 36px;
   border-radius: var(--radius-sm);
@@ -1631,9 +1666,32 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
   flex: none;
   color: var(--yellow);
 }
-.notif-row__title { font-size: var(--fs-md); font-weight: 600; }
-.notif-row__text { font-size: var(--fs-sm); color: var(--text-muted); }
-.notif-row__time { font-size: var(--fs-2xs); color: var(--text-muted); margin-top: 3px; }
+.notif-row__title { font-size: var(--fs-md); font-weight: 600; line-height: 1.4; }
+.notif-row__text {
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+  line-height: 1.55;
+  margin-top: 2px;
+}
+.notif-row__time {
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+  margin-top: 3px;
+  white-space: nowrap;
+  flex: none;
+}
+/* On the full page the time is a column, so it gets a width and every row's
+   timestamp begins at the same place. Without it the column is ragged, since
+   "قبل أسبوع" and "قبل 3 أيام" are not the same length. */
+.notif-row > .notif-row__time {
+  min-width: 86px;
+  margin-top: 0;
+  text-align: start;
+}
+
+/* In the dashboard's narrow card the time still sits under the text, where it
+   is a block inside the body rather than a column of its own. */
+.notif-row__body .notif-row__time { display: block; margin-top: 4px; }
 
 /* =========================================================== SECRET FIELD */
 .secret-field {

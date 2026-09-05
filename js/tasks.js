@@ -18,11 +18,12 @@ import {
 } from './utils/api.js';
 import {
   TASK_STATUSES, PRIORITIES, WORK_TYPES, BOARD_COLUMNS, summarize, sortTasks, filterTasks,
-  isOverdue, progressOf, statusLabel, priorityLabel, myTasksQuery, allTasksQuery,
+  isOverdue, progressOf, statusLabel, priorityLabel, myTasksQuery, allTasksQuery, birthFields,
   watchTasks, workersOf
 } from './utils/task-model.js';
 import {
-  formatDate, formatDateTime, formatDuration, timeAgo, toMillis, toDateTimeInput, formatBytes,
+  formatDate, formatDateTime, formatDuration, timeAgo, toMillis, toDateTimeInput,
+  toDateTimeValue, formatBytes,
   dayKey
 } from './utils/format.js';
 import { sanitizeText, sanitizeMultiline, renderMessageBody } from './utils/sanitize.js';
@@ -373,11 +374,8 @@ function taskCard(task, people, clientsById = {}) {
 
       ${task.description ? `<div class="task-card__desc clamp-2">${esc(task.description)}</div>` : ''}
 
-      <div class="task-card__progress">
-        <div class="progress"><div class="progress__bar${progress === 100 ? ' progress__bar--success' : ''}"
-          style="width:${progress}%"></div></div>
-        <span class="task-card__pct">${progress}%</span>
-      </div>
+      <div class="progress"><div class="progress__bar${progress === 100 ? ' progress__bar--success' : ''}"
+        style="width:${progress}%"></div></div>
 
       <div class="task-card__meta">
         ${task.dueAt ? `<span class="task-chip${overdue ? ' task-chip--danger' : ''}">
@@ -1313,7 +1311,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
           <div class="field">
             <label class="field__label" for="t-due">الموعد النهائي</label>
             <input class="input" id="t-due" type="datetime-local"
-                   value="${attr(task?.dueAt ? toDateTimeInput(task.dueAt) : (defaults.dueAt || ''))}">
+                   value="${attr(task?.dueAt ? toDateTimeInput(task.dueAt) : toDateTimeValue(defaults.dueAt))}">
           </div>
 
           <div class="field">
@@ -1507,8 +1505,12 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
               ...payload,
               createdBy: session.uid,
               createdAt: ts(),
-              completedAt: null,
-              progress: 0,
+              // A task can be created already finished or already under way;
+              // see birthFields for why assuming otherwise was wrong.
+              ...birthFields(payload.status, {
+                now: ts(),
+                startedAt: payload.startedAt
+              }),
               timeSpentMs: 0,
               commentCount: 0,
               attachments: [],
@@ -1516,6 +1518,15 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
               deleted: false
             });
             await logActivity(created.id, 'create', 'أنشأ المهمة');
+
+            // A second entry, because "created" and "completed" are two facts
+            // and the log is what a person reads to find out what happened.
+            // This one also records the contributor, which the 'create' entry
+            // deliberately does not.
+            if (payload.status === 'completed') {
+              await logActivity(created.id, 'status', `غيّر الحالة إلى «${statusLabel('completed')}»`);
+            }
+
             announce('task.created', created.id);
             toastSuccess('تم إنشاء المهمة بنجاح.');
           }
