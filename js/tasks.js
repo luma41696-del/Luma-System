@@ -18,7 +18,8 @@ import {
 } from './utils/api.js';
 import {
   TASK_STATUSES, PRIORITIES, WORK_TYPES, BOARD_COLUMNS, summarize, sortTasks, filterTasks,
-  isOverdue, progressOf, statusLabel, priorityLabel, myTasksQuery, allTasksQuery, birthFields,
+  isOverdue, isOpen, progressOf, statusLabel, priorityLabel, myTasksQuery, allTasksQuery,
+  birthFields,
   watchTasks, workersOf
 } from './utils/task-model.js';
 import {
@@ -99,6 +100,8 @@ async function renderBoard(container, ctx) {
 
       ${can(session.claims, 'tasks.ai') ? '<div id="manager-ai" hidden></div>' : ''}
 
+      ${!scopeMine && canSeeAll ? '<div id="task-workload"></div>' : ''}
+
       <div class="filter-bar">
         <span class="filter-bar__label"><i data-lucide="filter"></i> تصفية</span>
         <input class="input" id="f-search" type="search" placeholder="بحث في العنوان أو الوصف…">
@@ -157,6 +160,16 @@ async function renderBoard(container, ctx) {
   ['#f-status', '#f-priority', '#f-assignee', '#f-client'].forEach((sel) => {
     $(sel)?.addEventListener('change', applyFilters);
   });
+  on(container, 'click', '[data-load]', (_, node) => {
+    const id = node.dataset.load;
+    // A second click on the same person clears it, so the strip is a toggle
+    // rather than a trap you have to leave through the filter bar.
+    filters.assignee = filters.assignee === id ? 'all' : id;
+    const select = $('#f-assignee');
+    if (select) select.value = filters.assignee;
+    paint();
+  });
+
   $('#f-status').value = filters.status;
   $('#f-reset').addEventListener('click', () => {
     $('#f-search').value = '';
@@ -209,6 +222,15 @@ async function renderBoard(container, ctx) {
     $('#task-count').textContent = feed.state.hasMore
       ? `${filtered.length} من ${tasks.length} محمّلة — انزل لتحميل المزيد`
       : `${filtered.length} مهمة معروضة من أصل ${tasks.length}`;
+
+    // Built from every loaded task, not the filtered set: the strip exists to
+    // show who is busy, and filtering it by the board's own filter would only
+    // ever tell you about the slice you are already looking at.
+    const workload = $('#task-workload');
+    if (workload) {
+      workload.innerHTML = workloadStrip(tasks, directory, filters.assignee, feed.state.hasMore);
+      refreshIcons(workload);
+    }
 
     $('#task-stats').innerHTML = `
       ${statChip('list-todo', 'info', stats.open, 'مفتوحة')}
@@ -401,6 +423,69 @@ function taskCard(task, people, clientsById = {}) {
         <span class="fs-2xs text-muted">${esc(timeAgo(task.updatedAt || task.createdAt))}</span>
       </div>
     </article>`;
+}
+
+/* --------------------------------------------------------------- workload */
+
+/**
+ * Who is carrying what, right now.
+ *
+ * A board answers "what is the state of the work"; it does not answer "who is
+ * drowning". That question gets asked in every stand-up and the only way to
+ * answer it here was to filter by each person in turn and count.
+ *
+ * Sorted by load, busiest first, because the reason to look is to find the
+ * person with too much — and the people at the end with nothing are the other
+ * half of the same answer.
+ *
+ * The number is open tasks. The ring is whether any of them is late, which is
+ * a different question: eight tasks with room to breathe is a working week,
+ * two that are already late is a problem. Colouring by volume alone would put
+ * the alarm on the wrong person.
+ */
+function workloadStrip(tasks, directory, activeId, partial) {
+  const load = new Map();
+  for (const person of directory) {
+    if (person.status === 'disabled') continue;
+    load.set(person.id, { person, open: 0, overdue: 0 });
+  }
+
+  for (const task of tasks) {
+    if (!isOpen(task)) continue;
+    for (const uid of task.assignees || []) {
+      const entry = load.get(uid);
+      if (!entry) continue;
+      entry.open += 1;
+      if (isOverdue(task)) entry.overdue += 1;
+    }
+  }
+
+  const rows = [...load.values()].sort((a, b) =>
+    b.open - a.open || a.person.displayName.localeCompare(b.person.displayName, 'ar'));
+  if (!rows.length) return '';
+
+  return `
+    <div class="workload">
+      <div class="workload__head">
+        <span class="workload__title"><i data-lucide="gauge"></i> أحمال الفريق</span>
+        <span class="workload__note">${esc(partial
+          ? 'ضمن المهام المحمّلة حتى الآن'
+          : 'المهام المفتوحة لكل موظف')}</span>
+      </div>
+      <div class="workload__strip">
+        ${rows.map((row) => `
+          <button type="button"
+                  class="workload__person${row.person.id === activeId ? ' is-active' : ''}${row.open ? '' : ' is-free'}"
+                  data-load="${attr(row.person.id)}"
+                  title="${attr(`${row.person.displayName} — ${row.open} مفتوحة${row.overdue ? ` منها ${row.overdue} متأخرة` : ''}`)}">
+            <span class="workload__avatar${row.overdue ? ' is-late' : ''}">
+              ${avatarHTML(row.person, 'sm')}
+              <span class="workload__count">${row.open}</span>
+            </span>
+            <span class="workload__name truncate">${esc(row.person.displayName.split(' ')[0])}</span>
+          </button>`).join('')}
+      </div>
+    </div>`;
 }
 
 function bindCards(host) {

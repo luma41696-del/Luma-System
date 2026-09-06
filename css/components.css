@@ -3048,3 +3048,96 @@ html[dir="ltr"] .ai-panel.is-open,
   .pair-qr { animation: none; }
   .pair-countdown__time.is-urgent { animation: none; }
 }
+
+/* ---------------------------------------------------------------- workload */
+/* Who is carrying what. Sorted busiest first, so the answer is at the start
+   of the line rather than somewhere along it. */
+
+.workload {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-3) var(--sp-4);
+  margin-bottom: var(--sp-4);
+}
+.workload__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.workload__title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.workload__note { font-size: var(--fs-2xs); color: var(--text-muted); }
+
+/* Scrolls rather than wraps: a team of thirty should not push the board down
+   the page before anyone has looked at it. */
+.workload__strip {
+  display: flex;
+  gap: var(--sp-3);
+  overflow-x: auto;
+  padding-bottom: 4px;
+  scrollbar-width: none;
+}
+.workload__strip::-webkit-scrollbar { height: 0; }
+
+.workload__person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 8px 5px;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  cursor: pointer;
+  flex: none;
+  width: 74px;
+  transition: background var(--t-fast) var(--ease), opacity var(--t-fast) var(--ease);
+}
+.workload__person:hover { background: var(--bg-hover); }
+.workload__person.is-active { background: var(--bg-active); }
+/* Nobody assigned anything is still an answer, just a quieter one. */
+.workload__person.is-free { opacity: 0.5; }
+.workload__person.is-free:hover { opacity: 1; }
+
+.workload__avatar { position: relative; display: block; }
+/* The ring is lateness, not volume: eight tasks with room is a working week,
+   two already late is a problem. */
+.workload__avatar.is-late .avatar {
+  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--danger);
+}
+
+.workload__count {
+  position: absolute;
+  inset-inline-end: -6px;
+  bottom: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: var(--radius-pill);
+  background: var(--brand);
+  color: var(--text-on-brand);
+  border: 2px solid var(--bg-surface);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 14px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.workload__person.is-free .workload__count {
+  background: var(--bg-surface-2);
+  color: var(--text-muted);
+}
+
+.workload__name {
+  max-width: 100%;
+  font-size: var(--fs-2xs);
+  color: var(--text-secondary);
+}
+.workload__person.is-active .workload__name { color: var(--text-primary); font-weight: 700; }
