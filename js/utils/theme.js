@@ -1,6 +1,7 @@
 /**
  * App theme: dark (default) plus a family of light and dark palettes —
- * light, white, classic, black, space, ship, forest, mocha and dawn.
+ * light, white, classic, black, space, ship, forest, mocha, dawn and a
+ * terminal-green pair.
  *
  * The value is persisted to localStorage and restored before first paint by
  * the inline script in dashboard.html, so this module only needs to update
@@ -8,7 +9,10 @@
  * re-themes itself on the `luma:theme` event (see utils/charts.js).
  */
 
-export const THEMES = ['dark', 'light', 'white', 'classic', 'black', 'space', 'ship', 'forest', 'mocha', 'dawn'];
+export const THEMES = [
+  'dark', 'light', 'white', 'classic', 'black', 'space', 'ship',
+  'forest', 'mocha', 'dawn', 'hacker', 'hacker-light'
+];
 
 export const THEME_META = {
   dark:    { icon: 'moon',       labelKey: 'settings.appearance.theme.dark',    hintKey: 'settings.appearance.theme.dark.hint' },
@@ -20,7 +24,13 @@ export const THEME_META = {
   ship:    { icon: 'rocket',     labelKey: 'settings.appearance.theme.ship',    hintKey: 'settings.appearance.theme.ship.hint' },
   forest:  { icon: 'trees',      labelKey: 'settings.appearance.theme.forest',  hintKey: 'settings.appearance.theme.forest.hint' },
   mocha:   { icon: 'coffee',     labelKey: 'settings.appearance.theme.mocha',   hintKey: 'settings.appearance.theme.mocha.hint' },
-  dawn:    { icon: 'sunrise',    labelKey: 'settings.appearance.theme.dawn',    hintKey: 'settings.appearance.theme.dawn.hint' }
+  dawn:    { icon: 'sunrise',    labelKey: 'settings.appearance.theme.dawn',    hintKey: 'settings.appearance.theme.dawn.hint' },
+  hacker:  { icon: 'terminal',   labelKey: 'settings.appearance.theme.hacker',  hintKey: 'settings.appearance.theme.hacker.hint' },
+  'hacker-light': {
+    icon: 'terminal-square',
+    labelKey: 'settings.appearance.theme.hackerLight',
+    hintKey: 'settings.appearance.theme.hackerLight.hint'
+  }
 };
 
 export function getTheme() {

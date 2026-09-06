@@ -19,13 +19,26 @@ double contrast(Color a, Color b) {
 }
 
 void main() {
-  test('all ten of the site themes are present and distinct', () {
-    expect(lumaPalettes.length, 10);
-    expect(lumaPalettes.map((p) => p.id).toSet().length, 10);
+  test('every site theme is present and distinct', () {
+    expect(lumaPalettes.length, 12);
+    expect(lumaPalettes.map((p) => p.id).toSet().length, 12);
     expect(
       lumaPalettes.map((p) => p.id),
-      containsAll(['dark', 'light', 'forest', 'mocha', 'dawn']),
+      containsAll(['dark', 'light', 'forest', 'mocha', 'dawn',
+                   'hacker', 'hacker-light']),
     );
+  });
+
+  test('the hacker pair really is one dark and one light', () {
+    final dark = ThemeController.byId('hacker');
+    final light = ThemeController.byId('hacker-light');
+
+    expect(dark.isDark, isTrue);
+    expect(light.isDark, isFalse);
+    // Same idea, opposite grounds — and both green.
+    expect(_luminance(dark.bgApp), lessThan(_luminance(light.bgApp)));
+    expect(dark.brand.g, greaterThan(dark.brand.r));
+    expect(light.brand.g, greaterThan(light.brand.r));
   });
 
   test('a theme id that no longer exists falls back instead of throwing', () {

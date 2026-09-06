@@ -758,6 +758,134 @@ html.theme-swapping * {
   html.theme-swapping * { transition: none !important; }
 }
 
+/* ------------------------------------------------------------------ hacker */
+/* A terminal: phosphor green on something close to black. The accent is the
+   loudest thing here by a wide margin, which suits a palette built around one
+   colour glowing in the dark. */
+[data-theme="hacker"] {
+  --navy-900: #050B07;
+  --navy-800: #08110B;
+  --navy-700: #0B1710;
+  --navy-600: #102015;
+  --border-dark: #1C3A26;
+
+  --brand: #3DDC71;
+  --brand-hover: #2FB85C;
+  --brand-light: #6BF29A;
+  --brand-soft: rgba(61, 220, 113, 0.15);
+  --brand-glow: rgba(61, 220, 113, 0.34);
+  --brand-gradient: linear-gradient(135deg, var(--brand-light) 0%, var(--brand) 55%, var(--brand-hover) 100%);
+  --brand-gradient-hover: linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 60%, #1F8C43 100%);
+  --brand-gradient-x: linear-gradient(to right, var(--brand-light), var(--brand) 70%, var(--brand-hover));
+
+  --yellow: var(--brand);
+  --yellow-hover: var(--brand-hover);
+  --yellow-soft: var(--brand-soft);
+
+  --bg-app: #030704;
+  --bg-canvas: #050B07;
+  --bg-surface: #0B1710;
+  --bg-surface-2: #102015;
+  --bg-elevated: #13271A;
+  --bg-inset: rgba(200, 255, 217, 0.04);
+  --bg-hover: rgba(200, 255, 217, 0.07);
+  --bg-active: rgba(61, 220, 113, 0.14);
+  --bg-overlay: rgba(2, 6, 3, 0.80);
+
+  --text-primary: #D6F5E0;
+  --text-secondary: #A6C9B2;
+  --text-muted: #6E9179;
+  --text-inverse: #030704;
+  /* Dark on the bright green — white on it is barely 2:1. */
+  --text-on-brand: #04170B;
+
+  --border: #1C3A26;
+  --border-soft: rgba(200, 255, 217, 0.09);
+  --border-strong: rgba(61, 220, 113, 0.42);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.48);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.56);
+  --shadow-lg: 0 22px 54px rgba(0, 0, 0, 0.66);
+  --shadow-focus: 0 0 0 3px rgba(61, 220, 113, 0.34);
+
+  --glass-surface-rgb: 11, 23, 16;
+  --glass-elevated-rgb: 19, 39, 26;
+  --glass-overlay-rgb: 2, 6, 3;
+
+  color-scheme: dark;
+}
+
+/* ------------------------------------------------------------ hacker light */
+/* The same idea in daylight: green ink on paper rather than green light on
+   glass. The accent has to darken a long way to survive a white card — the
+   phosphor green of the dark theme measures about 1.7:1 there. */
+[data-theme="hacker-light"] {
+  --navy-900: #FFFFFF;
+  --navy-800: #F7FAF7;
+  --navy-700: #FFFFFF;
+  --navy-600: #F1F6F1;
+  --border-dark: #DBE7DD;
+
+  --brand: #0F7A42;
+  --brand-hover: #0B6234;
+  --brand-light: #149853;
+  --brand-soft: rgba(15, 122, 66, 0.12);
+  --brand-glow: rgba(15, 122, 66, 0.22);
+  --brand-gradient: linear-gradient(135deg, var(--brand-light) 0%, var(--brand) 55%, var(--brand-hover) 100%);
+  --brand-gradient-hover: linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 60%, #0A5A30 100%);
+  --brand-gradient-x: linear-gradient(to right, var(--brand-light), var(--brand) 70%, var(--brand-hover));
+
+  --yellow: var(--brand);
+  --yellow-hover: var(--brand-hover);
+  --yellow-soft: var(--brand-soft);
+
+  --bg-app: #EEF3EE;
+  --bg-canvas: #F4F8F4;
+  --bg-surface: #FFFFFF;
+  --bg-surface-2: #F5F9F5;
+  --bg-elevated: #FFFFFF;
+  --bg-inset: rgba(16, 35, 26, 0.04);
+  --bg-hover: rgba(16, 35, 26, 0.05);
+  --bg-active: rgba(15, 122, 66, 0.10);
+  --bg-overlay: rgba(16, 35, 26, 0.42);
+
+  /* Status colours are set here rather than inherited. The base palette mixes
+     them for a navy card — on white they measure 2.8 for the red and 1.7 for
+     the amber, which is a word you can see is there and cannot read. Same
+     meanings, darkened until they hold. */
+  --danger: #C62828;
+  --danger-soft: rgba(198, 40, 40, 0.12);
+  --warning: #A15C00;
+  --success: #1B7A43;
+  --info: #1565C0;
+  --purple: #6A3FB5;
+  --gray: #5C7A68;
+
+  --text-primary: #10231A;
+  --text-secondary: #3C5546;
+  --text-muted: #5C7A68;
+  --text-inverse: #FFFFFF;
+  --text-on-brand: #FFFFFF;
+
+  --border: #DDE7DF;
+  --border-soft: rgba(16, 35, 26, 0.08);
+  --border-strong: #C2D4C7;
+
+  --shadow-xs: 0 1px 2px rgba(20, 60, 40, 0.06);
+  --shadow-sm: 0 2px 10px rgba(20, 60, 40, 0.08);
+  --shadow-md: 0 10px 28px rgba(20, 60, 40, 0.11);
+  --shadow-lg: 0 20px 48px rgba(20, 60, 40, 0.15);
+  --shadow-focus: 0 0 0 3px rgba(15, 122, 66, 0.28);
+
+  --glass-surface-rgb: 255, 255, 255;
+  --glass-elevated-rgb: 255, 255, 255;
+  --glass-overlay-rgb: 16, 35, 26;
+  --glass-dim-scale: 0.6;
+
+  color-scheme: light;
+}
+
 /* ---------------------------------------------------------------- contrast */
 /* The light themes inherit their status colours from the dark palette, where a
    pale red belongs. Text drawn in it on a white card is hard to read, so the
