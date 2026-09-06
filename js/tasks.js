@@ -14,11 +14,12 @@ import { openModal, confirmDialog, promptDialog, lightbox } from './utils/modal.
 import {
   col, ref, query, where, orderBy, limit, onSnapshot, getOne, getMany, getUsers,
   getDirectory, addDoc, updateDoc, deleteDoc, setDoc, doc, ts, callFn, arrayUnion,
-  announce
+  announce, documentId
 } from './utils/api.js';
 import {
   TASK_STATUSES, PRIORITIES, WORK_TYPES, BOARD_COLUMNS, summarize, sortTasks, filterTasks,
   isOverdue, progressOf, statusLabel, priorityLabel, myTasksQuery, allTasksQuery, birthFields,
+  blockedBy, blocking, wouldCycle,
   watchTasks, workersOf
 } from './utils/task-model.js';
 import {
@@ -384,6 +385,8 @@ function taskCard(task, people, clientsById = {}) {
         <span class="task-chip task-chip--priority">
           <span class="task-chip__dot"></span> ${esc(priorityLabel(task.priority))}
         </span>
+        ${task.dependsOn?.length ? `<span class="task-chip" title="تنتظر إنجاز مهام أخرى">
+          <i data-lucide="git-branch" class="icon-sm"></i> ${task.dependsOn.length}</span>` : ''}
         ${task.checklist?.length ? `<span class="task-chip"><i data-lucide="check-square" class="icon-sm"></i>
           ${task.checklist.filter((i) => i.done).length}/${task.checklist.length}</span>` : ''}
         ${task.commentCount ? `<span class="task-chip"><i data-lucide="message-square" class="icon-sm"></i> ${task.commentCount}</span>` : ''}
@@ -401,6 +404,18 @@ function taskCard(task, people, clientsById = {}) {
         <span class="fs-2xs text-muted">${esc(timeAgo(task.updatedAt || task.createdAt))}</span>
       </div>
     </article>`;
+}
+
+/** One linked task: its status, its name, and a way to it. */
+function linkRow(other) {
+  const meta = TASK_STATUSES[other.status] || {};
+  const done = other.status === 'completed' || other.status === 'cancelled';
+  return `
+    <a class="link-row${done ? ' is-done' : ''}" href="#/tasks/${attr(other.id)}">
+      <span class="link-row__dot" style="background:${meta.color || 'var(--gray)'}"></span>
+      <span class="link-row__title truncate">${esc(other.title)}</span>
+      <span class="link-row__status">${esc(statusLabel(other.status))}</span>
+    </a>`;
 }
 
 function bindCards(host) {
@@ -694,8 +709,24 @@ async function renderDetail(container, taskId) {
   return () => [...unsubs, ...paintUnsubs].forEach((fn) => { try { fn(); } catch {} });
 }
 
+/** Both ends of the link, for the detail page. */
+async function loadLinks(task) {
+  const ids = (task.dependsOn || []).slice(0, 20);
+
+  const [blockers, waiting] = await Promise.all([
+    ids.length
+      ? getMany(query(col('tasks'), where(documentId(), 'in', ids.slice(0, 10)))).catch(() => [])
+      : Promise.resolve([]),
+    getMany(query(col('tasks'), where('dependsOn', 'array-contains', task.id), limit(20)))
+      .catch(() => [])
+  ]);
+
+  return { blockers, waiting };
+}
+
 async function paintDetail(root, task, unsubs) {
   const assignees = await getUsers(task.assignees || []);
+  const links = await loadLinks(task);
   const creator = await getUsers([task.createdBy]).then((r) => r[0]);
   // Best-effort: a viewer without clients.view simply sees the name with no logo.
   const client = task.clientId ? await getOne('clients', task.clientId).catch(() => null) : null;
@@ -795,6 +826,17 @@ async function paintDetail(root, task, unsubs) {
           <div class="kv"><span class="kv__k">عدد الفيديوهات</span><span class="kv__v num">${task.videoCount ?? 0}</span></div>
           <div class="kv"><span class="kv__k">مدة الفيديو</span><span class="kv__v">${esc(task.videoDuration || '—')}</span></div>` : ''}
         </div>
+
+        ${links.blockers.length || links.waiting.length ? `
+        <div class="card">
+          <div class="card__head"><div class="card__title"><i data-lucide="git-branch"></i> الترابط</div></div>
+          ${links.blockers.length ? `
+            <div class="link-group__title">تنتظر إنجاز</div>
+            ${links.blockers.map((b) => linkRow(b)).join('')}` : ''}
+          ${links.waiting.length ? `
+            <div class="link-group__title${links.blockers.length ? ' mt-3' : ''}">تنتظرها</div>
+            ${links.waiting.map((w) => linkRow(w)).join('')}` : ''}
+        </div>` : ''}
 
         <div class="card">
           <div class="card__head"><div class="card__title"><i data-lucide="users"></i> المسؤولون</div></div>
@@ -1106,6 +1148,28 @@ async function paintDetail(root, task, unsubs) {
 /* ========================================================================== */
 
 export async function changeStatus(taskId, status, task = null) {
+  // Finishing a task that is still waiting on another is either a mistake or a
+  // decision to break the plan. The list is fetched rather than trusted from
+  // whatever the screen happens to hold, because a board can be filtered and a
+  // blocker that is not on screen still blocks.
+  if (status === 'completed' && task?.dependsOn?.length) {
+    const blockers = await getMany(
+      query(col('tasks'), where(documentId(), 'in', task.dependsOn.slice(0, 10)))
+    ).catch(() => []);
+    const open = blockedBy({ dependsOn: task.dependsOn },
+      Object.fromEntries(blockers.map((b) => [b.id, b])));
+
+    if (open.length) {
+      const names = open.map((b) => `«${b.title}»`).join('، ');
+      const go = await confirmDialog({
+        title: 'المهمة ما زالت تنتظر غيرها',
+        message: `لم تكتمل بعد: ${names}. هل تريد إنهاء هذه المهمة على أي حال؟`,
+        confirmText: 'إنهاؤها الآن'
+      });
+      if (!go) return;
+    }
+  }
+
   const patch = { status, lastStatusAt: ts(), updatedAt: ts() };
 
   if (status === 'inprogress' && !task?.startedAt) patch.startedAt = ts();
@@ -1220,10 +1284,18 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
   const canAssign = can(session.claims, 'tasks.assign') || can(session.claims, 'tasks.create');
   const canAI = can(session.claims, 'tasks.ai');
 
-  const [directory, clients] = await Promise.all([
+  // Only `tasks.editAll` may write `dependsOn` — the rules restrict an
+  // assignee to moving their own work forward, and linking two tasks is a
+  // planning decision, not part of doing one.
+  const canLink = can(session.claims, 'tasks.editAll');
+
+  const [directory, clients, linkable] = await Promise.all([
     canAssign ? getDirectory().catch(() => []) : Promise.resolve([]),
     can(session.claims, 'clients.view')
       ? getMany(query(col('clients'), orderBy('name'), limit(200))).catch(() => [])
+      : Promise.resolve([]),
+    canLink
+      ? getMany(query(col('tasks'), orderBy('createdAt', 'desc'), limit(60))).catch(() => [])
       : Promise.resolve([])
   ]);
 
@@ -1236,6 +1308,16 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
     || (personal || !canAssign ? [session.uid] : [])
   );
   let selectedClientId = task?.clientId || clientId || defaults.clientId || '';
+
+  const dependsOn = new Set(task?.dependsOn || []);
+  // A task cannot wait for itself, and it cannot wait for anything already
+  // waiting on it — see wouldCycle. The list is filtered once here rather than
+  // checked on every click.
+  const byId = Object.fromEntries(linkable.map((t) => [t.id, t]));
+  const candidates = linkable.filter((other) =>
+    other.id !== task?.id &&
+    !other.deleted &&
+    !(task?.id && wouldCycle(task.id, other.id, byId)));
 
   const modal = openModal({
     title: isEdit ? 'تعديل المهمة' : (personal ? 'مهمة شخصية جديدة' : 'مهمة جديدة'),
@@ -1334,6 +1416,22 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
           <div class="field__hint">يمكن إسناد المهمة لأكثر من موظف.</div>
         </div>` : ''}
 
+        ${canLink && candidates.length ? `
+        <div class="field">
+          <label class="field__label">تنتظر إنجاز</label>
+          <div class="chip-select chip-select--tall" id="t-depends">
+            ${candidates.map((other) => `
+              <button type="button" class="chip-toggle${dependsOn.has(other.id) ? ' is-on' : ''}"
+                      data-dep="${attr(other.id)}" title="${attr(other.title)}">
+                <span class="chip-toggle__dot" style="background:${TASK_STATUSES[other.status]?.color || 'var(--gray)'}"></span>
+                ${esc(other.title)}
+              </button>`).join('')}
+          </div>
+          <div class="field__hint">
+            لا تبدأ هذه المهمة قبل أن تكتمل ما تختاره هنا. المهام التي تنتظر هذه المهمة لا تظهر في القائمة، حتى لا تنتظر كلٌّ منهما الأخرى إلى الأبد.
+          </div>
+        </div>` : ''}
+
         <div class="field">
           <label class="field__label">قائمة التحقق</label>
           <div id="t-checklist" class="flex-col gap-2"></div>
@@ -1387,6 +1485,12 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
       }
 
       /* client picker — a native <select> cannot show a logo per option */
+      on(api.root, 'click', '[data-dep]', (_, node) => {
+        const id = node.dataset.dep;
+        if (dependsOn.has(id)) dependsOn.delete(id); else dependsOn.add(id);
+        node.classList.toggle('is-on');
+      });
+
       const clientBtn = api.$('#t-client-btn');
       const paintClientButton = () => {
         if (!clientBtn) return;
@@ -1486,6 +1590,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
           startedAt: startValue ? new Date(startValue) : (task?.startedAt || null),
           checklist: checklist.filter((c) => c.text.trim()),
           isPersonal: personal || (!canAssign),
+          ...(canLink ? { dependsOn: [...dependsOn] } : {}),
           workType,
           imageCount: workType === 'design' ? (Number(api.$('#t-image-count')?.value) || 0) : null,
           videoCount: workType === 'video' ? (Number(api.$('#t-video-count')?.value) || 0) : null,
