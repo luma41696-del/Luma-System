@@ -44,24 +44,38 @@ function row(key, value, ltr = false) {
   </div>`;
 }
 
+/**
+ * The top of every sheet: the mark in the corner the page starts from, and the
+ * document's own name set large opposite it.
+ *
+ * The logo is an `<img>` rather than the CSS mask the app uses, because
+ * html2canvas rasterises this markup and does not implement `mask-image` — the
+ * mark would come out as a solid block.
+ */
+/** One line of the totals block; `grand` gives it the rule above and the size. */
+function total(label, value, grand = false) {
+  return `<div class="doc-totals__row${grand ? ' doc-totals__row--grand' : ''}">
+    <span>${esc(label)}</span><span>${esc(value)}</span>
+  </div>`;
+}
+
 function sheetHeader(docTitle, subtitle, number) {
   return `
     <div class="doc-sheet__header">
       <div class="doc-sheet__brand">
-        <img src="assets/logo/luma-mark-dark.png" alt="Luma Agency"
-             style="width:34px;height:95px;object-fit:contain">
+        <img src="assets/logo/luma-mark-dark.png" alt="Luma Agency">
         <div>
           <div class="doc-sheet__brand-name">LUMA</div>
           <div class="doc-sheet__brand-word">AGENCY</div>
+          ${subtitle ? `<div class="doc-sheet__brand-sub">${esc(subtitle)}</div>` : ''}
         </div>
       </div>
       <div class="doc-sheet__meta">
-        ${number ? `<div class="doc-sheet__no">${esc(number)}</div>` : ''}
+        <div class="doc-sheet__title">${esc(docTitle)}</div>
+        ${number ? `<div class="doc-sheet__no">#${esc(number)}</div>` : ''}
         <div>${esc(formatDate(new Date()))}</div>
       </div>
-    </div>
-    <div class="doc-sheet__title">${esc(docTitle)}</div>
-    ${subtitle ? `<div class="doc-sheet__subtitle">${esc(subtitle)}</div>` : ''}`;
+    </div>`;
 }
 
 function sheetFooter(note = '') {
@@ -194,7 +208,6 @@ export function buildInvoiceSheet(invoice, { statusLabel, statusTone } = {}) {
 
       <div class="doc-section">
         <div class="doc-grid">
-          ${row('العميل', invoice.clientName)}
           ${row('تاريخ الإصدار', formatDate(invoice.issueDate))}
           ${row('تاريخ الاستحقاق', invoice.dueDate ? formatDate(invoice.dueDate) : '—')}
         </div>
@@ -204,26 +217,24 @@ export function buildInvoiceSheet(invoice, { statusLabel, statusTone } = {}) {
       <div class="doc-section">
         <div class="doc-section__title">البنود</div>
         <table class="doc-table">
-          <thead><tr><th>الوصف</th><th>الكمية</th><th>سعر الوحدة</th><th>الإجمالي</th></tr></thead>
+          <thead><tr><th>الوصف</th><th class="num">الكمية</th><th class="num">سعر الوحدة</th><th class="num">الإجمالي</th></tr></thead>
           <tbody>${(invoice.items || []).map((it) => `
             <tr>
               <td>${esc(it.description)}</td>
-              <td>${esc(String(it.quantity))}</td>
-              <td>${esc(formatMinor(it.unitPrice))}</td>
-              <td>${esc(formatMinor(it.total))}</td>
+              <td class="num">${esc(String(it.quantity))}</td>
+              <td class="num">${esc(formatMinor(it.unitPrice))}</td>
+              <td class="num">${esc(formatMinor(it.total))}</td>
             </tr>`).join('')}
           </tbody>
         </table>
-      </div>
 
-      <div class="doc-section">
-        <div class="doc-grid">
-          ${row('المجموع الفرعي', formatMinor(invoice.subtotal))}
-          ${invoice.discount ? row('الخصم', `− ${formatMinor(invoice.discount)}`) : ''}
-          ${invoice.tax ? row(`الضريبة (${invoice.taxRate}%)`, formatMinor(invoice.tax)) : ''}
-          ${row('الإجمالي', formatMinor(invoice.total))}
-          ${row('المحصّل', formatMinor(invoice.paid || 0))}
-          ${row('المتبقي', formatMinor(balance))}
+        <div class="doc-totals">
+          ${total('المجموع الفرعي', formatMinor(invoice.subtotal))}
+          ${invoice.discount ? total('الخصم', `− ${formatMinor(invoice.discount)}`) : ''}
+          ${invoice.tax ? total(`الضريبة (${invoice.taxRate}%)`, formatMinor(invoice.tax)) : ''}
+          ${total('الإجمالي', formatMinor(invoice.total), true)}
+          ${total('المحصّل', formatMinor(invoice.paid || 0))}
+          ${total('المتبقي', formatMinor(balance))}
         </div>
       </div>
 

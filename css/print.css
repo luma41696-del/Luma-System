@@ -1,152 +1,255 @@
 /* =============================================================================
-   Luma Agency — Printable / PDF document sheet (Arabic RTL)
-   Used by js/utils/pdf.js. The browser does the Arabic shaping, so letters are
-   always joined and never reversed — unlike embedding a raw TTF in jsPDF.
+   Luma Agency — printable document sheet (Arabic RTL)
+
+   Used by js/utils/pdf.js for all seven documents: requests, invoices,
+   contracts, receipts, expenses, ad budgets and reports. They share these
+   classes, so the look is decided once here rather than seven times there.
+
+   Deliberately monochrome. A document that leaves the company is read by
+   people who did not choose our brand colour, often printed in black and
+   white, sometimes faxed or scanned. Ink is the only thing every one of those
+   preserves, so the hierarchy is built from size, weight and space instead of
+   from colour — the accent appears once, as a hairline under the logo.
+
+   Fixed hex values rather than theme tokens, on purpose: paper does not have a
+   dark mode, and a document exported at midnight must match one exported at
+   noon.
    ============================================================================= */
 
 .doc-sheet {
   width: 794px;               /* A4 @ 96dpi */
   min-height: 1123px;
-  padding: 56px 60px;
-  background: #ffffff;
-  color: #171B22;
+  padding: 64px 64px 56px;
+  /* Warm off-white rather than pure white: it reads as paper on screen and
+     prints identically. */
+  background: #FBFBF9;
+  color: #14140F;
   font-family: "Cairo", Arial, sans-serif;
-  font-size: 14px;
-  line-height: 1.8;
+  font-size: 13px;
+  line-height: 1.85;
   direction: rtl;
   text-align: right;
   box-sizing: border-box;
   position: relative;
 }
 
+/* ------------------------------------------------------------------ header */
+
 .doc-sheet__header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 24px;
-  padding-bottom: 20px;
-  border-bottom: 3px solid #4070C8;
-  margin-bottom: 28px;
+  gap: 32px;
+  margin-bottom: 52px;
 }
-.doc-sheet__brand { display: flex; align-items: center; gap: 16px; }
-.doc-sheet__logo {
-  width: 34px;
-  height: 95px;
-  -webkit-mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
-  mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
-  background-color: #071A2F;
+
+/* The logo sits in the corner the page starts from. */
+.doc-sheet__brand { display: flex; align-items: flex-start; gap: 14px; }
+.doc-sheet__brand img {
+  width: 26px;
+  height: 72px;
+  object-fit: contain;
   flex: none;
 }
 .doc-sheet__brand-name {
-  font-size: 24px;
-  font-weight: 800;
-  color: #071A2F;
-  line-height: 1.1;
-  letter-spacing: 0.3em;
+  font-size: 19px;
+  font-weight: 700;
+  color: #14140F;
+  line-height: 1.05;
+  letter-spacing: 0.34em;
   direction: ltr;
 }
 .doc-sheet__brand-word {
-  font-size: 11px;
-  color: #41505F;
-  letter-spacing: 0.42em;
+  font-size: 9.5px;
+  font-weight: 400;
+  color: #8A8A82;
+  letter-spacing: 0.44em;
   direction: ltr;
-  margin-top: 3px;
+  margin-top: 4px;
 }
-.doc-sheet__brand-sub { font-size: 12px; color: #7F8998; margin-top: 5px; }
-
-.doc-sheet__meta { text-align: left; font-size: 12px; color: #41505F; direction: ltr; }
-.doc-sheet__no {
-  display: inline-block;
-  padding: 5px 12px;
-  background: #4070C8;
-  color: #12100A;
-  border-radius: 6px;
-  font-weight: 800;
-  font-size: 13px;
-  margin-bottom: 6px;
-  direction: ltr;
+.doc-sheet__brand-sub {
+  font-size: 11.5px;
+  color: #6E6E66;
+  margin-top: 10px;
+  max-width: 260px;
 }
 
+/* The document's own name, set large and light — the one thing on the page
+   that should be legible across a desk. */
 .doc-sheet__title {
-  font-size: 22px;
-  font-weight: 800;
-  color: #071A2F;
-  margin-bottom: 4px;
+  font-size: 38px;
+  font-weight: 300;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: #14140F;
+  margin: 0 0 6px;
+  text-align: left;
 }
-.doc-sheet__subtitle { font-size: 13px; color: #7F8998; margin-bottom: 26px; }
+.doc-sheet__meta {
+  text-align: left;
+  font-size: 12px;
+  color: #6E6E66;
+  min-width: 150px;
+}
+/* The number is text, not a badge: a filled chip is the first thing a
+   photocopier turns into a black smudge. */
+.doc-sheet__no {
+  font-size: 17px;
+  font-weight: 600;
+  color: #14140F;
+  direction: ltr;
+  text-align: left;
+  margin-bottom: 2px;
+}
+/* Kept for any sheet that still renders a standalone subtitle. */
+.doc-sheet__subtitle {
+  font-size: 12px;
+  color: #8A8A82;
+  margin: 0 0 32px;
+}
 
-.doc-section { margin-bottom: 24px; break-inside: avoid; }
+/* ----------------------------------------------------------------- sections */
+
+.doc-section { margin-bottom: 34px; break-inside: avoid; }
 .doc-section__title {
-  font-size: 14px;
-  font-weight: 800;
-  color: #102943;
-  padding-bottom: 6px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid #E1E7F0;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: #8A8A82;
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid #E4E4DE;
 }
 
 .doc-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 28px;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px 40px;
 }
-.doc-row { display: flex; gap: 10px; font-size: 13px; align-items: baseline; }
-.doc-row__k { color: #7F8998; min-width: 96px; flex: none; }
-.doc-row__v { color: #171B22; font-weight: 600; word-break: break-word; }
+
+.doc-row { display: flex; gap: 12px; font-size: 12.5px; align-items: baseline; }
+.doc-row__k { color: #8A8A82; min-width: 104px; flex: none; font-weight: 400; }
+.doc-row__v { color: #14140F; font-weight: 600; word-break: break-word; }
 .doc-row__v.ltr { direction: ltr; text-align: right; }
 
 .doc-box {
+  background: #F4F4F0;
+  border: 1px solid #E4E4DE;
+  border-radius: 4px;
   padding: 14px 16px;
-  background: #F7F9FC;
-  border: 1px solid #E1E7F0;
-  border-radius: 10px;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.9;
+  color: #34342C;
   white-space: pre-wrap;
-  word-break: break-word;
 }
 
+/* Status is a word with a rule under it, not a coloured pill — it survives a
+   black-and-white print, which a pale green chip does not. */
 .doc-status {
   display: inline-block;
-  padding: 5px 14px;
-  border-radius: 999px;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
+  padding-bottom: 3px;
+  border-bottom: 2px solid #14140F;
 }
-.doc-status--approved { background: #DCFCE7; color: #15803D; }
-.doc-status--rejected { background: #FEE2E2; color: #B91C1C; }
-.doc-status--pending  { background: #FEF3C7; color: #A16207; }
-.doc-status--neutral  { background: #EEF1F6; color: #41505F; }
+.doc-status--approved { border-bottom-color: #15803D; color: #15803D; }
+.doc-status--rejected { border-bottom-color: #B91C1C; color: #B91C1C; }
+.doc-status--pending  { border-bottom-color: #A16207; color: #A16207; }
+.doc-status--neutral  { border-bottom-color: #8A8A82; color: #4A4A42; }
+
+/* ------------------------------------------------------------------- tables */
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.doc-table th,
+.doc-table td {
+  padding: 11px 4px;
+  text-align: right;
+  border-bottom: 1px solid #EAEAE4;
+}
+.doc-table th {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: #8A8A82;
+  border-bottom: 1px solid #14140F;
+  padding-bottom: 9px;
+}
+/* Money lines up on the decimal, which is the only way a column of figures
+   can be checked by eye. */
+.doc-table td.num,
+.doc-table th.num {
+  text-align: left;
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.doc-table tr:last-child td { border-bottom: 0; }
+
+/* The totals block sits under the figures it sums, in the same column. */
+.doc-totals {
+  margin-inline-start: auto;
+  width: 58%;
+  margin-top: 18px;
+}
+.doc-totals__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  font-size: 12.5px;
+  padding: 7px 4px;
+}
+.doc-totals__row span:last-child {
+  direction: ltr;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.doc-totals__row--grand {
+  border-top: 1px solid #14140F;
+  margin-top: 6px;
+  padding-top: 12px;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------- signatures */
 
 .doc-signatures {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 40px;
-  margin-top: 46px;
+  display: flex;
+  gap: 56px;
+  margin-top: 56px;
+  break-inside: avoid;
 }
-.doc-sign { text-align: center; }
-.doc-sign__line { border-top: 1px solid #7F8998; margin-bottom: 8px; }
-.doc-sign__label { font-size: 12px; color: #7F8998; }
+.doc-sign { flex: 1; }
+.doc-sign__line {
+  border-bottom: 1px solid #14140F;
+  height: 46px;
+}
+.doc-sign__label {
+  font-size: 11px;
+  color: #8A8A82;
+  margin-top: 8px;
+}
+
+/* ------------------------------------------------------------------ footer */
 
 .doc-sheet__footer {
   position: absolute;
-  inset-inline: 60px;
-  bottom: 32px;
-  padding-top: 12px;
-  border-top: 1px solid #E1E7F0;
+  inset-inline: 64px;
+  bottom: 40px;
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
-  color: #7F8998;
+  gap: 24px;
+  padding-top: 14px;
+  border-top: 1px solid #E4E4DE;
+  font-size: 10.5px;
+  color: #9A9A92;
 }
 
-.doc-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-.doc-table th, .doc-table td {
-  padding: 8px 10px;
-  border: 1px solid #E1E7F0;
-  text-align: right;
-}
-.doc-table th { background: #F7F9FC; font-weight: 700; color: #102943; }
+/* ------------------------------------------------------------------- print */
 
 /* Off-screen staging container used while rasterising to PDF. */
 .pdf-stage {
@@ -163,6 +266,19 @@
   body.is-printing > *:not(.print-root) { display: none !important; }
   body.is-printing .print-root { display: block !important; }
   body.is-printing .pdf-stage { position: static; inset: auto; }
-  .doc-sheet { box-shadow: none; width: 100%; min-height: auto; padding: 0; }
+  .doc-sheet {
+    box-shadow: none;
+    width: 100%;
+    min-height: auto;
+    padding: 0;
+    background: #fff;
+  }
+  /* Absolute positioning is what pins the footer to the bottom of the A4 box
+     on screen; on paper the page break decides, so it goes back in flow. */
+  .doc-sheet__footer {
+    position: static;
+    inset-inline: auto;
+    margin-top: 44px;
+  }
   @page { size: A4; margin: 14mm; }
 }

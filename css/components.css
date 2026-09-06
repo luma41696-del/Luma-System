@@ -584,6 +584,14 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .theme-swatch--dawn .theme-swatch__preview {
   background: linear-gradient(135deg, #FFFFFF 0%, #F7DED9 100%);
 }
+/* Every theme needs its own preview: the swatch is hand-drawn, not read from
+   the palette, so a theme without one shows an empty square. */
+.theme-swatch--hacker .theme-swatch__preview {
+  background: linear-gradient(135deg, #13271A 0%, #030704 100%);
+}
+.theme-swatch--hacker-light .theme-swatch__preview {
+  background: linear-gradient(135deg, #FFFFFF 0%, #E4EFE7 100%);
+}
 .theme-swatch__dot {
   position: absolute;
   inset-inline-end: 5px;
@@ -602,6 +610,8 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .theme-swatch--forest .theme-swatch__dot { background: #3FB98F; }
 .theme-swatch--mocha .theme-swatch__dot { background: #D9A066; }
 .theme-swatch--dawn .theme-swatch__dot { background: #D24E6B; }
+.theme-swatch--hacker .theme-swatch__dot { background: #3DDC71; }
+.theme-swatch--hacker-light .theme-swatch__dot { background: #0F7A42; }
 
 .theme-swatch__text { flex: 1; min-width: 0; }
 .theme-swatch__label { display: block; font-weight: 700; font-size: var(--fs-sm); color: var(--text-primary); }
