@@ -120,56 +120,6 @@ export function birthFields(status, { now, startedAt = null }) {
   };
 }
 
-/* ------------------------------------------------------------ dependencies */
-
-/**
- * A task can wait on other tasks: "publish" cannot start before "approve".
- *
- * The link is stored on the waiting task as `dependsOn` — a list of the ids it
- * is waiting for — rather than on the blocking one. That direction matters: a
- * task needs to know what it is waiting for to draw itself, and asking the
- * other way would mean reading every task in the system to find out whether
- * this one is free.
- *
- * A cancelled task stops blocking. It is not going to happen, and leaving it
- * in the way would strand everything behind it forever.
- */
-export function blockedBy(task, tasksById = {}) {
-  return (task?.dependsOn || [])
-    .map((id) => tasksById[id])
-    .filter((other) => other && other.status !== 'completed' && other.status !== 'cancelled');
-}
-
-export function isBlocked(task, tasksById = {}) {
-  return blockedBy(task, tasksById).length > 0;
-}
-
-/** The tasks waiting on this one — the other end of the same link. */
-export function blocking(task, allTasks = []) {
-  if (!task?.id) return [];
-  return allTasks.filter((other) => (other.dependsOn || []).includes(task.id));
-}
-
-/**
- * Whether adding `blockerId` to `taskId` would create a loop.
- *
- * Two tasks each waiting for the other can never start, and neither can
- * anything behind them. The cycle is cheaper to refuse than to explain later,
- * so the picker walks the chain before it offers the link.
- */
-export function wouldCycle(taskId, blockerId, tasksById = {}) {
-  if (taskId === blockerId) return true;
-
-  const seen = new Set();
-  const walk = (id) => {
-    if (id === taskId) return true;
-    if (seen.has(id)) return false;
-    seen.add(id);
-    return (tasksById[id]?.dependsOn || []).some(walk);
-  };
-  return walk(blockerId);
-}
-
 /* ----------------------------------------------------------------- queries */
 
 /** Tasks assigned to one employee. */
