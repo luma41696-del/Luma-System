@@ -29,6 +29,16 @@ export function series() {
   return [p.brand, p.info, p.purple, p.success, p.warning, p.danger, p.gray];
 }
 
+/**
+ * The app's own face, for text drawn on a canvas.
+ *
+ * A chart is painted, not laid out, so it inherits nothing from CSS — it has
+ * to be told. Named once here rather than at each of the five places that need
+ * it, which is how the family name was left behind when the app changed fonts
+ * and every label quietly fell back to Arial.
+ */
+const CHART_FONT = '"Cairo", "Segoe UI", Arial, sans-serif';
+
 function baseOptions() {
   const p = palette();
   return {
@@ -40,7 +50,7 @@ function baseOptions() {
         display: false,
         labels: {
           color: p.text,
-          font: { family: 'DIN, "DIN Next Arabic", Arial, sans-serif', size: 12 },
+          font: { family: CHART_FONT, size: 12 },
           usePointStyle: true,
           boxWidth: 8
         }
@@ -56,19 +66,19 @@ function baseOptions() {
         displayColors: true,
         rtl: true,
         textDirection: 'rtl',
-        titleFont: { family: 'DIN, "DIN Next Arabic", Arial, sans-serif', weight: '700' },
-        bodyFont: { family: 'DIN, "DIN Next Arabic", Arial, sans-serif' }
+        titleFont: { family: CHART_FONT, weight: '700' },
+        bodyFont: { family: CHART_FONT }
       }
     },
     scales: {
       x: {
         grid: { display: false, drawBorder: false },
-        ticks: { color: p.text, font: { family: 'DIN, Arial, sans-serif', size: 11 } }
+        ticks: { color: p.text, font: { family: CHART_FONT, size: 11 } }
       },
       y: {
         beginAtZero: true,
         grid: { color: p.grid, drawBorder: false },
-        ticks: { color: p.text, precision: 0, font: { family: 'DIN, Arial, sans-serif', size: 11 } }
+        ticks: { color: p.text, precision: 0, font: { family: CHART_FONT, size: 11 } }
       }
     }
   };

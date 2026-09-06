@@ -10,7 +10,7 @@
  */
 
 export const THEMES = [
-  'dark', 'light', 'mono', 'classic', 'space', 'ship',
+  'dark', 'light', 'mono', 'mono-dark', 'classic', 'space', 'ship',
   'forest', 'mocha', 'dawn', 'hacker', 'hacker-light'
 ];
 
@@ -18,6 +18,11 @@ export const THEME_META = {
   dark:    { icon: 'moon',       labelKey: 'settings.appearance.theme.dark',    hintKey: 'settings.appearance.theme.dark.hint' },
   light:   { icon: 'sun',        labelKey: 'settings.appearance.theme.light',   hintKey: 'settings.appearance.theme.light.hint' },
   mono:    { icon: 'contrast',   labelKey: 'settings.appearance.theme.mono',    hintKey: 'settings.appearance.theme.mono.hint' },
+  'mono-dark': {
+    icon: 'eclipse',
+    labelKey: 'settings.appearance.theme.monoDark',
+    hintKey: 'settings.appearance.theme.monoDark.hint'
+  },
   classic: { icon: 'book',       labelKey: 'settings.appearance.theme.classic', hintKey: 'settings.appearance.theme.classic.hint' },
   space:   { icon: 'sparkles',   labelKey: 'settings.appearance.theme.space',   hintKey: 'settings.appearance.theme.space.hint' },
   ship:    { icon: 'rocket',     labelKey: 'settings.appearance.theme.ship',    hintKey: 'settings.appearance.theme.ship.hint' },

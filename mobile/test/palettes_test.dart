@@ -20,13 +20,26 @@ double contrast(Color a, Color b) {
 
 void main() {
   test('every site theme is present and distinct', () {
-    expect(lumaPalettes.length, 11);
-    expect(lumaPalettes.map((p) => p.id).toSet().length, 11);
+    expect(lumaPalettes.length, 12);
+    expect(lumaPalettes.map((p) => p.id).toSet().length, 12);
     expect(
       lumaPalettes.map((p) => p.id),
-      containsAll(['dark', 'light', 'mono', 'forest', 'mocha', 'dawn',
-                   'hacker', 'hacker-light']),
+      containsAll(['dark', 'light', 'mono', 'mono-dark', 'forest', 'mocha',
+                   'dawn', 'hacker', 'hacker-light']),
     );
+  });
+
+  test('the monochrome pair is one the exact reverse of the other', () {
+    final light = ThemeController.byId('mono');
+    final dark = ThemeController.byId('mono-dark');
+
+    expect(light.isDark, isFalse);
+    expect(dark.isDark, isTrue);
+    // Black on white, white on black: each one's accent is the other's ground.
+    expect(_luminance(light.brand), lessThan(0.1));
+    expect(_luminance(dark.brand), greaterThan(0.9));
+    expect(_luminance(light.bgApp), greaterThan(0.8));
+    expect(_luminance(dark.bgApp), lessThan(0.05));
   });
 
   test('the hacker pair really is one dark and one light', () {

@@ -860,6 +860,73 @@ html.theme-swapping * {
   color-scheme: light;
 }
 
+/* --------------------------------------------------- monochrome, inverted */
+/* The same idea with the ink and the paper swapped: white as the accent on
+   black. The status colours are set here too, but brightened rather than
+   darkened — the readable-on-white set from the light twin would disappear
+   against this. */
+[data-theme="mono-dark"] {
+  --navy-900: #000000;
+  --navy-800: #0A0A0A;
+  --navy-700: #121212;
+  --navy-600: #1A1A1A;
+  --border-dark: #2A2A2A;
+
+  --brand: #FFFFFF;
+  --brand-hover: #D6D6D6;
+  --brand-light: #FFFFFF;
+  --brand-soft: rgba(255, 255, 255, 0.10);
+  --brand-glow: rgba(255, 255, 255, 0.22);
+  --brand-gradient: linear-gradient(135deg, #FFFFFF 0%, #E4E4E4 55%, #C9C9C9 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #E4E4E4 0%, #C9C9C9 100%);
+  --brand-gradient-x: linear-gradient(to right, #FFFFFF, #E4E4E4 70%, #C9C9C9);
+
+  --yellow: var(--brand);
+  --yellow-hover: var(--brand-hover);
+  --yellow-soft: var(--brand-soft);
+
+  --bg-app: #000000;
+  --bg-canvas: #080808;
+  --bg-surface: #121212;
+  --bg-surface-2: #1A1A1A;
+  --bg-elevated: #1E1E1E;
+  --bg-inset: rgba(255, 255, 255, 0.05);
+  --bg-hover: rgba(255, 255, 255, 0.08);
+  --bg-active: rgba(255, 255, 255, 0.12);
+  --bg-overlay: rgba(0, 0, 0, 0.82);
+
+  --danger: #FF6B6B;
+  --danger-soft: rgba(255, 107, 107, 0.16);
+  --warning: #FFC24D;
+  --success: #4ADE80;
+  --info: #7DB9FF;
+  --purple: #C4A6FF;
+  --gray: #9A9A9A;
+
+  --text-primary: #FFFFFF;
+  --text-secondary: #C9C9C9;
+  --text-muted: #8C8C8C;
+  --text-inverse: #000000;
+  /* Black on the white accent — white on white would vanish. */
+  --text-on-brand: #000000;
+
+  --border: #2A2A2A;
+  --border-soft: rgba(255, 255, 255, 0.10);
+  --border-strong: #3D3D3D;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.6);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.55);
+  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.62);
+  --shadow-lg: 0 22px 54px rgba(0, 0, 0, 0.72);
+  --shadow-focus: 0 0 0 3px rgba(255, 255, 255, 0.28);
+
+  --glass-surface-rgb: 18, 18, 18;
+  --glass-elevated-rgb: 30, 30, 30;
+  --glass-overlay-rgb: 0, 0, 0;
+
+  color-scheme: dark;
+}
+
 /* ---------------------------------------------------------------- contrast */
 /* The light themes inherit their status colours from the dark palette, where a
    pale red belongs. Text drawn in it on a white card is hard to read, so the

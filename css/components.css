@@ -589,6 +589,9 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .theme-swatch--mono .theme-swatch__preview {
   background: linear-gradient(135deg, #FFFFFF 0%, #E6E6E6 100%);
 }
+.theme-swatch--mono-dark .theme-swatch__preview {
+  background: linear-gradient(135deg, #1E1E1E 0%, #000000 100%);
+}
 .theme-swatch--hacker .theme-swatch__preview {
   background: linear-gradient(135deg, #13271A 0%, #030704 100%);
 }
@@ -612,6 +615,7 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .theme-swatch--mocha .theme-swatch__dot { background: #D9A066; }
 .theme-swatch--dawn .theme-swatch__dot { background: #D24E6B; }
 .theme-swatch--mono .theme-swatch__dot { background: #141414; }
+.theme-swatch--mono-dark .theme-swatch__dot { background: #FFFFFF; }
 .theme-swatch--hacker .theme-swatch__dot { background: #3DDC71; }
 .theme-swatch--hacker-light .theme-swatch__dot { background: #0F7A42; }
 
