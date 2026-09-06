@@ -409,9 +409,19 @@ html[dir="ltr"] .select { background-position: right var(--sp-3) center; padding
   width: 18px; height: 18px;
   border-radius: 50%;
   background: #fff;
-  transition: transform var(--t-base) var(--ease);
+  /* The knob has to be visible on both tracks, and one of the themes has a
+     white accent — a white knob on it disappears and the switch reads as a
+     blank pill. `--text-on-brand` is by definition what shows on the accent.
+     Unchecked, the knob is white on a pale track in the light themes, where
+     colour alone is not enough: the ring gives it an edge and the shadow gives
+     it a lift, which is what tells a person it is a knob and not a gap. */
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.32),
+    0 0 0 1px rgba(0, 0, 0, 0.12);
+  transition: transform var(--t-base) var(--ease), background var(--t-base) var(--ease);
 }
 .switch input:checked + .switch__track { background: var(--yellow); }
+.switch input:checked + .switch__track::after { background: var(--text-on-brand); }
 .switch input:checked + .switch__track::after { transform: translateX(-18px); }
 html[dir="ltr"] .switch input:checked + .switch__track::after { transform: translateX(18px); }
 .switch input:focus-visible + .switch__track { box-shadow: var(--shadow-focus); }
@@ -2421,7 +2431,7 @@ html[dir="ltr"] .ai-panel.is-open,
   width: 34px; height: 34px;
   flex: none;
   border-radius: 50%;
-  color: #fff;
+  color: var(--text-on-brand);
   background: linear-gradient(135deg,
     var(--brand) 0%, color-mix(in srgb, var(--brand) 45%, #A855F7) 100%);
 }
@@ -2600,7 +2610,7 @@ html[dir="ltr"] .ai-panel.is-open,
 }
 .ai-bar__icon { color: var(--text-muted); background: none; }
 .ai-bar__icon:hover { background: var(--bg-hover); color: var(--text-primary); }
-.ai-bar__send { color: #fff; background: var(--brand); }
+.ai-bar__send { color: var(--text-on-brand); background: var(--brand); }
 .ai-bar__send:hover { transform: scale(1.06); }
 
 .ai-page__note {
