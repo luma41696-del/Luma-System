@@ -733,7 +733,8 @@
 .intro__mark {
   height: clamp(84px, 18vh, 132px);
   /* Faster than the sidebar's, because this one is doing the waiting. */
-  animation-duration: 2.6s;
+  animation-duration: 2.25s;
+  filter: drop-shadow(0 0 18px rgba(238, 70, 151, .2));
 }
 
 .intro.is-done {

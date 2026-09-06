@@ -210,27 +210,29 @@ svg.lucide {
 .logo-mark {
   -webkit-mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
   mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
-  /* Painted first, so the mark is never invisible if the gradient fails. */
-  background-color: var(--brand);
+  /* A dark berry base keeps the mark visible before its moving paint loads. */
+  background-color: #a43b78;
   background-image: linear-gradient(
-    115deg,
-    var(--brand-light) 0%,
-    var(--accent-3) 25%,
-    var(--brand) 50%,
-    var(--accent-2) 75%,
-    var(--brand-light) 100%
+    125deg,
+    #762b5d 0%,
+    #d34b8e 19%,
+    #ff3b9a 34%,
+    #e99a78 48%,
+    #a33a76 64%,
+    #ff4aa2 82%,
+    #762b5d 100%
   );
-  /* Oversized so there is somewhere to travel; the pass is slow enough to
-     read as a sheen rather than a flicker in the corner of the eye. */
-  background-size: 300% 300%;
-  animation: logo-sheen 8s var(--ease) infinite;
+  /* The reference keeps the mark still and moves only its diagonal colour. */
+  background-size: 260% 260%;
+  animation: logo-sheen 4.8s linear infinite;
+  filter: drop-shadow(0 0 8px rgba(238, 70, 151, .14));
   aspect-ratio: 216 / 604;
   flex: none;
 }
 
 @keyframes logo-sheen {
-  0%,  100% { background-position:   0% 50%; }
-  50%       { background-position: 100% 50%; }
+  0%   { background-position: 100% 100%; }
+  100% { background-position:   0%   0%; }
 }
 
 /* A logo that never stops moving is a logo nobody stops noticing. */
