@@ -72,20 +72,20 @@ flutter:
   assets:
     - assets/logo/
 
-  # The same face the website uses, so the two read as one product. Four
-  # weights rather than the family's seven: these are the ones the UI asks for,
-  # and each unused weight is ~150 KB of APK for nothing.
+  # The same face the website uses, so the two read as one product. Four of the
+  # family's six weights: these are the ones the UI asks for, and each unused
+  # weight is ~170 KB of APK for nothing.
   fonts:
-    - family: DIN Next Arabic
+    - family: Cairo
       fonts:
-        - asset: assets/fonts/DINNextArabic-Regular.ttf
+        - asset: assets/fonts/Cairo-Regular.ttf
           weight: 400
-        - asset: assets/fonts/DINNextArabic-Medium.ttf
-          weight: 500
-        - asset: assets/fonts/DINNextArabic-Bold.ttf
+        - asset: assets/fonts/Cairo-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Cairo-Bold.ttf
           weight: 700
-        - asset: assets/fonts/DINNextArabic-Black.ttf
-          weight: 800
+        - asset: assets/fonts/Cairo-Black.ttf
+          weight: 900
 
   # To add assets to your application, add an assets section, like this:
   # assets:

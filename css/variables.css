@@ -4,81 +4,61 @@
    ============================================================================= */
 
 /* ------------------------------------------------------------------ fonts */
+/* Cairo, in the six weights the project ships.
+   Two of the weights the stylesheet asks for — 500 and 800 — have no face of
+   their own, so the two nearest cover them by range. Without that the browser
+   would synthesise them by smearing the outlines, which looks muddy in Arabic
+   where letters join. */
 @font-face {
-  font-family: "DIN Next Arabic";
-  src: url("../assets/fonts/DINNextArabic-UltraLight.ttf") format("truetype");
+  font-family: "Cairo";
+  src: url("../assets/fonts/Cairo-ExtraLight.ttf") format("truetype");
   font-weight: 200;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "DIN Next Arabic";
-  src: url("../assets/fonts/DINNextArabic-Light.ttf") format("truetype");
+  font-family: "Cairo";
+  src: url("../assets/fonts/Cairo-Light.ttf") format("truetype");
   font-weight: 300;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "DIN Next Arabic";
-  src: url("../assets/fonts/DINNextArabic-Regular.ttf") format("truetype");
+  font-family: "Cairo";
+  src: url("../assets/fonts/Cairo-Regular.ttf") format("truetype");
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
+/* Carries 500 as well: "medium" emphasis reads as emphasis this way, where
+   falling back to Regular would erase it entirely. */
 @font-face {
-  font-family: "DIN Next Arabic";
-  src: url("../assets/fonts/DINNextArabic-Medium.ttf") format("truetype");
-  font-weight: 500;
+  font-family: "Cairo";
+  src: url("../assets/fonts/Cairo-SemiBold.ttf") format("truetype");
+  font-weight: 500 600;
   font-style: normal;
   font-display: swap;
 }
 @font-face {
-  font-family: "DIN Next Arabic";
-  src: url("../assets/fonts/DINNextArabic-Bold.ttf") format("truetype");
+  font-family: "Cairo";
+  src: url("../assets/fonts/Cairo-Bold.ttf") format("truetype");
   font-weight: 700;
   font-style: normal;
   font-display: swap;
 }
+/* And 800, which nineteen headings ask for. */
 @font-face {
-  font-family: "DIN Next Arabic";
-  src: url("../assets/fonts/DINNextArabic-Black.ttf") format("truetype");
-  font-weight: 800;
+  font-family: "Cairo";
+  src: url("../assets/fonts/Cairo-Black.ttf") format("truetype");
+  font-weight: 800 900;
   font-style: normal;
-  font-display: swap;
-}
-@font-face {
-  font-family: "DIN Next Arabic";
-  src: url("../assets/fonts/DINNextArabic-Heavy.ttf") format("truetype");
-  font-weight: 900;
-  font-style: normal;
-  font-display: swap;
-}
-
-/* "DIN" is kept as the public alias used across the codebase, so a Latin-only
-   DIN can be dropped in later without touching every rule. */
-@font-face {
-  font-family: "DIN";
-  src: url("../assets/fonts/DINNextArabic-Regular.ttf") format("truetype");
-  font-weight: 400;
-  font-display: swap;
-}
-@font-face {
-  font-family: "DIN";
-  src: url("../assets/fonts/DINNextArabic-Medium.ttf") format("truetype");
-  font-weight: 500;
-  font-display: swap;
-}
-@font-face {
-  font-family: "DIN";
-  src: url("../assets/fonts/DINNextArabic-Bold.ttf") format("truetype");
-  font-weight: 700;
   font-display: swap;
 }
 
 :root {
   /* ---------------------------------------------------------- typography */
-  --font-base: "DIN", "DIN Next Arabic", "Cairo", "Segoe UI", Arial, sans-serif;
-  --font-num: "DIN", "DIN Next Arabic", Arial, sans-serif;
+  --font-base: "Cairo", "Segoe UI", Tahoma, Arial, sans-serif;
+  --font-num: "Cairo", "Segoe UI", Tahoma, Arial, sans-serif;
 
   --fs-2xs: 0.6875rem;  /* 11px */
   --fs-xs: 0.75rem;     /* 12px */

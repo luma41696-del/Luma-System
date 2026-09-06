@@ -13,7 +13,7 @@ abstract final class AppRadius {
 }
 
 /// The website's Arabic face, bundled with the app so the two match.
-const kFontFamily = 'DIN Next Arabic';
+const kFontFamily = 'Cairo';
 
 ThemeData buildAppTheme(LumaPalette palette) {
   final base = ThemeData(
