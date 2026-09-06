@@ -129,7 +129,14 @@
   overflow-x: hidden;
   margin: 0 calc(var(--sp-2) * -1);
   padding: 0 var(--sp-2);
+  /* The bar is hidden, not the scrolling: a 10px track running the height of a
+     narrow nav reads as a seam down the panel. The list still scrolls by wheel,
+     trackpad, touch and keyboard, and it is short enough that nobody has to
+     hunt for what is below. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.sidebar__nav::-webkit-scrollbar { width: 0; height: 0; }
 
 .nav-section { margin-bottom: var(--sp-5); }
 .nav-section__title {

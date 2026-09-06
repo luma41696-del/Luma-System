@@ -1,6 +1,6 @@
 /**
  * App theme: dark (default) plus a family of light and dark palettes —
- * light, white, classic, black, space, ship, forest, mocha, dawn and a
+ * light, classic, space, ship, forest, mocha, dawn, a monochrome one and a
  * terminal-green pair.
  *
  * The value is persisted to localStorage and restored before first paint by
@@ -10,16 +10,15 @@
  */
 
 export const THEMES = [
-  'dark', 'light', 'white', 'classic', 'black', 'space', 'ship',
+  'dark', 'light', 'mono', 'classic', 'space', 'ship',
   'forest', 'mocha', 'dawn', 'hacker', 'hacker-light'
 ];
 
 export const THEME_META = {
   dark:    { icon: 'moon',       labelKey: 'settings.appearance.theme.dark',    hintKey: 'settings.appearance.theme.dark.hint' },
   light:   { icon: 'sun',        labelKey: 'settings.appearance.theme.light',   hintKey: 'settings.appearance.theme.light.hint' },
-  white:   { icon: 'feather',    labelKey: 'settings.appearance.theme.white',   hintKey: 'settings.appearance.theme.white.hint' },
+  mono:    { icon: 'contrast',   labelKey: 'settings.appearance.theme.mono',    hintKey: 'settings.appearance.theme.mono.hint' },
   classic: { icon: 'book',       labelKey: 'settings.appearance.theme.classic', hintKey: 'settings.appearance.theme.classic.hint' },
-  black:   { icon: 'circle',     labelKey: 'settings.appearance.theme.black',   hintKey: 'settings.appearance.theme.black.hint' },
   space:   { icon: 'sparkles',   labelKey: 'settings.appearance.theme.space',   hintKey: 'settings.appearance.theme.space.hint' },
   ship:    { icon: 'rocket',     labelKey: 'settings.appearance.theme.ship',    hintKey: 'settings.appearance.theme.ship.hint' },
   forest:  { icon: 'trees',      labelKey: 'settings.appearance.theme.forest',  hintKey: 'settings.appearance.theme.forest.hint' },
@@ -35,7 +34,16 @@ export const THEME_META = {
 
 export function getTheme() {
   const current = document.documentElement.dataset.theme;
-  return THEMES.includes(current) ? current : 'dark';
+  if (THEMES.includes(current)) return current;
+
+  // A theme that has been removed leaves its name in localStorage, and the
+  // inline script in dashboard.html applies it before this module exists. The
+  // stylesheet no longer has a rule for it, so the page renders as the default
+  // while the attribute still claims otherwise — which would make the picker
+  // disagree with the screen. Put both back on the default.
+  document.documentElement.dataset.theme = 'dark';
+  try { localStorage.removeItem('luma.theme'); } catch { /* private browsing */ }
+  return 'dark';
 }
 
 /**

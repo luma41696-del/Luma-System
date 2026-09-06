@@ -80,7 +80,8 @@
   font-size: 38px;
   font-weight: 300;
   line-height: 1.15;
-  letter-spacing: -0.01em;
+  /* No letter-spacing here or below: these hold Arabic, whose letters join,
+     and spacing them apart breaks the joins and the shaping with them. */
   color: #14140F;
   margin: 0 0 6px;
   text-align: left;
@@ -112,9 +113,8 @@
 
 .doc-section { margin-bottom: 34px; break-inside: avoid; }
 .doc-section__title {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.18em;
   color: #8A8A82;
   padding-bottom: 8px;
   margin-bottom: 14px;
@@ -171,9 +171,8 @@
   border-bottom: 1px solid #EAEAE4;
 }
 .doc-table th {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.12em;
   color: #8A8A82;
   border-bottom: 1px solid #14140F;
   padding-bottom: 9px;
@@ -263,22 +262,44 @@
 
 /* When the sheet is printed directly (window.print fallback) hide the app. */
 @media print {
+  /* The page's own margin is set by @page. Any margin left on html or body is
+     added to it, and a few pixels of overflow become a second, empty sheet. */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+  }
+
   body.is-printing > *:not(.print-root) { display: none !important; }
-  body.is-printing .print-root { display: block !important; }
+  body.is-printing .print-root { display: block !important; margin: 0; padding: 0; }
   body.is-printing .pdf-stage { position: static; inset: auto; }
+
   .doc-sheet {
     box-shadow: none;
     width: 100%;
-    min-height: auto;
+    /* The 1123px floor is what makes an A4 page on screen. On paper the page
+       is already A4, so holding that floor pushes past it. */
+    min-height: 0;
+    height: auto;
     padding: 0;
     background: #fff;
   }
+  /* Nothing trailing may create a page of its own. */
+  .doc-sheet > *:last-child { margin-bottom: 0 !important; }
+
+  /* Tighter on paper than on screen: the same content has to clear a printable
+     area smaller than the sheet it was laid out in. */
+  .doc-section { margin-bottom: 22px; }
+  .doc-sheet__header { margin-bottom: 34px; }
+  .doc-signatures { margin-top: 34px; }
+
   /* Absolute positioning is what pins the footer to the bottom of the A4 box
      on screen; on paper the page break decides, so it goes back in flow. */
   .doc-sheet__footer {
     position: static;
     inset-inline: auto;
-    margin-top: 44px;
+    margin-top: 28px;
   }
-  @page { size: A4; margin: 14mm; }
+
+  @page { size: A4; margin: 12mm; }
 }

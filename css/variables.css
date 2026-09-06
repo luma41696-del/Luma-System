@@ -403,104 +403,11 @@
    sitting on it, so surfaces separate by warmth instead of by borders. The
    existing Light theme is cool and blue-grey; this one is deliberately warm,
    which is the whole reason to have both. */
-[data-theme="white"] {
-  --brand: #3B5BDB;
-  --brand-hover: #2F49AF;
-  --brand-light: #5C7CFA;
-  --brand-soft: rgba(59, 91, 219, 0.10);
-  --brand-glow: rgba(59, 91, 219, 0.22);
-  --brand-gradient: linear-gradient(135deg, var(--brand-light) 0%, var(--brand) 55%, var(--brand-hover) 100%);
-  --brand-gradient-hover: linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 60%, #24388A 100%);
-  --brand-gradient-x: linear-gradient(to right, var(--brand-light), var(--brand) 70%, var(--brand-hover));
-
-  --yellow: var(--brand);
-  --yellow-hover: var(--brand-hover);
-  --yellow-soft: var(--brand-soft);
-
-  --bg-app: #FAF9F6;
-  --bg-canvas: #F5F3EE;
-  --bg-surface: #FFFFFF;
-  --bg-surface-2: #FBFAF7;
-  --bg-elevated: #FFFFFF;
-  --bg-inset: rgba(26, 24, 20, 0.035);
-  --bg-hover: rgba(26, 24, 20, 0.05);
-  --bg-active: rgba(59, 91, 219, 0.10);
-  --bg-overlay: rgba(28, 26, 22, 0.42);
-
-  --text-primary: #1A1815;
-  --text-secondary: #4A463F;
-  --text-muted: #8A847A;
-  --text-inverse: #FFFFFF;
-  --text-on-brand: #FFFFFF;
-
-  --border: #E7E3DA;
-  --border-soft: rgba(26, 24, 20, 0.08);
-  --border-strong: #D3CDC0;
-
-  --shadow-xs: 0 1px 2px rgba(60, 52, 38, 0.05);
-  --shadow-sm: 0 2px 10px rgba(60, 52, 38, 0.07);
-  --shadow-md: 0 10px 28px rgba(60, 52, 38, 0.10);
-  --shadow-lg: 0 20px 48px rgba(60, 52, 38, 0.14);
-  --shadow-focus: 0 0 0 3px rgba(59, 91, 219, 0.28);
-
-  --glass-surface-rgb: 255, 255, 255;
-  --glass-elevated-rgb: 255, 255, 255;
-  --glass-overlay-rgb: 28, 26, 22;
-  --glass-dim-scale: 0.6;
-
-  color-scheme: light;
-}
 
 /* ------------------------------------------------------------ black theme */
 /* True black, not dark grey. On an OLED panel #000 is an unlit pixel, so the
    chrome disappears and only the content is emitting — which is the point of
    asking for a black theme rather than a darker dark one. */
-[data-theme="black"] {
-  --brand: #4D8DFF;
-  --brand-hover: #3B72D9;
-  --brand-light: #7AAAFF;
-  --brand-soft: rgba(77, 141, 255, 0.14);
-  --brand-glow: rgba(77, 141, 255, 0.3);
-  --brand-gradient: linear-gradient(135deg, var(--brand-light) 0%, var(--brand) 55%, var(--brand-hover) 100%);
-  --brand-gradient-hover: linear-gradient(135deg, var(--brand) 0%, var(--brand-hover) 60%, #2C57A8 100%);
-  --brand-gradient-x: linear-gradient(to right, var(--brand-light), var(--brand) 70%, var(--brand-hover));
-
-  --yellow: var(--brand);
-  --yellow-hover: var(--brand-hover);
-  --yellow-soft: var(--brand-soft);
-
-  --bg-app: #000000;
-  --bg-canvas: #050505;
-  --bg-surface: #0D0D0D;
-  --bg-surface-2: #141414;
-  --bg-elevated: #171717;
-  --bg-inset: rgba(255, 255, 255, 0.04);
-  --bg-hover: rgba(255, 255, 255, 0.07);
-  --bg-active: rgba(77, 141, 255, 0.16);
-  --bg-overlay: rgba(0, 0, 0, 0.8);
-
-  --text-primary: #F2F2F2;
-  --text-secondary: #B4B4B4;
-  --text-muted: #6E6E6E;
-  --text-inverse: #000000;
-  --text-on-brand: #04101F;
-
-  --border: #1F1F1F;
-  --border-soft: rgba(255, 255, 255, 0.09);
-  --border-strong: #333333;
-
-  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.6);
-  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.6);
-  --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.7);
-  --shadow-lg: 0 22px 54px rgba(0, 0, 0, 0.8);
-  --shadow-focus: 0 0 0 3px rgba(77, 141, 255, 0.35);
-
-  --glass-surface-rgb: 20, 20, 20;
-  --glass-elevated-rgb: 28, 28, 28;
-  --glass-overlay-rgb: 0, 0, 0;
-
-  color-scheme: dark;
-}
 
 /* ---------------------------------------------------------- classic theme */
 /* Warm paper and bronze — the register of a printed letterhead rather than a
@@ -886,13 +793,80 @@ html.theme-swapping * {
   color-scheme: light;
 }
 
+/* -------------------------------------------------------------- monochrome */
+/* Black as the accent on white. No hue anywhere it can be avoided, which makes
+   the one place hue survives — the status colours — mean something on sight.
+   Those are set here rather than inherited: the base palette mixes them for a
+   navy card and they are unreadable on white. */
+[data-theme="mono"] {
+  --navy-900: #FFFFFF;
+  --navy-800: #F7F7F7;
+  --navy-700: #FFFFFF;
+  --navy-600: #F2F2F2;
+  --border-dark: #E3E3E3;
+
+  --brand: #141414;
+  --brand-hover: #000000;
+  --brand-light: #3A3A3A;
+  --brand-soft: rgba(20, 20, 20, 0.07);
+  --brand-glow: rgba(20, 20, 20, 0.18);
+  --brand-gradient: linear-gradient(135deg, #3A3A3A 0%, #141414 55%, #000000 100%);
+  --brand-gradient-hover: linear-gradient(135deg, #141414 0%, #000000 100%);
+  --brand-gradient-x: linear-gradient(to right, #3A3A3A, #141414 70%, #000000);
+
+  --yellow: var(--brand);
+  --yellow-hover: var(--brand-hover);
+  --yellow-soft: var(--brand-soft);
+
+  --bg-app: #F1F1F1;
+  --bg-canvas: #F7F7F7;
+  --bg-surface: #FFFFFF;
+  --bg-surface-2: #F5F5F5;
+  --bg-elevated: #FFFFFF;
+  --bg-inset: rgba(17, 17, 17, 0.04);
+  --bg-hover: rgba(17, 17, 17, 0.05);
+  --bg-active: rgba(20, 20, 20, 0.08);
+  --bg-overlay: rgba(17, 17, 17, 0.45);
+
+  --danger: #C62828;
+  --danger-soft: rgba(198, 40, 40, 0.12);
+  --warning: #A15C00;
+  --success: #1B7A43;
+  --info: #1565C0;
+  --purple: #6A3FB5;
+  --gray: #6E6E6E;
+
+  --text-primary: #111111;
+  --text-secondary: #444444;
+  --text-muted: #6E6E6E;
+  --text-inverse: #FFFFFF;
+  --text-on-brand: #FFFFFF;
+
+  --border: #E3E3E3;
+  --border-soft: rgba(17, 17, 17, 0.08);
+  --border-strong: #C9C9C9;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.10);
+  --shadow-lg: 0 20px 48px rgba(0, 0, 0, 0.14);
+  --shadow-focus: 0 0 0 3px rgba(20, 20, 20, 0.22);
+
+  --glass-surface-rgb: 255, 255, 255;
+  --glass-elevated-rgb: 255, 255, 255;
+  --glass-overlay-rgb: 17, 17, 17;
+  --glass-dim-scale: 0.6;
+
+  color-scheme: light;
+}
+
 /* ---------------------------------------------------------------- contrast */
 /* The light themes inherit their status colours from the dark palette, where a
    pale red belongs. Text drawn in it on a white card is hard to read, so the
    ink version is darkened for those four. */
 [data-theme="light"],
-[data-theme="white"],
 [data-theme="classic"],
-[data-theme="dawn"] {
+[data-theme="dawn"],
+[data-theme="mono"] {
   --danger-ink: #B3261E;
 }

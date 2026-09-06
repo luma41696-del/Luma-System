@@ -586,6 +586,9 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 }
 /* Every theme needs its own preview: the swatch is hand-drawn, not read from
    the palette, so a theme without one shows an empty square. */
+.theme-swatch--mono .theme-swatch__preview {
+  background: linear-gradient(135deg, #FFFFFF 0%, #E6E6E6 100%);
+}
 .theme-swatch--hacker .theme-swatch__preview {
   background: linear-gradient(135deg, #13271A 0%, #030704 100%);
 }
@@ -604,12 +607,11 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .theme-swatch--light .theme-swatch__dot { background: #4070C8; }
 .theme-swatch--space .theme-swatch__dot { background: #e8b95c; }
 .theme-swatch--ship .theme-swatch__dot { background: #22d3ee; }
-.theme-swatch--white .theme-swatch__dot { background: #3B5BDB; }
 .theme-swatch--classic .theme-swatch__dot { background: #A67C3D; }
-.theme-swatch--black .theme-swatch__dot { background: #4D8DFF; }
 .theme-swatch--forest .theme-swatch__dot { background: #3FB98F; }
 .theme-swatch--mocha .theme-swatch__dot { background: #D9A066; }
 .theme-swatch--dawn .theme-swatch__dot { background: #D24E6B; }
+.theme-swatch--mono .theme-swatch__dot { background: #141414; }
 .theme-swatch--hacker .theme-swatch__dot { background: #3DDC71; }
 .theme-swatch--hacker-light .theme-swatch__dot { background: #0F7A42; }
 

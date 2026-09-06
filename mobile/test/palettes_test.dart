@@ -20,11 +20,11 @@ double contrast(Color a, Color b) {
 
 void main() {
   test('every site theme is present and distinct', () {
-    expect(lumaPalettes.length, 12);
-    expect(lumaPalettes.map((p) => p.id).toSet().length, 12);
+    expect(lumaPalettes.length, 11);
+    expect(lumaPalettes.map((p) => p.id).toSet().length, 11);
     expect(
       lumaPalettes.map((p) => p.id),
-      containsAll(['dark', 'light', 'forest', 'mocha', 'dawn',
+      containsAll(['dark', 'light', 'mono', 'forest', 'mocha', 'dawn',
                    'hacker', 'hacker-light']),
     );
   });
