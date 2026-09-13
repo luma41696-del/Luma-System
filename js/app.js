@@ -12,7 +12,7 @@ import { initReader } from './ai-reader.js';
 import {
   $, $$, esc, attr, el, render, refreshIcons, bootIcons, debounce, avatarHTML
 } from './utils/dom.js';
-import { toastError, toastSuccess, reportError } from './utils/toast.js';
+import { toast, toastError, toastSuccess, reportError } from './utils/toast.js';
 import { confirmDialog, openModal } from './utils/modal.js';
 import {
   initPresence, onSelfPresence, setWorkState, confirmStartBreak, confirmEndBreak, presence
@@ -517,6 +517,46 @@ let latestNotifications = [];
 /** How many fit in the popover before it stops being a glance. */
 const NOTIF_PREVIEW = 6;
 
+/** Toasts shown at once before the rest are summarised into one. */
+const NOTIF_TOAST_MAX = 3;
+
+/**
+ * Announce notifications that arrived while the page was being looked at.
+ *
+ * The dot on the bell says a number changed; it does not say what happened,
+ * and nobody watches a dot. A toast says what arrived, next to the work the
+ * person is already doing, and clicking it goes there — which is the whole
+ * distance between "you have a notification" and having read it.
+ */
+function showArrivalToasts(arrivals) {
+  arrivals.slice(0, NOTIF_TOAST_MAX).forEach((n) => {
+    const kind = kindOf(n.kind);
+    toast(n.body || '', {
+      type: 'info',
+      title: n.title || kind.ar,
+      icon: n.icon || kind.icon,
+      duration: 6000,
+      onClick: () => {
+        // Acting on it is reading it.
+        updateDoc(ref('notifications', n.id), { read: true, readAt: ts() })
+          .catch((err) => console.warn('[luma] mark read', err.code));
+        navigate(n.link || '#/notifications');
+      }
+    });
+  });
+
+  // Six at once would be a wall of toasts covering the page they are about.
+  const rest = arrivals.length - NOTIF_TOAST_MAX;
+  if (rest > 0) {
+    // Written out rather than run through pluralAr: the adjective has to agree
+    // with the noun too, and "إشعار أخرى" is not a sentence.
+    const more = rest === 1 ? 'إشعار آخر'
+      : rest === 2 ? 'إشعاران آخران'
+      : `${rest} إشعارات أخرى`;
+    toast(more, { type: 'info', icon: 'bell', onClick: () => navigate('#/notifications') });
+  }
+}
+
 function openNotificationsMenu(anchor) {
   // A second click on the bell puts it away. Matching on our own menu rather
   // than on any open dropdown, so clicking the bell while the profile menu is
@@ -597,18 +637,24 @@ function watchNotifications() {
       .filter((n) => !n.read && Date.now() - (n.createdAt?.toMillis?.() || 0) < 15000);
 
     if (arrivals.length) {
-      // Sound only when the employee is looking elsewhere, so it behaves like a
-      // messaging app rather than beeping at someone already reading the screen.
-      if (isAway()) playNotificationSound();
-
-      // No-ops unless the user has granted permission, which they can only do
-      // from the banner on the notifications page or from Settings.
-      arrivals.forEach((n) => showBrowserNotification({
-        title: n.title || t('common.newNotification'),
-        body: n.body || '',
-        tag: n.id,
-        link: n.link || ''
-      }));
+      if (isAway()) {
+        // Looking elsewhere: a sound, and the desktop notification that can
+        // reach them outside the tab. The latter is a no-op unless permission
+        // was granted, which they can only do from the banner on the
+        // notifications page or from Settings.
+        playNotificationSound();
+        arrivals.forEach((n) => showBrowserNotification({
+          title: n.title || t('common.newNotification'),
+          body: n.body || '',
+          tag: n.id,
+          link: n.link || ''
+        }));
+      } else {
+        // Looking at the page: say it on the page. No sound — beeping at
+        // someone already reading the screen is what makes people mute an app
+        // — and no desktop notification, which would say the same thing twice.
+        showArrivalToasts(arrivals);
+      }
     }
 
     window.dispatchEvent(new CustomEvent('luma:notifications', { detail: items }));

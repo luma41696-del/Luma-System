@@ -993,6 +993,10 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
   animation: toast-in var(--t-slow) var(--ease-out);
 }
 .toast.is-leaving { animation: toast-out var(--t-base) var(--ease) forwards; }
+/* A toast that goes somewhere says so before it is clicked. */
+.toast.is-clickable { cursor: pointer; }
+.toast.is-clickable:hover { border-color: var(--brand); }
+.toast.is-clickable:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .toast--success { border-inline-start-color: var(--success); }
 .toast--error { border-inline-start-color: var(--danger); }
 .toast--info { border-inline-start-color: var(--info); }

@@ -18,8 +18,19 @@ function host() {
   return node;
 }
 
-export function toast(message, { type = 'info', title = '', duration = 4200 } = {}) {
-  const icon = el('i', { 'data-lucide': ICONS[type] || ICONS.info });
+/**
+ * @param {string} message
+ * @param {{type?: string, title?: string, duration?: number,
+ *          icon?: string, onClick?: () => void}} options
+ *   `icon` overrides the one the type would pick — for a toast that is
+ *   announcing something with an icon of its own, like a notification.
+ *   `onClick` makes the toast itself actionable: a notification you cannot
+ *   act on just makes you go and find it.
+ */
+export function toast(message, {
+  type = 'info', title = '', duration = 4200, icon = '', onClick = null
+} = {}) {
+  const glyph = el('i', { 'data-lucide': icon || ICONS[type] || ICONS.info });
   const body = el('div', { class: 'toast__body' }, [
     title ? el('div', { class: 'toast__title', text: title }) : null,
     el('div', { class: title ? 'toast__msg' : 'toast__title', text: message })
@@ -28,9 +39,10 @@ export function toast(message, { type = 'info', title = '', duration = 4200 } = 
     el('i', { 'data-lucide': 'x' })
   ]);
 
-  const node = el('div', { class: `toast toast--${type}`, role: 'alert' }, [
-    el('span', { class: 'toast__icon' }, [icon]), body, close
-  ]);
+  const node = el('div', {
+    class: `toast toast--${type}${onClick ? ' is-clickable' : ''}`,
+    role: 'alert'
+  }, [el('span', { class: 'toast__icon' }, [glyph]), body, close]);
 
   const dismiss = () => {
     node.classList.add('is-leaving');
@@ -38,6 +50,22 @@ export function toast(message, { type = 'info', title = '', duration = 4200 } = 
     setTimeout(() => node.remove(), 400);
   };
   close.addEventListener('click', dismiss);
+
+  if (onClick) {
+    // `role` stays "alert" so it is still announced as one; the tabindex is
+    // what lets a keyboard reach the thing the mouse can already click.
+    node.tabIndex = 0;
+    const act = () => { dismiss(); onClick(); };
+    node.addEventListener('click', (e) => {
+      if (e.target.closest('.icon-btn')) return;    // the × is not the body
+      act();
+    });
+    node.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      e.preventDefault();
+      act();
+    });
+  }
 
   host().append(node);
   refreshIcons(node);
