@@ -216,7 +216,7 @@ export function errorState(message, retryId = '') {
  * 129°. When two people hash to the same slot the second walks one step along,
  * and a step must not land on something that looks like what it was avoiding.
  */
-const PERSON_TINTS = [
+export const PERSON_TINTS = [
   '#EF645D', '#4ACFA7', '#E445ED', '#CEEA2E',   // coral  teal    magenta lime
   '#2E96EA', '#E39A5E', '#74F1F1', '#F174B3',   // blue   orange  cyan    pink
   '#3FE03F', '#A880E5', '#EDC345', '#2EC5EA'    // green  purple  amber   sky
@@ -249,6 +249,10 @@ const tintById = new Map();
  * time, for the same reason two people in a small room usually share a
  * birthday. And "a colour of their own" has to mean nobody else's.
  *
+ * Two people who both pick the same colour both get it: that is their
+ * decision and not this function's to overrule. It only avoids handing an
+ * automatic colour to someone whose neighbour chose it.
+ *
  * So each person keeps their hashed colour where it is free and takes the
  * next free one where it is not. Sorted by id, so the same roster always
  * produces the same assignment however the directory happened to arrive, and
@@ -259,8 +263,20 @@ const tintById = new Map();
 export function assignPersonTints(people = []) {
   tintById.clear();
   const taken = new Set();
+  const rows = [...people].filter((p) => p?.id).sort((a, b) => a.id.localeCompare(b.id));
 
-  for (const person of [...people].filter((p) => p?.id).sort((a, b) => a.id.localeCompare(b.id))) {
+  // Anyone who picked their own keeps it, and those are claimed before a
+  // single one is handed out — settle the choices first and the automatic
+  // pass has nothing to give away and take back.
+  for (const person of rows) {
+    const slot = PERSON_TINTS.indexOf(person.tint);
+    if (slot < 0) continue;                      // no choice, or one we dropped
+    tintById.set(person.id, PERSON_TINTS[slot]);
+    taken.add(slot);
+  }
+
+  for (const person of rows) {
+    if (tintById.has(person.id)) continue;
     let slot = tintSlot(person.id);
     for (let step = 0; step < PERSON_TINTS.length && taken.has(slot); step++) {
       slot = (slot + 1) % PERSON_TINTS.length;

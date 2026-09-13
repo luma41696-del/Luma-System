@@ -76,13 +76,19 @@ service cloud.firestore {
       // a model name, same class of thing as `theme`. It carries no key and no
       // authority: the server re-checks that the named provider exists and has
       // a key, and falls back to the company default when it does not.
+      // `tint` is the colour this person is drawn in around the app — the
+      // week planner paints their rows with it. Same class of thing as
+      // `theme`: a preference about appearance, carrying no authority. The
+      // client only ever writes one of a fixed dozen; the length cap is here
+      // so a hand-rolled write cannot park a novel in the field.
       allow update: if active() && uid() == userId
         && onlyChanged([
              'phone', 'personalEmail', 'photoURL', 'photoPath', 'personalNotes',
-             'birthday', 'notifPrefs', 'theme', 'aiPrefs', 'updatedAt'
+             'birthday', 'notifPrefs', 'theme', 'tint', 'aiPrefs', 'updatedAt'
            ])
         && notLarger('personalNotes', 2000)
-        && notLarger('phone', 32);
+        && notLarger('phone', 32)
+        && notLarger('tint', 7);
 
       // Management may edit descriptive fields, never the security-critical ones.
       allow update: if can('ee')

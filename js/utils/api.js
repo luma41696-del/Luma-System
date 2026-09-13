@@ -9,7 +9,7 @@ import { httpsCallable } from 'https://www.gstatic.com/firebasejs/12.17.0/fireba
 import {
   collection, doc, getDoc, getDocs, query, where, limit as qLimit,
   orderBy, serverTimestamp, addDoc, updateDoc, setDoc, deleteDoc,
-  onSnapshot, startAfter, documentId, arrayUnion
+  onSnapshot, startAfter, documentId, arrayUnion, deleteField
 } from 'https://www.gstatic.com/firebasejs/12.17.0/firebase-firestore.js';
 
 const cache = new Map();
@@ -140,7 +140,7 @@ export async function getByIds(collectionName, ids = []) {
 export {
   collection, doc, getDoc, getDocs, query, where, qLimit as limit,
   orderBy, addDoc, updateDoc, setDoc, deleteDoc, onSnapshot, startAfter, documentId,
-  arrayUnion
+  arrayUnion, deleteField
 };
 
 /* ------------------------------------------------------------ user cache */

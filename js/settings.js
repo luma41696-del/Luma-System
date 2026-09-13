@@ -9,12 +9,15 @@ import {
   can, isAdmin, PERMISSIONS, PERMISSION_GROUPS, PERMISSION_PRESETS, ROLE_LABELS,
   JOB_ROLES, DEPARTMENTS, rolesLabel
 } from './permissions.js';
-import { $, $$, esc, attr, refreshIcons, render as mount, emptyState, setBusy, avatarHTML, debounce } from './utils/dom.js';
+import {
+  $, $$, esc, attr, refreshIcons, render as mount, emptyState, setBusy, avatarHTML, debounce,
+  PERSON_TINTS, personTint
+} from './utils/dom.js';
 import { toastSuccess, toastError, reportError } from './utils/toast.js';
 import { openModal, confirmDialog } from './utils/modal.js';
 import {
   col, ref, query, where, orderBy, limit, getMany, getDirectory, getUsers,
-  updateDoc, setDoc, getOne, callFn, ts, onSnapshot
+  updateDoc, setDoc, getOne, callFn, ts, onSnapshot, deleteField
 } from './utils/api.js';
 import { formatDateTime, timeAgo, formatDate } from './utils/format.js';
 import { checkPassword } from './utils/sanitize.js';
@@ -98,6 +101,9 @@ export async function render(container, ctx) {
 function generalTab(host) {
   const theme = getTheme();
   const glass = getGlassStrength();
+  // What this person picked, if they picked. Empty means the colour is still
+  // being handed out for them.
+  const myTint = PERSON_TINTS.includes(session.profile?.tint) ? session.profile.tint : '';
   host.innerHTML = `
     <div class="grid grid-2 mt-4">
       <div class="card">
@@ -141,12 +147,30 @@ function generalTab(host) {
                    value="${glass.backdrop}">
           </div>
         </div>
-        <label class="switch">
+        <label class="switch mb-4">
           <input type="checkbox" id="s-collapsed"
             ${localStorage.getItem('luma.sidebarCollapsed') === '1' ? 'checked' : ''}>
           <span class="switch__track"></span>
           <span>${esc(t('settings.appearance.collapsedStart'))}</span>
         </label>
+
+        <div class="field">
+          <label class="field__label">${esc(t('settings.appearance.myColour'))}</label>
+          <div class="tint-picker" id="tint-picker">
+            <button type="button" class="tint-swatch tint-swatch--auto${myTint ? '' : ' is-active'}"
+                    data-tint="" title="${attr(t('settings.appearance.myColour.auto'))}"
+                    style="--tint:${personTint(session.uid)}">
+              <i data-lucide="wand-2"></i>
+            </button>
+            ${PERSON_TINTS.map((colour) => `
+              <button type="button" class="tint-swatch${colour === myTint ? ' is-active' : ''}"
+                      data-tint="${attr(colour)}" style="--tint:${colour}"
+                      aria-label="${attr(colour)}" title="${attr(colour)}">
+                <i data-lucide="check"></i>
+              </button>`).join('')}
+          </div>
+          <div class="field__hint">${esc(t('settings.appearance.myColour.hint'))}</div>
+        </div>
       </div>
 
       <div class="card">
@@ -200,6 +224,36 @@ function generalTab(host) {
     setTheme(button.dataset.themeChoice);
     $$('.theme-swatch', host).forEach((swatch) =>
       swatch.classList.toggle('is-active', swatch === button));
+  });
+
+  /* The colour this person is drawn in. Unlike the theme it is not a local
+     preference — everyone else sees it, so it lives on the profile. */
+  $('#tint-picker').addEventListener('click', async (e) => {
+    const button = e.target.closest('[data-tint]');
+    if (!button) return;
+
+    const chosen = button.dataset.tint;
+    const previous = $('.tint-swatch.is-active', host);
+    // Marked before the write rather than after: the round trip is long enough
+    // that waiting feels like the click missed, and the failure path below puts
+    // it back.
+    $$('.tint-swatch', host).forEach((swatch) =>
+      swatch.classList.toggle('is-active', swatch === button));
+
+    try {
+      // Removed rather than stored empty when going back to automatic: the
+      // assignment asks whether the field is one of the twelve, and a field
+      // that is not there answers that more plainly than an empty string.
+      await updateDoc(ref('users', session.uid), {
+        tint: chosen || deleteField(),
+        updatedAt: ts()
+      });
+      toastSuccess(t('settings.appearance.myColour.saved'));
+    } catch (err) {
+      $$('.tint-swatch', host).forEach((swatch) =>
+        swatch.classList.toggle('is-active', swatch === previous));
+      reportError(err, 'tint');
+    }
   });
 
   $('#s-glass').addEventListener('change', (e) => {

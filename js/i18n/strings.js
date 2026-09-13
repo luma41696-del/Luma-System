@@ -233,6 +233,11 @@ export const STRINGS = {
     'settings.appearance.glass.panel': 'قوة التأثير على النافذة',
     'settings.appearance.glass.backdrop': 'قوة التأثير خلف النافذة',
     'settings.appearance.collapsedStart': 'بدء القائمة الجانبية مطوية',
+    'settings.appearance.myColour': 'لوني في الفريق',
+    'settings.appearance.myColour.auto': 'تلقائي',
+    'settings.appearance.myColour.hint':
+      'اللون الذي تظهر به مهامك للجميع في مخطّط الأسبوع. اتركه تلقائياً ليُختار لك لون لا يشاركك فيه أحد.',
+    'settings.appearance.myColour.saved': 'تم حفظ لونك.',
     'settings.timezone': 'المنطقة الزمنية',
     'settings.weekStart': 'بداية الأسبوع',
     'settings.weekStart.sunday': 'الأحد',
@@ -477,6 +482,11 @@ export const STRINGS = {
     'settings.appearance.glass.panel': 'Effect strength on panels',
     'settings.appearance.glass.backdrop': 'Effect strength behind dialogs',
     'settings.appearance.collapsedStart': 'Start with the sidebar collapsed',
+    'settings.appearance.myColour': 'My colour',
+    'settings.appearance.myColour.auto': 'Automatic',
+    'settings.appearance.myColour.hint':
+      'The colour your tasks are drawn in for everyone on the week planner. Leave it automatic to be given one nobody else has.',
+    'settings.appearance.myColour.saved': 'Your colour is saved.',
     'settings.timezone': 'Timezone',
     'settings.weekStart': 'Week starts on',
     'settings.weekStart.sunday': 'Sunday',

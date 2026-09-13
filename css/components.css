@@ -545,6 +545,40 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .theme-swatch:hover { background: var(--bg-hover); }
 .theme-swatch.is-active { border-color: var(--brand); background: var(--brand-soft); }
 
+/* ------------------------------------------------- personal colour picker */
+/* The twelve a person can be drawn in, plus the one that hands it to them.
+   Swatches rather than a list: the thing being chosen is the colour itself. */
+.tint-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.tint-swatch {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 2px solid transparent;
+  background: var(--tint);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  /* The tick is dark because the swatch is bright, same ink the rows use. */
+  color: transparent;
+  transition: transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+.tint-swatch svg { width: 17px; height: 17px; stroke-width: 3; }
+.tint-swatch:hover { transform: translateY(-1px); }
+.tint-swatch:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+.tint-swatch.is-active {
+  color: var(--tint-ink, #14140F);
+  /* A ring in the page's own colour, then the accent: on a swatch that may be
+     any of twelve colours, one ring alone always disappears into one of them. */
+  box-shadow: 0 0 0 2px var(--bg-surface), 0 0 0 4px var(--brand);
+}
+/* Automatic shows the colour it would give you, with a wand over it. */
+.tint-swatch--auto { color: var(--tint-ink, #14140F); opacity: 0.85; }
+.tint-swatch--auto.is-active { opacity: 1; }
+
 /* Fixed, literal colours — these previews must look right regardless of
    which theme is currently active, so they cannot use the theme's own vars. */
 .theme-swatch__preview {
