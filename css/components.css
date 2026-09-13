@@ -1510,39 +1510,33 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
 /* Touch has no hover to reveal it with. */
 @media (hover: none) { .week-add-btn { opacity: 1; } }
 
-.week-add {
-  width: 100%;
-  padding: 6px var(--sp-2);
-  border: 1px solid var(--brand);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font: inherit;
-  font-size: var(--fs-sm);
+/* Adding happens in a dialog, not in the cell — see openQuickAdd. What is
+   left in the cell is the way in. */
+.quick-add { display: flex; flex-direction: column; gap: var(--sp-3); }
+.quick-add__title { font-size: var(--fs-lg); }
+.quick-add__meta { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.quick-add__count {
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--success-ink);
 }
-/* The box is not `.input`, so it does not inherit that class's placeholder
-   colour and was falling back to the browser's grey — the one shade on the
-   page that belongs to no theme. */
-.week-add::placeholder { color: var(--text-muted); }
-.week-add:focus { outline: none; box-shadow: var(--shadow-focus); }
+/* The escape hatch sits at the far end of the footer, away from the two
+   buttons that finish the job. */
+.quick-add__more { margin-inline-end: auto; }
 
-/* Who the line is for and whose work it is, under the box rather than in
-   front of it: the typing comes first, and these two are already answered. */
-.week-compose { display: flex; flex-direction: column; gap: 5px; }
-.week-compose__meta { display: flex; flex-wrap: wrap; gap: 4px; }
-
+/* Who it is for and whose work it is. */
 .week-pick {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   max-width: 100%;
-  padding: 3px 8px;
+  padding: 5px 10px;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-pill);
   background: var(--bg-inset);
   color: var(--text-secondary);
   font: inherit;
-  font-size: var(--fs-2xs);
+  font-size: var(--fs-xs);
   line-height: 1.6;
   cursor: pointer;
   transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
@@ -1552,8 +1546,8 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
 /* A chosen client is stated in full ink; "no client" stays quiet, because it
    is the answer that needs no attention. */
 .week-pick.is-set { color: var(--text-primary); }
-.week-pick .avatar { width: 16px; height: 16px; font-size: 8px; flex: none; }
-.week-pick svg { width: 13px; height: 13px; flex: none; }
+.week-pick .avatar { width: 18px; height: 18px; font-size: 9px; flex: none; }
+.week-pick svg { width: 14px; height: 14px; flex: none; }
 .week-pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The two trays hold what a seven-day grid has no cell for. */

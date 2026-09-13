@@ -25,7 +25,7 @@ import {
 import {
   formatDate, formatDateTime, formatDuration, timeAgo, toMillis, toDateTimeInput,
   toDateTimeValue, formatBytes,
-  dayKey, startOfWeek, addDays, AR_DAYS_SHORT
+  dayKey, startOfWeek, addDays, AR_DAYS, AR_DAYS_SHORT, pluralAr
 } from './utils/format.js';
 import { sanitizeText, sanitizeMultiline, renderMessageBody } from './utils/sanitize.js';
 import { uploadFile, pickFiles, paths, deleteFile } from './utils/upload.js';
@@ -71,16 +71,13 @@ async function renderBoard(container, ctx) {
     search: ''
   };
 
-  // The week planner carries state the other views do not, and all of it has
-  // to survive a repaint: a live snapshot can land between two keystrokes, and
-  // it would otherwise throw away the half-typed line, close the box and send
-  // the user back to the current week.
+  // The week planner carries state the other views do not, and it has to
+  // survive a repaint: a live snapshot lands whenever anyone else touches a
+  // task, and it would otherwise send the user back to the current week.
   const week = {
     offset: 0,                 // weeks away from this one
     showDone: false,
-    composer: null,            // which day's add-box is open
-    draft: '',                 // what has been typed into it
-    assignee: null,            // who the next added line is for (null = the default)
+    assignee: null,            // who the next added task is for (null = the default)
     client: null,              // which client it belongs to, if any
     undo: new Map(),           // ticked task id -> the status it had before
     timers: new Set()
@@ -261,29 +258,162 @@ async function renderBoard(container, ctx) {
     }
   });
 
-  on(container, 'click', '[data-add]', (_, node) => {
-    week.composer = node.dataset.add;
-    week.draft = '';
-    paint();
-  });
+  /* --------------------------------------------------------- quick add */
 
-  /* Who the line is for, and whose work it is. Both keep their value between
-     lines — see weekComposer for why. */
-  on(container, 'click', '[data-pick="person"]', (_, button) => {
+  const canPickPerson = !scopeMine && canAssign && directory.length > 1;
+  const canPickClient = clients.length > 0;
+
+  on(container, 'click', '[data-add]', (_, node) => openQuickAdd(node.dataset.add));
+
+  /**
+   * Adding, as a small dialog rather than a box inside the day cell.
+   *
+   * The cell is about 180 pixels wide with six other days beside it. A
+   * field, two chips and a way out to the full form do not belong in that
+   * space — they pushed the day's own tasks down the column and reflowed the
+   * grid every time someone clicked add. The dialog gives them room and
+   * leaves the week to be a week.
+   *
+   * What it does not do is slow the typing down. Enter adds the task and
+   * leaves the dialog open with the field cleared, so a day still gets
+   * filled in a run — the count under the field is there to say so.
+   */
+  function openQuickAdd(day) {
+    const noon = day === 'undated' ? null : new Date(`${day}T12:00:00`);
+    const when = noon
+      ? `${AR_DAYS[noon.getDay()]} · ${formatDate(noon, { short: true })}`
+      : 'بدون موعد';
+
+    let added = 0;
+
+    openModal({
+      title: 'إضافة سريعة',
+      subtitle: when,
+      size: 'sm',
+      bodyHTML: `
+        <div class="quick-add">
+          <input class="input quick-add__title" id="qa-title" maxlength="200"
+                 placeholder="ماذا يجب إنجازه؟" aria-label="عنوان المهمة" autocomplete="off">
+          <div class="quick-add__meta" id="qa-meta"></div>
+          <p class="quick-add__count" id="qa-count" hidden></p>
+        </div>`,
+      footerHTML: `
+        <button class="btn btn--ghost quick-add__more" id="qa-more">
+          <i data-lucide="sliders-horizontal"></i> تفاصيل أكثر
+        </button>
+        <button class="btn btn--secondary" data-modal-close>تم</button>
+        <button class="btn btn--primary" id="qa-add"><i data-lucide="plus"></i> إضافة</button>`,
+      onMount: (api) => {
+        const input = api.$('#qa-title');
+        const meta = api.$('#qa-meta');
+        const count = api.$('#qa-count');
+
+        /* Who it is for and whose work it is. Both keep their value between
+           tasks: a day gets planned for one person at a time, and re-picking
+           on every Enter would be worse than the form this replaces. */
+        const paintMeta = () => {
+          const person = people[week.assignee || quickAssignee()];
+          const client = week.client;
+          meta.innerHTML = `
+            ${canPickPerson ? `
+              <button type="button" class="week-pick" data-pick="person"
+                      title="الموظف الذي سينجز المهمة">
+                ${person ? avatarHTML(person, 'xs') : '<i data-lucide="user" class="icon-sm"></i>'}
+                <span>${esc(person?.displayName || 'اختر موظفاً')}</span>
+              </button>` : ''}
+            ${canPickClient ? `
+              <button type="button" class="week-pick${client ? ' is-set' : ''}" data-pick="client"
+                      title="العميل صاحب المهمة">
+                ${client
+                  ? avatarHTML({ name: client.name, photoURL: client.logoURL }, 'xs')
+                  : '<i data-lucide="briefcase" class="icon-sm"></i>'}
+                <span>${esc(client?.name || 'بدون عميل')}</span>
+              </button>` : ''}`;
+          refreshIcons(meta);
+        };
+        paintMeta();
+
+        meta.addEventListener('click', (e) => {
+          const button = e.target.closest('[data-pick]');
+          if (!button) return;
+          if (button.dataset.pick === 'person') pickPerson(button, paintMeta);
+          else pickClient(button, paintMeta);
+        });
+
+        const add = async () => {
+          const title = sanitizeText(input.value, 200);
+          if (!title) { input.focus(); return; }
+
+          const button = api.$('#qa-add');
+          button.classList.add('is-loading');
+          input.disabled = true;
+          try {
+            await createTask({
+              title,
+              status: canAssign ? 'assigned' : 'new',
+              assignees: [week.assignee || quickAssignee()],
+              clientId: week.client?.id || null,
+              clientName: week.client ? sanitizeText(week.client.name, 140) : null,
+              // 23:59 for the same reason the form uses it: a day with no
+              // time is due by the end of it, not at the midnight it starts.
+              dueAt: noon ? new Date(`${day}T23:59:00`) : null,
+              isPersonal: !canAssign
+            });
+            added += 1;
+            input.value = '';
+            count.hidden = false;
+            count.textContent = `أُضيفت ${pluralAr(added, 'مهمة')} — اكتب التالية أو أغلق.`;
+          } catch (err) {
+            reportError(err, 'week-add');
+          } finally {
+            button.classList.remove('is-loading');
+            input.disabled = false;
+            input.focus();
+          }
+        };
+
+        input.addEventListener('keydown', (e) => {
+          if (e.key !== 'Enter') return;
+          e.preventDefault();
+          add();
+        });
+        api.$('#qa-add').addEventListener('click', add);
+
+        /* The way out to the full form, carrying everything decided here. */
+        api.$('#qa-more').addEventListener('click', () => {
+          const title = sanitizeText(input.value, 200);
+          api.close();
+          openTaskModal({
+            personal: !canAssign,
+            defaults: {
+              title,
+              assignees: [week.assignee || quickAssignee()],
+              clientId: week.client?.id || '',
+              // A bare date; the form turns it into the end of that day, the
+              // same way this dialog does.
+              ...(noon ? { dueAt: day } : {})
+            }
+          });
+        });
+      }
+    });
+  }
+
+  function pickPerson(anchor, done) {
     const rows = directory
       .filter((person) => person.status !== 'disabled')
       .map((person) => `
         <button type="button" class="dropdown__item" data-act="${attr(person.id)}">
           ${avatarHTML(person, 'xs')}<span class="truncate">${esc(person.displayName)}</span>
         </button>`).join('');
-    dropdown(button, rows, (act, close) => {
+    dropdown(anchor, rows, (act, close) => {
       week.assignee = act;
       close();
-      paint();
+      done();
     });
-  });
+  }
 
-  on(container, 'click', '[data-pick="client"]', (_, button) => {
+  function pickClient(anchor, done) {
     const rows = [
       `<button type="button" class="dropdown__item" data-act="__none__">
          <i data-lucide="ban" class="icon-sm"></i> — بدون عميل —
@@ -294,72 +424,11 @@ async function renderBoard(container, ctx) {
           <span class="truncate">${esc(client.name)}</span>
         </button>`)
     ].join('');
-    dropdown(button, rows, (act, close) => {
+    dropdown(anchor, rows, (act, close) => {
       week.client = act === '__none__' ? null : clients.find((c) => c.id === act) || null;
       close();
-      paint();
+      done();
     });
-  });
-
-  /* The way out to the full form, carrying everything the box already knows. */
-  on(container, 'click', '[data-pick="more"]', (_, button) => {
-    const day = button.dataset.day;
-    const title = sanitizeText(week.draft, 200);
-
-    // The box closes: the form is where this task is being written now, and
-    // leaving a half-typed line behind invites adding it a second time.
-    week.composer = null;
-    week.draft = '';
-    paint();
-
-    openTaskModal({
-      personal: !canAssign,
-      defaults: {
-        title,
-        assignees: [week.assignee || quickAssignee()],
-        clientId: week.client?.id || '',
-        // A bare date; the form turns it into the end of that day, the same
-        // way a quick add does.
-        ...(day === 'undated' ? {} : { dueAt: day })
-      }
-    });
-  });
-  on(container, 'input', '.week-add', (_, input) => { week.draft = input.value; });
-  on(container, 'keydown', '.week-add', (e, input) => {
-    if (e.key === 'Escape') { week.composer = null; week.draft = ''; paint(); return; }
-    if (e.key !== 'Enter') return;
-    e.preventDefault();
-    quickAdd(input);
-  });
-
-  async function quickAdd(input) {
-    const title = sanitizeText(input.value, 200);
-    if (!title) return;
-    const day = input.dataset.day;
-
-    input.value = '';
-    week.draft = '';
-    input.disabled = true;                     // no second task from a double Enter
-    try {
-      await createTask({
-        title,
-        status: canAssign ? 'assigned' : 'new',
-        assignees: [week.assignee || quickAssignee()],
-        clientId: week.client?.id || null,
-        clientName: week.client ? sanitizeText(week.client.name, 140) : null,
-        // 23:59 for the same reason the form uses it: a day with no time is
-        // due by the end of that day, not at the midnight it starts with.
-        dueAt: day === 'undated' ? null : new Date(`${day}T23:59:00`),
-        isPersonal: !canAssign
-      });
-    } catch (err) {
-      week.draft = title;                      // typed once is enough
-      reportError(err, 'week-add');
-    } finally {
-      input.disabled = false;
-      // The box stays open: a week gets filled in a run, not one task a visit.
-      paint();
-    }
   }
 
   $('#f-status').value = filters.status;
@@ -454,15 +523,7 @@ async function renderBoard(container, ctx) {
     else if (view === 'table') renderTable(host, filtered, people);
     else if (view === 'week') {
       renderWeek(host, filtered, people, {
-        week,
-        partial: feed.state.hasMore,
-        showPeople: !scopeMine,
-        compose: {
-          people,
-          canPickPerson: !scopeMine && canAssign && directory.length > 1,
-          canPickClient: clients.length > 0,
-          assignTo: quickAssignee()
-        }
+        week, partial: feed.state.hasMore, showPeople: !scopeMine
       });
     } else renderList(host, filtered, people, clientsById);
 
@@ -985,7 +1046,7 @@ const isFinished = (task) => task.status === 'completed' || task.status === 'can
  * that is late from before it, and work with no date at all. Dragging out of
  * either onto a day is how it gets scheduled.
  */
-function renderWeek(host, tasks, people, { week, partial, showPeople, compose }) {
+function renderWeek(host, tasks, people, { week, partial, showPeople }) {
   // Cells are keyed first and dated second. The keys come from dayKey, which
   // is the office's timezone; building the date from the key back again keeps
   // the weekday name and the number on a cell agreeing with the tasks in it,
@@ -1031,7 +1092,7 @@ function renderWeek(host, tasks, people, { week, partial, showPeople, compose })
     ? `${Number(keys[0].slice(8))} – ${formatDate(dates[6], { short: true })}`
     : `${formatDate(dates[0], { withYear: false, short: true })} – ${formatDate(dates[6], { short: true })}`;
   const cell = (key, i) => weekDay(key, dates[i], byDay.get(key), done.get(key), {
-    today, week, people, showPeople, compose
+    today, week, people, showPeople
   });
 
   host.innerHTML = `
@@ -1067,7 +1128,7 @@ function renderWeek(host, tasks, people, { week, partial, showPeople, compose })
         }) : ''}
         ${weekTray({
           id: 'undated', title: 'بدون موعد', icon: 'calendar-off', tone: '',
-          items: undated, week, people, showPeople, compose,
+          items: undated, week, people, showPeople,
           droppable: true, addable: true
         })}
       </div>
@@ -1075,21 +1136,9 @@ function renderWeek(host, tasks, people, { week, partial, showPeople, compose })
 
   refreshIcons(host);
   enableWeekDrag(host);
-
-  // Every repaint builds a new input, so the caret has to be put back by hand
-  // — otherwise a snapshot landing mid-sentence drops the user out of the box.
-  // preventScroll, because a repaint while the page is scrolled elsewhere
-  // should not yank it back here.
-  if (week.composer) {
-    const input = host.querySelector(`.week-add[data-day="${CSS.escape(week.composer)}"]`);
-    if (input) {
-      input.focus({ preventScroll: true });
-      input.setSelectionRange(input.value.length, input.value.length);
-    }
-  }
 }
 
-function weekDay(key, date, items, doneCount, { today, week, people, showPeople, compose }) {
+function weekDay(key, date, items, doneCount, { today, week, people, showPeople }) {
   const sorted = sortTasks(items);
   return `
     <section class="week-day${key === today ? ' is-today' : ''}${key < today ? ' is-past' : ''}"
@@ -1103,7 +1152,7 @@ function weekDay(key, date, items, doneCount, { today, week, people, showPeople,
       <div class="week-day__list">
         ${sorted.map((task) => weekTask(task, people, showPeople)).join('')}
       </div>
-      ${weekComposer(key, week, compose)}
+      ${weekAddButton(key)}
     </section>`;
 }
 
@@ -1112,7 +1161,7 @@ function weekDay(key, date, items, doneCount, { today, week, people, showPeople,
  * reading surface only — nothing can be dropped into the past, and there is
  * no such thing as adding a task that is already late.
  */
-function weekTray({ id, title, icon, tone, items, week, people, showPeople, compose,
+function weekTray({ id, title, icon, tone, items, week, people, showPeople,
                     droppable = false, addable = false }) {
   const sorted = sortTasks(items);
   return `
@@ -1125,65 +1174,14 @@ function weekTray({ id, title, icon, tone, items, week, people, showPeople, comp
       <div class="week-tray__list">
         ${sorted.map((task) => weekTask(task, people, showPeople)).join('')}
       </div>
-      ${addable ? weekComposer(id, week, compose) : ''}
+      ${addable ? weekAddButton(id) : ''}
     </section>`;
 }
 
-/**
- * The one-line add box, plus who the line is for and which client it belongs
- * to.
- *
- * Those two sit *under* the input rather than in front of it, and they are
- * already filled in — with the person the board is filtered to, or whoever is
- * signed in. The typing still comes first, which is the whole reason this box
- * exists; the chips are there for the line where the default is wrong.
- *
- * They also stay put between lines. A week is planned one person at a time, so
- * picking a name once and typing six tasks is the normal shape of the job, and
- * having to re-pick on every Enter would be worse than the form this box is
- * meant to replace. The chip is always on screen saying whose week is being
- * filled, so what it will do is never a guess.
- *
- * «تفاصيل» is the way out to the full form for the line that needs a
- * description, a priority or a checklist. It carries everything already
- * decided here across with it, so nothing is retyped — Enter stays the fast
- * path, and the form is a click away rather than in front of it.
- */
-function weekComposer(key, week, { people, canPickPerson, canPickClient, assignTo }) {
-  if (week.composer !== key) {
-    return `<button class="week-add-btn" type="button" data-add="${attr(key)}">
-              <i data-lucide="plus" class="icon-sm"></i> أضف</button>`;
-  }
-
-  const person = people[week.assignee || assignTo];
-  const client = week.client;
-
-  return `
-    <div class="week-compose">
-      <input class="week-add" data-day="${attr(key)}" value="${attr(week.draft)}"
-             maxlength="200" placeholder="اكتب ثم Enter" aria-label="مهمة جديدة">
-      <div class="week-compose__meta">
-          ${canPickPerson ? `
-            <button type="button" class="week-pick" data-pick="person"
-                    title="الموظف الذي سينجز المهمة">
-              ${person ? avatarHTML(person, 'xs') : '<i data-lucide="user" class="icon-sm"></i>'}
-              <span>${esc(person?.displayName || 'اختر موظفاً')}</span>
-            </button>` : ''}
-          ${canPickClient ? `
-            <button type="button" class="week-pick${client ? ' is-set' : ''}" data-pick="client"
-                    title="العميل صاحب المهمة">
-              ${client
-                ? avatarHTML({ name: client.name, photoURL: client.logoURL }, 'xs')
-                : '<i data-lucide="briefcase" class="icon-sm"></i>'}
-              <span>${esc(client?.name || 'بدون عميل')}</span>
-            </button>` : ''}
-          <button type="button" class="week-pick week-pick--more" data-pick="more"
-                  data-day="${attr(key)}" title="وصف، أولوية، نوع العمل، قائمة تحقّق…">
-            <i data-lucide="sliders-horizontal" class="icon-sm"></i>
-            <span>تفاصيل</span>
-          </button>
-      </div>
-    </div>`;
+/** Opens the quick-add dialog for this day. */
+function weekAddButton(key) {
+  return `<button class="week-add-btn" type="button" data-add="${attr(key)}">
+            <i data-lucide="plus" class="icon-sm"></i> أضف</button>`;
 }
 
 /**
@@ -1734,7 +1732,7 @@ export async function changeStatus(taskId, status, task = null) {
 /**
  * Write a new task, and everything that has to be true alongside it.
  *
- * Shared by the full form and the week planner's one-line composer, so a task
+ * Shared by the full form and the week planner's quick-add dialog, so a task
  * added in two keystrokes is the same shape as one filled in field by field.
  * The defaults below are what the form would have submitted had the user left
  * every optional control alone — without them a quick-added task would be
