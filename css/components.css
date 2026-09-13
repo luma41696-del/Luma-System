@@ -1480,7 +1480,41 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
   font: inherit;
   font-size: var(--fs-sm);
 }
+/* The box is not `.input`, so it does not inherit that class's placeholder
+   colour and was falling back to the browser's grey — the one shade on the
+   page that belongs to no theme. */
+.week-add::placeholder { color: var(--text-muted); }
 .week-add:focus { outline: none; box-shadow: var(--shadow-focus); }
+
+/* Who the line is for and whose work it is, under the box rather than in
+   front of it: the typing comes first, and these two are already answered. */
+.week-compose { display: flex; flex-direction: column; gap: 5px; }
+.week-compose__meta { display: flex; flex-wrap: wrap; gap: 4px; }
+
+.week-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  padding: 3px 8px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-pill);
+  background: var(--bg-inset);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-2xs);
+  line-height: 1.6;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+.week-pick:hover { border-color: var(--brand); color: var(--text-primary); }
+.week-pick:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+/* A chosen client is stated in full ink; "no client" stays quiet, because it
+   is the answer that needs no attention. */
+.week-pick.is-set { color: var(--text-primary); }
+.week-pick .avatar { width: 16px; height: 16px; font-size: 8px; flex: none; }
+.week-pick svg { width: 13px; height: 13px; flex: none; }
+.week-pick span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* The two trays hold what a seven-day grid has no cell for. */
 .week__trays {
