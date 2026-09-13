@@ -1455,6 +1455,42 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
 .week-task:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
 .week-task.is-dragging { opacity: 0.4; }
 
+/* ---------------------------------------------------- the owner's colour */
+/* The whole row is filled with the colour of whoever is carrying the task —
+   not outlined in it, not marked with it. Seven columns of grey lines is a
+   week you read word by word to find your own work in. */
+.week-task.is-owned {
+  background: var(--row-tint);
+  padding-inline-start: var(--sp-2);
+}
+.week-task.is-owned:hover { background: color-mix(in srgb, var(--row-tint) 84%, #000); }
+/* The four tints are all dark enough to carry white, measured. */
+.week-task.is-owned .week-task__title { color: #fff; }
+.week-task.is-owned .week-task__check { border-color: rgba(255, 255, 255, 0.65); }
+.week-task.is-owned:hover .week-task__check { border-color: #fff; }
+.week-task.is-owned .week-task__live { background: #fff; }
+
+/* The priority mark is dropped on a filled row rather than drawn over it: a
+   red bar on a red fill says nothing, and there is no fifth colour that reads
+   on all sixteen. Priority still shows on the card, the board and the task
+   itself. */
+.week-task.is-owned::before { display: none; }
+
+/* The face, on the colour. The ring separates a photograph from a fill it
+   might otherwise blend into, and the translucent ground behind it is what
+   carries the initials for anyone who has not uploaded one — their own tint
+   would be the same colour as the row it sits on. */
+.week-task.is-owned .avatar-stack .avatar {
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Late and in-progress both repaint the row elsewhere; on a filled row the
+   fill wins and those states speak through their own marks — the pulsing dot
+   for work under way, the متأخرة tray for what is overdue. */
+.week-task.is-owned.is-late .week-task__title { color: #fff; }
+
 /* The priority reads as a mark in the margin rather than as colour on the
    text — same four colours the cards use, so the two agree. */
 .week-task::before {
@@ -1516,7 +1552,7 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
    the soft token's strength it was the brand on a brand wash — 2.4:1 on the
    warmer themes. Backing the row off gives the dot somewhere to stand, and a
    row inside a seven-column grid does not need to shout anyway. */
-.week-task.is-active { background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.week-task.is-active:not(.is-owned) { background: color-mix(in srgb, var(--brand) 8%, transparent); }
 .week-task.is-active:hover { background: var(--bg-hover); }
 .week-task.is-active::before { animation: week-bar-breathe 1.9s var(--ease) infinite; }
 
@@ -1556,9 +1592,16 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
   color: var(--text-on-brand);
 }
 .week-task.is-done .week-task__title { text-decoration: line-through; color: var(--text-muted); }
+.week-task.is-owned.is-done .week-task__title { color: rgba(255, 255, 255, 0.85); }
 
-.week-task .avatar-stack { flex: none; }
-.week-task .avatar-stack .avatar { width: 20px; height: 20px; font-size: 9px; }
+.week-task .avatar-stack { flex: none; gap: 3px; }
+.week-task .avatar-stack .avatar {
+  width: 22px;
+  height: 22px;
+  font-size: 9px;
+  margin-inline-start: 0;
+  border: 0;
+}
 
 /* Under the date and above the day's work, and on all the time. It was a
    ghost that appeared on hover, which hid the one thing a planner is for from

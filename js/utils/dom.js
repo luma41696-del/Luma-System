@@ -191,19 +191,116 @@ export function errorState(message, retryId = '') {
 }
 
 /** Colour-stable initials avatar used when a user has no photo. */
-export function avatarHTML(user = {}, size = '') {
+/**
+ * Colours people are told apart by.
+ *
+ * A fixed list rather than a hue computed from the name. Hues derived by
+ * arithmetic drift into each other and into mud — and a sum of character codes
+ * puts every Arabic name in the same narrow band of the wheel, because Arabic
+ * letters share a code range, so half the company came out the same blue.
+ *
+ * All are dark enough to carry white initials.
+ */
+const PERSON_TINTS = [
+  '#B91C1C', '#C2410C', '#B45309', '#4D7C0F', '#15803D',
+  '#0F766E', '#0E7490', '#0369A1', '#1D4ED8', '#4338CA',
+  '#6D28D9', '#A21CAF', '#BE185D', '#9F1239', '#57534E', '#3F6212'
+];
+
+/** Where a seed lands on the list on its own. FNV-1a, because neighbouring
+ *  seeds have to fall far apart — a plain sum of character codes would put
+ *  "أحمد" and "أحمر" side by side. */
+function tintSlot(seed) {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0) % PERSON_TINTS.length;
+}
+
+/** Colours handed out by assignPersonTints, keyed by account id. */
+const tintById = new Map();
+
+/**
+ * Give everyone in the directory a colour nobody else has.
+ *
+ * The hash alone does not manage it. It spreads evenly — sixteen slots take
+ * an even sixteenth of the ids each, measured — but evenly is not the same as
+ * without collisions: ten people over sixteen colours end up sharing one
+ * about 98 times in a hundred, for the same reason two people in a small room
+ * usually share a birthday. And "a colour of their own" has to mean nobody
+ * else's.
+ *
+ * So each person keeps their hashed colour where it is free and takes the
+ * next free one where it is not. Sorted by id, so the same roster always
+ * produces the same assignment however the directory happened to arrive, and
+ * so a new hire displaces at most the few people their own colour was already
+ * shared with. Past sixteen people the list wraps and sharing resumes, which
+ * is a better failure than a seventeenth colour nobody can tell from the
+ * third.
+ */
+export function assignPersonTints(people = []) {
+  tintById.clear();
+  const taken = new Set();
+
+  for (const person of [...people].filter((p) => p?.id).sort((a, b) => a.id.localeCompare(b.id))) {
+    let slot = tintSlot(person.id);
+    for (let step = 0; step < PERSON_TINTS.length && taken.has(slot); step++) {
+      slot = (slot + 1) % PERSON_TINTS.length;
+    }
+    taken.add(slot);
+    tintById.set(person.id, PERSON_TINTS[slot]);
+  }
+  return tintById;
+}
+
+/**
+ * The colour that belongs to one person, and keeps belonging to them.
+ *
+ * Seeded by the account id where there is one: two people can share a name,
+ * one person can change theirs, and a colour that moves when someone gets
+ * married is not an identity. Falls back to the hash for anything not in the
+ * directory — a client's logo stand-in, or an avatar drawn before the
+ * directory has arrived.
+ */
+export function personTint(seed = '') {
+  return tintById.get(seed) || PERSON_TINTS[tintSlot(seed)];
+}
+
+// The directory is loaded once and shared (see getDirectory), and it announces
+// itself when it lands or changes. Reacting to that here keeps the data layer
+// from having to know what a colour is.
+if (typeof window !== 'undefined') {
+  window.addEventListener('luma:directory', (e) => assignPersonTints(e.detail || []));
+}
+
+/**
+ * @param {object} user
+ * @param {string} size
+ * @param {{photo?: boolean}} options
+ *   `photo: false` asks for the colour block and initials even when there is a
+ *   photograph. Somewhere small enough that a face is a smudge, the block says
+ *   who at a glance and the photograph says nothing — particularly here, where
+ *   most of the company is using the same stock portrait.
+ */
+export function avatarHTML(user = {}, size = '', { photo = true } = {}) {
   const name = user.displayName || user.name || '؟';
   const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('');
-  const hue = [...name].reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 360;
+  const tint = personTint(user.id || user.uid || name);
   const cls = size ? `avatar avatar--${size}` : 'avatar';
-  if (user.photoURL) {
+  // Published as a custom property as well as painted: a photo covers the
+  // background, so anywhere that wants to show whose face it is — a ring, a
+  // bar — needs the colour rather than the fill.
+  const style = `--avatar-tint:${tint};background:${tint};color:#fff`;
+  if (photo && user.photoURL) {
     // The initials travel with the photo so a dead URL can fall back to them
     // instead of leaving a broken-image glyph where a face should be.
-    return `<span class="${cls}" style="background:hsl(${hue} 62% 42%);color:#fff">` +
+    return `<span class="${cls}" style="${style}">` +
       `<img src="${attr(user.photoURL)}" alt="${attr(name)}" loading="lazy" ` +
       `data-initials="${attr(initials)}"></span>`;
   }
-  return `<span class="${cls}" style="background:hsl(${hue} 62% 42%);color:#fff" aria-label="${attr(name)}">${esc(initials)}</span>`;
+  return `<span class="${cls}" style="${style}" aria-label="${attr(name)}">${esc(initials)}</span>`;
 }
 
 /**
@@ -253,11 +350,11 @@ export function avatarWithPresence(user = {}, state = 'offline', size = '') {
   return `<span class="avatar-wrap">${avatarHTML(user, size)}<span class="presence presence--${attr(state)}"></span></span>`;
 }
 
-export function avatarStack(users = [], max = 4) {
+export function avatarStack(users = [], max = 4, options = {}) {
   const shown = users.slice(0, max);
   const rest = users.length - shown.length;
   return `<div class="avatar-stack">${
-    shown.map((u) => avatarHTML(u, 'sm')).join('')
+    shown.map((u) => avatarHTML(u, 'sm', options)).join('')
   }${rest > 0 ? `<span class="avatar-stack__more">${rest}+</span>` : ''}</div>`;
 }
 

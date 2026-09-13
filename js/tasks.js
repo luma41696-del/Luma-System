@@ -7,7 +7,8 @@
 import { session } from './auth.js';
 import { can, JOB_ROLES } from './permissions.js';
 import {
-  $, $$, esc, attr, refreshIcons, render as mount, avatarHTML, avatarStack, emptyState, debounce, on
+  $, $$, esc, attr, refreshIcons, render as mount, avatarHTML, avatarStack, emptyState, debounce, on,
+  personTint
 } from './utils/dom.js';
 import { toastSuccess, toastError, reportError } from './utils/toast.js';
 import { openModal, confirmDialog, promptDialog, lightbox } from './utils/modal.js';
@@ -1234,6 +1235,16 @@ function weekTask(task, people, showPeople) {
     ? (task.assignees || []).map((id) => people[id]).filter(Boolean)
     : [];
 
+  // The row is painted in the colour of whoever is carrying it. Not a mark on
+  // the row — the row. Seven columns of identical grey lines is a week you
+  // have to read word by word to find your own work in; seven columns of
+  // colour is one you can find it in from across the desk.
+  //
+  // The first assignee owns the colour. A task handed to two people has to
+  // pick one, and the first is the one the form put there first.
+  const owner = (task.assignees || [])[0];
+  const tint = owner ? personTint(owner) : '';
+
   // Being worked on right now is the one status that describes something
   // happening at this moment rather than a state the task is parked in, so it
   // is the only row that moves. Same rule the board's live badge uses: a task
@@ -1241,8 +1252,9 @@ function weekTask(task, people, showPeople) {
   const live = !overdue && !finished && task.status === 'inprogress';
 
   return `
-    <article class="week-task${finished ? ' is-done' : ''}${overdue ? ' is-late' : ''}${live ? ' is-active' : ''}"
+    <article class="week-task${tint ? ' is-owned' : ''}${finished ? ' is-done' : ''}${overdue ? ' is-late' : ''}${live ? ' is-active' : ''}"
              data-task="${attr(task.id)}" data-priority="${attr(task.priority)}"
+             ${tint ? `style="--row-tint:${tint}"` : ''}
              title="${attr(task.title)}" draggable="true" tabindex="0">
       <button class="week-task__check" type="button" data-check="${attr(task.id)}"
               aria-pressed="${finished}"
