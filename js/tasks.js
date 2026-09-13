@@ -1188,10 +1188,10 @@ function weekDay(key, date, items, doneCount, { today, week, people, showPeople 
         ${doneCount ? `<span class="week-day__done" title="منجزة في هذا اليوم">
           <i data-lucide="check" class="icon-sm"></i>${doneCount}</span>` : ''}
       </header>
+      ${weekAddButton(key)}
       <div class="week-day__list">
         ${sorted.map((task) => weekTask(task, people, showPeople)).join('')}
       </div>
-      ${weekAddButton(key)}
     </section>`;
 }
 
@@ -1210,10 +1210,10 @@ function weekTray({ id, title, icon, tone, items, week, people, showPeople,
         <span class="week-tray__title">${esc(title)}</span>
         <span class="week-tray__count num">${sorted.length}</span>
       </header>
+      ${addable ? weekAddButton(id) : ''}
       <div class="week-tray__list">
         ${sorted.map((task) => weekTask(task, people, showPeople)).join('')}
       </div>
-      ${addable ? weekAddButton(id) : ''}
     </section>`;
 }
 
@@ -1930,6 +1930,16 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
   );
   let selectedClientId = task?.clientId || clientId || defaults.clientId || '';
 
+  // A new task opens with today's date already in the deadline, ready to be
+  // changed. A task with no deadline sits outside every count the app keeps —
+  // due today, overdue, the week planner — and the empty field is the one
+  // people skip. Only when creating: filling it in on a task that has gone
+  // without a deadline until now would add one the moment it is saved, which
+  // is not what opening a form to change something else means.
+  const dueFieldValue = task?.dueAt
+    ? toDateTimeInput(task.dueAt)
+    : toDateTimeValue(defaults.dueAt || (isEdit ? '' : dayKey()));
+
   const modal = openModal({
     title: isEdit ? 'تعديل المهمة' : (personal ? 'مهمة شخصية جديدة' : 'مهمة جديدة'),
     subtitle: personal ? 'ستظهر لك وحدك ضمن مهامك الشخصية' : '',
@@ -2004,7 +2014,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
           <div class="field">
             <label class="field__label" for="t-due">الموعد النهائي</label>
             <input class="input" id="t-due" type="datetime-local"
-                   value="${attr(task?.dueAt ? toDateTimeInput(task.dueAt) : toDateTimeValue(defaults.dueAt))}">
+                   value="${attr(dueFieldValue)}">
           </div>
 
           <div class="field">
