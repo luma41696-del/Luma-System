@@ -194,25 +194,32 @@ export function errorState(message, retryId = '') {
 /**
  * Colours people are told apart by.
  *
- * A fixed list rather than a hue computed from the name. Hues derived by
- * arithmetic drift into each other and into mud — and a sum of character codes
- * puts every Arabic name in the same narrow band of the wheel, because Arabic
- * letters share a code range, so half the company came out the same blue.
+ * Twelve, not sixteen. Sixteen was chosen for headroom and cost separation to
+ * get it: the closest two sat 12° apart on the wheel and measured 0.04 apart
+ * in OKLab, which is a different number and the same colour to look at — one
+ * lavender beside another lavender. Twelve of them stand 24° apart at the
+ * closest and 0.10 in OKLab, two and a half times the gap, and twelve still
+ * covers this company with room left.
  *
- * Sixteen bright ones, evenly spaced around the wheel. Nothing dark and
- * nothing near black: these fill whole rows of the week, and a wall of deep
- * colour is a heavier thing to look at all day than the work it is describing.
- * Being bright, they carry dark text rather than white — see TINT_INK.
+ * Chosen by search rather than by taste: a farthest-point walk over every
+ * bright colour that carries the dark ink at 5.5:1 or better, keeping the set
+ * whose narrowest gap is widest, under a rule that no two may come from the
+ * same quarter-turn of the wheel. Distance alone will happily pick a pale blue
+ * and a strong blue — far apart by the numbers, "blue" and "blue" to a person
+ * naming them.
+ *
+ * Two were softened by hand afterwards: the search's green was an acid
+ * #2EEA2E and its orange a muddy #DA9B72. Re-measured after, the narrowest gap
+ * moved 0.106 → 0.102, which is nothing.
+ *
+ * Listed so that neighbours in the list are far apart on the wheel — at worst
+ * 129°. When two people hash to the same slot the second walks one step along,
+ * and a step must not land on something that looks like what it was avoiding.
  */
 const PERSON_TINTS = [
-  // Listed around the wheel in steps of seven rather than one. When two people
-  // hash to the same slot the second walks forward to the next free one, and
-  // in wheel order that handed them the neighbouring green — a distinct colour
-  // that looks like the one it was avoiding.
-  '#F87171', '#2DD4BF', '#E879F9', '#4ADE80',   // red    teal    fuchsia green
-  '#A78BFA', '#FDE047', '#60A5FA', '#FB923C',   // violet yellow  blue    orange
-  '#22D3EE', '#F472B6', '#34D399', '#C084FC',   // cyan   pink    emerald purple
-  '#A3E635', '#818CF8', '#FBBF24', '#38BDF8'    // lime   indigo  amber   sky
+  '#EF645D', '#4ACFA7', '#E445ED', '#CEEA2E',   // coral  teal    magenta lime
+  '#2E96EA', '#E39A5E', '#74F1F1', '#F174B3',   // blue   orange  cyan    pink
+  '#3FE03F', '#A880E5', '#EDC345', '#2EC5EA'    // green  purple  amber   sky
 ];
 
 /** What is written on them. Fixed, because the tints are. */
@@ -236,20 +243,18 @@ const tintById = new Map();
 /**
  * Give everyone in the directory a colour nobody else has.
  *
- * The hash alone does not manage it. It spreads evenly — sixteen slots take
- * an even sixteenth of the ids each, measured — but evenly is not the same as
- * without collisions: ten people over sixteen colours end up sharing one
- * about 98 times in a hundred, for the same reason two people in a small room
- * usually share a birthday. And "a colour of their own" has to mean nobody
- * else's.
+ * The hash alone does not manage it. It spreads evenly — every slot takes an
+ * even share of the ids, measured — but evenly is not the same as without
+ * collisions: ten people over a dozen colours end up sharing one nearly every
+ * time, for the same reason two people in a small room usually share a
+ * birthday. And "a colour of their own" has to mean nobody else's.
  *
  * So each person keeps their hashed colour where it is free and takes the
  * next free one where it is not. Sorted by id, so the same roster always
  * produces the same assignment however the directory happened to arrive, and
  * so a new hire displaces at most the few people their own colour was already
- * shared with. Past sixteen people the list wraps and sharing resumes, which
- * is a better failure than a seventeenth colour nobody can tell from the
- * third.
+ * shared with. Past twelve people the list wraps and sharing resumes, which is
+ * a better failure than a thirteenth colour nobody can tell from the third.
  */
 export function assignPersonTints(people = []) {
   tintById.clear();
