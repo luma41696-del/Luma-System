@@ -120,6 +120,11 @@
   /* Green for *text*, on the same terms as `--danger-ink` below: the mint
      that reads on a navy card measures 1.3:1 on a white one. */
   --success-ink: var(--success);
+  /* What is written on the per-person tints (see PERSON_TINTS in utils/dom.js).
+     Deliberately not a theme token: those tints are the same sixteen bright
+     colours in every theme, so what reads on them is the same dark ink in
+     every theme too. */
+  --tint-ink: #14140F;
   --warning: #FBBF24;
   --warning-soft: rgba(251, 191, 36, 0.14);
   --danger: #F87171;

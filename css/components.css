@@ -1463,12 +1463,14 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
   background: var(--row-tint);
   padding-inline-start: var(--sp-2);
 }
-.week-task.is-owned:hover { background: color-mix(in srgb, var(--row-tint) 84%, #000); }
-/* The four tints are all dark enough to carry white, measured. */
-.week-task.is-owned .week-task__title { color: #fff; }
-.week-task.is-owned .week-task__check { border-color: rgba(255, 255, 255, 0.65); }
-.week-task.is-owned:hover .week-task__check { border-color: #fff; }
-.week-task.is-owned .week-task__live { background: #fff; }
+.week-task.is-owned:hover { background: color-mix(in srgb, var(--row-tint) 88%, #000); }
+/* Dark ink on the fill, not white: the tints are bright by design — see
+   PERSON_TINTS — and white on a bright ground is the one combination that
+   cannot be made to read. Fixed, because the tints are fixed. */
+.week-task.is-owned .week-task__title { color: var(--tint-ink, #14140F); }
+.week-task.is-owned .week-task__check { border-color: rgba(20, 20, 15, 0.55); }
+.week-task.is-owned:hover .week-task__check { border-color: var(--tint-ink, #14140F); }
+.week-task.is-owned .week-task__live { background: var(--tint-ink, #14140F); }
 
 /* The priority mark is dropped on a filled row rather than drawn over it: a
    red bar on a red fill says nothing, and there is no fifth colour that reads
@@ -1481,15 +1483,15 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
    carries the initials for anyone who has not uploaded one — their own tint
    would be the same colour as the row it sits on. */
 .week-task.is-owned .avatar-stack .avatar {
-  background: rgba(255, 255, 255, 0.24);
-  color: #fff;
-  border: 1.5px solid rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--tint-ink, #14140F);
+  border: 1.5px solid rgba(255, 255, 255, 0.9);
 }
 
 /* Late and in-progress both repaint the row elsewhere; on a filled row the
    fill wins and those states speak through their own marks — the pulsing dot
    for work under way, the متأخرة tray for what is overdue. */
-.week-task.is-owned.is-late .week-task__title { color: #fff; }
+.week-task.is-owned.is-late .week-task__title { color: var(--tint-ink, #14140F); }
 
 /* The priority reads as a mark in the margin rather than as colour on the
    text — same four colours the cards use, so the two agree. */
@@ -1592,7 +1594,7 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
   color: var(--text-on-brand);
 }
 .week-task.is-done .week-task__title { text-decoration: line-through; color: var(--text-muted); }
-.week-task.is-owned.is-done .week-task__title { color: rgba(255, 255, 255, 0.85); }
+.week-task.is-owned.is-done .week-task__title { color: rgba(20, 20, 15, 0.75); }
 
 .week-task .avatar-stack { flex: none; gap: 3px; }
 .week-task .avatar-stack .avatar {

@@ -199,13 +199,24 @@ export function errorState(message, retryId = '') {
  * puts every Arabic name in the same narrow band of the wheel, because Arabic
  * letters share a code range, so half the company came out the same blue.
  *
- * All are dark enough to carry white initials.
+ * Sixteen bright ones, evenly spaced around the wheel. Nothing dark and
+ * nothing near black: these fill whole rows of the week, and a wall of deep
+ * colour is a heavier thing to look at all day than the work it is describing.
+ * Being bright, they carry dark text rather than white — see TINT_INK.
  */
 const PERSON_TINTS = [
-  '#B91C1C', '#C2410C', '#B45309', '#4D7C0F', '#15803D',
-  '#0F766E', '#0E7490', '#0369A1', '#1D4ED8', '#4338CA',
-  '#6D28D9', '#A21CAF', '#BE185D', '#9F1239', '#57534E', '#3F6212'
+  // Listed around the wheel in steps of seven rather than one. When two people
+  // hash to the same slot the second walks forward to the next free one, and
+  // in wheel order that handed them the neighbouring green — a distinct colour
+  // that looks like the one it was avoiding.
+  '#F87171', '#2DD4BF', '#E879F9', '#4ADE80',   // red    teal    fuchsia green
+  '#A78BFA', '#FDE047', '#60A5FA', '#FB923C',   // violet yellow  blue    orange
+  '#22D3EE', '#F472B6', '#34D399', '#C084FC',   // cyan   pink    emerald purple
+  '#A3E635', '#818CF8', '#FBBF24', '#38BDF8'    // lime   indigo  amber   sky
 ];
+
+/** What is written on them. Fixed, because the tints are. */
+const TINT_INK = '#14140F';
 
 /** Where a seed lands on the list on its own. FNV-1a, because neighbouring
  *  seeds have to fall far apart — a plain sum of character codes would put
@@ -292,7 +303,7 @@ export function avatarHTML(user = {}, size = '', { photo = true } = {}) {
   // Published as a custom property as well as painted: a photo covers the
   // background, so anywhere that wants to show whose face it is — a ring, a
   // bar — needs the colour rather than the fill.
-  const style = `--avatar-tint:${tint};background:${tint};color:#fff`;
+  const style = `--avatar-tint:${tint};background:${tint};color:${TINT_INK}`;
   if (photo && user.photoURL) {
     // The initials travel with the photo so a dead URL can fall back to them
     // instead of leaving a broken-image glyph where a face should be.
