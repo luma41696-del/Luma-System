@@ -158,6 +158,11 @@
 
   .kanban { grid-auto-columns: 84vw; }
 
+  /* One day at a time on a phone. Two narrow columns of a week fit nothing
+     but a truncated title, which is a week you cannot read. */
+  .week__grid { grid-template-columns: minmax(0, 1fr); }
+  .week__toggle { margin-inline-start: 0; }
+
   .avatar-stack .avatar { margin-inline-start: -8px; }
 }
 

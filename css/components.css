@@ -1269,6 +1269,238 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
 .kanban.is-grabbing { cursor: grabbing; scroll-behavior: auto; }
 .kanban.is-grabbable .task-card { cursor: grab; }
 
+/* ============================================================ WEEK PLANNER */
+
+/* Seven days, wrapping to two rows on a laptop and one column on a phone.
+   The cells are deliberately plain: a week is read down a column, and the
+   card chrome that suits a board would leave room for three tasks a day. */
+.week { display: flex; flex-direction: column; gap: var(--sp-4); }
+
+.week__bar {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  flex-wrap: wrap;
+}
+.week__nav { display: flex; align-items: center; gap: var(--sp-1); }
+.week__range { font-size: var(--fs-lg); font-weight: 800; }
+.week__toggle { margin-inline-start: auto; font-size: var(--fs-sm); }
+
+.week__note {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+}
+
+/* Four and three on a laptop, all seven in a row once there is width for it.
+   auto-fit was tried first and gave three columns, which splits a week into
+   3 + 3 + 1 — a shape that reads as nothing. */
+.week__grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-3);
+  align-items: start;
+}
+/* 1400 and not 1180: seven columns inside a 1180px page leaves 150px a day,
+   which wraps most titles twice and still cuts them. The sidebar takes its
+   share first, so on the usual screen this stays at four and three. */
+@media (min-width: 1400px) {
+  .week__grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+}
+@media (max-width: 860px) {
+  .week__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.week-day,
+.week-tray {
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-height: 132px;
+  transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease);
+}
+[data-theme="light"] .week-day,
+[data-theme="light"] .week-tray { background: var(--bg-surface-2); }
+
+/* Today is the only cell that gets the accent. A week where every day is
+   highlighted is a week with nothing highlighted. */
+.week-day.is-today { border-color: var(--brand); background: var(--bg-active); }
+.week-day.is-past { opacity: 0.72; }
+.week-day.is-drop-target,
+.week-tray.is-drop-target { border-color: var(--yellow); background: var(--bg-active); }
+
+.week-day__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+  padding-inline: var(--sp-1);
+}
+.week-day__name { font-size: var(--fs-sm); font-weight: 700; }
+.week-day__date { font-size: var(--fs-xs); color: var(--text-muted); }
+/* Today's number is picked out by weight and by the cell around it, not by a
+   colour: the brand tint measures under 3:1 on every light theme. */
+.week-day.is-today .week-day__date { color: var(--text-primary); font-weight: 700; }
+
+/* What the day got through, kept even while the grid shows none of it. */
+.week-day__done {
+  margin-inline-start: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: var(--fs-2xs);
+  font-weight: 700;
+  color: var(--success-ink);
+}
+
+.week-day__list,
+.week-tray__list { display: flex; flex-direction: column; gap: var(--sp-1); }
+
+.week-task {
+  position: relative;
+  display: flex;
+  /* Top-aligned, because a title may run to two lines and the box has to stay
+     level with the first of them. */
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: 6px var(--sp-2);
+  padding-inline-start: 10px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), opacity var(--t-base) var(--ease);
+}
+.week-task:hover { background: var(--bg-hover); }
+.week-task:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
+.week-task.is-dragging { opacity: 0.4; }
+
+/* The priority reads as a mark in the margin rather than as colour on the
+   text — same four colours the cards use, so the two agree. */
+.week-task::before {
+  content: "";
+  position: absolute;
+  inset-block: 6px;
+  inset-inline-start: 2px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--border-strong);
+}
+.week-task[data-priority="urgent"]::before { background: var(--danger); }
+.week-task[data-priority="high"]::before   { background: var(--warning); }
+.week-task[data-priority="medium"]::before { background: var(--info); }
+.week-task[data-priority="low"]::before    { background: var(--gray); }
+
+.week-task__check {
+  flex: none;
+  margin-top: 1px;
+  width: 17px;
+  height: 17px;
+  border-radius: var(--radius-xs);
+  border: 1.5px solid var(--border-strong);
+  background: transparent;
+  color: transparent;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: border-color var(--t-fast) var(--ease), background var(--t-fast) var(--ease),
+              color var(--t-fast) var(--ease);
+}
+.week-task__check svg { width: 12px; height: 12px; stroke-width: 3; }
+.week-task:hover .week-task__check { border-color: var(--success); }
+.week-task__check:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
+
+/* Wrapped to two lines rather than cut off at one: a column of a week is
+   about 180px wide, and a planner whose titles all end in "…" is a planner
+   you have to open every row of to read. */
+.week-task__title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.week-task.is-late .week-task__title { color: var(--danger-ink); }
+
+/* Ticked: struck through and on its way out. It is still here, and clicking
+   the box again brings it back — the row only leaves a few seconds later. */
+.week-task.is-done { opacity: 0.45; }
+.week-task.is-done .week-task__check {
+  background: var(--success);
+  border-color: var(--success);
+  color: var(--text-on-brand);
+}
+.week-task.is-done .week-task__title { text-decoration: line-through; color: var(--text-muted); }
+
+.week-task .avatar-stack { flex: none; }
+.week-task .avatar-stack .avatar { width: 20px; height: 20px; font-size: 9px; }
+
+/* The add row is a ghost until it is wanted, so seven of them down a week do
+   not read as seven buttons. */
+.week-add-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  width: 100%;
+  padding: 6px var(--sp-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease), background var(--t-fast) var(--ease),
+              color var(--t-fast) var(--ease);
+}
+.week-day:hover .week-add-btn,
+.week-tray:hover .week-add-btn,
+.week-add-btn:focus-visible { opacity: 1; }
+.week-add-btn:hover { background: var(--bg-hover); }
+/* Touch has no hover to reveal it with. */
+@media (hover: none) { .week-add-btn { opacity: 1; } }
+
+.week-add {
+  width: 100%;
+  padding: 6px var(--sp-2);
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--fs-sm);
+}
+.week-add:focus { outline: none; box-shadow: var(--shadow-focus); }
+
+/* The two trays hold what a seven-day grid has no cell for. */
+.week__trays {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: var(--sp-3);
+}
+.week-tray.is-late { border-color: var(--danger); }
+.week-tray__head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  padding-inline: var(--sp-1);
+  font-size: var(--fs-sm);
+  font-weight: 700;
+}
+.week-tray.is-late .week-tray__head { color: var(--danger-ink); }
+.week-tray__title { flex: 1; }
+.week-tray__count { color: var(--text-muted); font-weight: 700; font-size: var(--fs-xs); }
+
 /* =============================================================== CALENDAR */
 .cal-toolbar {
   display: flex;

@@ -25,7 +25,7 @@ import {
 import {
   formatDate, formatDateTime, formatDuration, timeAgo, toMillis, toDateTimeInput,
   toDateTimeValue, formatBytes,
-  dayKey
+  dayKey, startOfWeek, addDays, AR_DAYS_SHORT
 } from './utils/format.js';
 import { sanitizeText, sanitizeMultiline, renderMessageBody } from './utils/sanitize.js';
 import { uploadFile, pickFiles, paths, deleteFile } from './utils/upload.js';
@@ -55,6 +55,7 @@ export async function render(container, ctx) {
 async function renderBoard(container, ctx) {
   const scopeMine = ctx.path === '/my-tasks';
   const canSeeAll = can(session.claims, 'tasks.editAll') || can(session.claims, 'dashboard.viewCompany');
+  const canAssign = can(session.claims, 'tasks.assign') || can(session.claims, 'tasks.create');
   const unsubs = [];
 
   let tasks = [];
@@ -66,6 +67,20 @@ async function renderBoard(container, ctx) {
     client: 'all',
     search: ''
   };
+
+  // The week planner carries state the other views do not, and all of it has
+  // to survive a repaint: a live snapshot can land between two keystrokes, and
+  // it would otherwise throw away the half-typed line, close the box and send
+  // the user back to the current week.
+  const week = {
+    offset: 0,                 // weeks away from this one
+    showDone: false,
+    composer: null,            // which day's add-box is open
+    draft: '',                 // what has been typed into it
+    undo: new Map(),           // ticked task id -> the status it had before
+    timers: new Set()
+  };
+  unsubs.push(() => week.timers.forEach(clearTimeout));
 
   const [directory, clients] = await Promise.all([
     getDirectory().catch(() => []),
@@ -88,6 +103,7 @@ async function renderBoard(container, ctx) {
             <button data-view="list" title="قائمة"><i data-lucide="list"></i> قائمة</button>
             <button data-view="board" title="لوحة"><i data-lucide="columns-3"></i> لوحة</button>
             <button data-view="table" title="جدول"><i data-lucide="table"></i> جدول</button>
+            <button data-view="week" title="أسبوع"><i data-lucide="calendar-days"></i> أسبوع</button>
           </div>
           ${!scopeMine && canSeeAll ? '' : `<a class="btn btn--ghost" href="#/tasks">كل المهام</a>`}
           ${can(session.claims, 'tasks.ai')
@@ -170,6 +186,117 @@ async function renderBoard(container, ctx) {
     paint();
   });
 
+  /* ----------------------------------------------------- week planner */
+  // Bound once, on the container, rather than per render: the view repaints on
+  // every snapshot, and re-binding each time would run a handler twice for one
+  // click — which for "add task" means two tasks.
+
+  // A quick add lands on whoever the board is filtered to, so one person's
+  // week can be filled in without opening a picker for every line.
+  const quickAssignee = () =>
+    (!scopeMine && canAssign && filters.assignee !== 'all' ? filters.assignee : session.uid);
+
+  on(container, 'click', '[data-week]', (_, node) => {
+    const act = node.dataset.week;
+    if (act === 'prev') week.offset -= 1;
+    else if (act === 'next') week.offset += 1;
+    else week.offset = 0;
+    paint();
+  });
+
+  on(container, 'change', '#week-done', (_, node) => {
+    week.showDone = node.checked;
+    paint();
+  });
+
+  on(container, 'click', '.week-task', (e, node) => {
+    if (e.target.closest('button')) return;
+    location.hash = `#/tasks/${node.dataset.task}`;
+  });
+
+  on(container, 'click', '[data-check]', async (_, button) => {
+    const id = button.dataset.check;
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
+    const row = button.closest('.week-task');
+
+    if (isFinished(task)) {
+      // Ticking a finished row again puts it back where it came from. The
+      // fallback matters for a task finished before this page was opened,
+      // where there is no remembered status to return to.
+      const previous = week.undo.get(id) || (canAssign ? 'assigned' : 'new');
+      week.undo.delete(id);
+      row?.classList.remove('is-done');
+      try { await changeStatus(id, previous, task); }
+      catch (err) { reportError(err, 'week-reopen'); paint(); }
+      return;
+    }
+
+    // Struck through straight away. The listener confirms it a moment later,
+    // and waiting for the round trip makes the tick feel broken.
+    row?.classList.add('is-done');
+    week.undo.set(id, task.status);
+
+    // It stays on screen, struck through, for a few seconds before it goes:
+    // the row is about to vanish and a mis-click needs somewhere to go.
+    const timer = setTimeout(() => {
+      week.timers.delete(timer);
+      week.undo.delete(id);
+      paint();
+    }, WEEK_LINGER_MS);
+    week.timers.add(timer);
+
+    try {
+      await changeStatus(id, 'completed', task);
+    } catch (err) {
+      week.undo.delete(id);
+      row?.classList.remove('is-done');
+      reportError(err, 'week-done');
+      paint();
+    }
+  });
+
+  on(container, 'click', '[data-add]', (_, node) => {
+    week.composer = node.dataset.add;
+    week.draft = '';
+    paint();
+  });
+  on(container, 'input', '.week-add', (_, input) => { week.draft = input.value; });
+  on(container, 'keydown', '.week-add', (e, input) => {
+    if (e.key === 'Escape') { week.composer = null; week.draft = ''; paint(); return; }
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    quickAdd(input);
+  });
+
+  async function quickAdd(input) {
+    const title = sanitizeText(input.value, 200);
+    if (!title) return;
+    const day = input.dataset.day;
+
+    input.value = '';
+    week.draft = '';
+    input.disabled = true;                     // no second task from a double Enter
+    try {
+      await createTask({
+        title,
+        status: canAssign ? 'assigned' : 'new',
+        assignees: [quickAssignee()],
+        // 23:59 for the same reason the form uses it: a day with no time is
+        // due by the end of that day, not at the midnight it starts with.
+        dueAt: day === 'undated' ? null : new Date(`${day}T23:59:00`),
+        isPersonal: !canAssign
+      });
+    } catch (err) {
+      week.draft = title;                      // typed once is enough
+      reportError(err, 'week-add');
+    } finally {
+      input.disabled = false;
+      // The box stays open: a week gets filled in a run, not one task a visit.
+      paint();
+    }
+  }
+
   $('#f-status').value = filters.status;
   $('#f-reset').addEventListener('click', () => {
     $('#f-search').value = '';
@@ -240,7 +367,10 @@ async function renderBoard(container, ctx) {
     refreshIcons($('#task-stats'));
 
     const host = $('#task-view');
-    if (!filtered.length) {
+    // The week is the one view that still has work to do when it is empty:
+    // its day cells are where a task is added, so an empty-state card in
+    // their place would leave nowhere to add one.
+    if (!filtered.length && view !== 'week') {
       mount(host, emptyState({
         icon: 'clipboard-list',
         title: 'لا توجد مهام',
@@ -257,11 +387,15 @@ async function renderBoard(container, ctx) {
 
     if (view === 'board') renderKanban(host, filtered, people, clientsById);
     else if (view === 'table') renderTable(host, filtered, people);
-    else renderList(host, filtered, people, clientsById);
+    else if (view === 'week') {
+      renderWeek(host, filtered, people, { week, partial: feed.state.hasMore, showPeople: !scopeMine });
+    } else renderList(host, filtered, people, clientsById);
 
     // The board scrolls sideways, so an intersection sentinel at the bottom
-    // would never come into view — it gets an explicit button instead.
-    detachLoadMore = mountLoadMore(host, feed, { autoLoad: view !== 'board' });
+    // would never come into view — it gets an explicit button instead. The
+    // week is short enough that a sentinel under it is on screen immediately,
+    // which would page through the whole collection unasked.
+    detachLoadMore = mountLoadMore(host, feed, { autoLoad: view === 'list' || view === 'table' });
   }
 
   return () => unsubs.forEach((fn) => { try { fn(); } catch {} });
@@ -744,6 +878,262 @@ function renderTable(host, tasks, people) {
   bindCards(host);
 }
 
+/* -------------------------------------------------------------- week view */
+
+/** How long a ticked row stays on screen, struck through, before it goes. */
+const WEEK_LINGER_MS = 4200;
+
+/**
+ * Finished as the week means it: off the grid. Cancelled counts — it is not
+ * work anybody is going to do, and leaving it in a day it will never be done
+ * on is the same lie as leaving a completed one there.
+ */
+const isFinished = (task) => task.status === 'completed' || task.status === 'cancelled';
+
+/**
+ * The week planner.
+ *
+ * The other three views answer "what is the state of all the work". This one
+ * answers the question people actually have at nine in the morning: what am I
+ * doing today, and what is coming. So it is one week, seven days wide; tasks
+ * fall into the day they are due without anyone placing them there; and a task
+ * that is finished leaves the grid. The page is meant to empty out as the week
+ * goes on — that emptying is the whole point, and it is why finished work is
+ * hidden rather than greyed out in place.
+ *
+ * Adding is a line of text: click a day, type, Enter, and the box stays open
+ * for the next one. Everything else a task can carry is set afterwards in the
+ * form. Asking for a priority, a client and a work type before a thought can
+ * be written down is what stops people writing it down.
+ *
+ * Two trays sit under the grid so nothing falls off the week's edges: work
+ * that is late from before it, and work with no date at all. Dragging out of
+ * either onto a day is how it gets scheduled.
+ */
+function renderWeek(host, tasks, people, { week, partial, showPeople }) {
+  // Cells are keyed first and dated second. The keys come from dayKey, which
+  // is the office's timezone; building the date from the key back again keeps
+  // the weekday name and the number on a cell agreeing with the tasks in it,
+  // even on a device set to another zone.
+  const first = addDays(startOfWeek(), week.offset * 7);
+  const keys = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(first, i);
+    date.setHours(12, 0, 0, 0);               // midday: no zone can round it to the day before
+    return dayKey(date);
+  });
+  const dates = keys.map((key) => new Date(`${key}T12:00:00`));
+
+  const today = dayKey();
+  const startMs = dates[0].getTime();
+
+  const byDay = new Map(keys.map((key) => [key, []]));
+  const done = new Map(keys.map((key) => [key, 0]));
+  const late = [];
+  const undated = [];
+
+  for (const task of tasks) {
+    const finished = isFinished(task);
+    const due = toMillis(task.dueAt);
+    const key = due ? dayKey(due) : null;
+
+    // Counted before it is filtered out, so a day can still say how much was
+    // got through while showing none of it. Completed only: a cancelled task
+    // leaves the grid the same way but it is not an afternoon's work.
+    if (task.status === 'completed' && done.has(key)) done.set(key, done.get(key) + 1);
+
+    // Finished work leaves the grid. It comes back with the toggle, and it
+    // lingers for a moment right after it is ticked so the tick can be undone.
+    if (finished && !week.showDone && !week.undo.has(task.id)) continue;
+
+    if (!key) { undated.push(task); continue; }
+    if (byDay.has(key)) byDay.get(key).push(task);
+    else if (!finished && due < startMs) late.push(task);
+  }
+
+  // "13 – 19 سبتمبر" while the week sits inside one month, both months named
+  // when it straddles two.
+  const range = keys[0].slice(0, 7) === keys[6].slice(0, 7)
+    ? `${Number(keys[0].slice(8))} – ${formatDate(dates[6], { short: true })}`
+    : `${formatDate(dates[0], { withYear: false, short: true })} – ${formatDate(dates[6], { short: true })}`;
+  const cell = (key, i) => weekDay(key, dates[i], byDay.get(key), done.get(key), {
+    today, week, people, showPeople
+  });
+
+  host.innerHTML = `
+    <div class="week">
+      <header class="week__bar">
+        <div class="week__nav">
+          <button class="btn btn--ghost btn--icon btn--sm" data-week="prev" aria-label="الأسبوع السابق">
+            <i data-lucide="chevron-right"></i></button>
+          <button class="btn btn--ghost btn--icon btn--sm" data-week="next" aria-label="الأسبوع التالي">
+            <i data-lucide="chevron-left"></i></button>
+          ${week.offset ? '<button class="btn btn--secondary btn--sm" data-week="today">هذا الأسبوع</button>' : ''}
+        </div>
+        <div class="week__range">${esc(range)}</div>
+        <label class="switch week__toggle">
+          <input type="checkbox" id="week-done" ${week.showDone ? 'checked' : ''}>
+          <span class="switch__track"></span>
+          <span>إظهار المنجزة</span>
+        </label>
+      </header>
+
+      ${partial ? `
+        <p class="week__note">
+          <i data-lucide="info" class="icon-sm"></i>
+          يعرض المهام المحمّلة حتى الآن — حمّل المزيد ليكتمل الأسبوع.
+        </p>` : ''}
+
+      <div class="week__grid">${keys.map(cell).join('')}</div>
+
+      <div class="week__trays">
+        ${late.length ? weekTray({
+          id: 'late', title: 'متأخرة', icon: 'alert-triangle', tone: 'is-late',
+          items: late, week, people, showPeople
+        }) : ''}
+        ${weekTray({
+          id: 'undated', title: 'بدون موعد', icon: 'calendar-off', tone: '',
+          items: undated, week, people, showPeople, droppable: true, addable: true
+        })}
+      </div>
+    </div>`;
+
+  refreshIcons(host);
+  enableWeekDrag(host);
+
+  // Every repaint builds a new input, so the caret has to be put back by hand
+  // — otherwise a snapshot landing mid-sentence drops the user out of the box.
+  // preventScroll, because a repaint while the page is scrolled elsewhere
+  // should not yank it back here.
+  if (week.composer) {
+    const input = host.querySelector(`.week-add[data-day="${CSS.escape(week.composer)}"]`);
+    if (input) {
+      input.focus({ preventScroll: true });
+      input.setSelectionRange(input.value.length, input.value.length);
+    }
+  }
+}
+
+function weekDay(key, date, items, doneCount, { today, week, people, showPeople }) {
+  const sorted = sortTasks(items);
+  return `
+    <section class="week-day${key === today ? ' is-today' : ''}${key < today ? ' is-past' : ''}"
+             data-day="${attr(key)}">
+      <header class="week-day__head">
+        <span class="week-day__name">${esc(AR_DAYS_SHORT[date.getDay()])}</span>
+        <span class="week-day__date num">${date.getDate()}</span>
+        ${doneCount ? `<span class="week-day__done" title="منجزة في هذا اليوم">
+          <i data-lucide="check" class="icon-sm"></i>${doneCount}</span>` : ''}
+      </header>
+      <div class="week-day__list">
+        ${sorted.map((task) => weekTask(task, people, showPeople)).join('')}
+      </div>
+      ${weekComposer(key, week)}
+    </section>`;
+}
+
+/**
+ * A tray for the work a seven-day grid has no cell for. The late one is a
+ * reading surface only — nothing can be dropped into the past, and there is
+ * no such thing as adding a task that is already late.
+ */
+function weekTray({ id, title, icon, tone, items, week, people, showPeople, droppable = false, addable = false }) {
+  const sorted = sortTasks(items);
+  return `
+    <section class="week-tray ${tone}" ${droppable ? `data-day="${attr(id)}"` : `data-tray="${attr(id)}"`}>
+      <header class="week-tray__head">
+        <i data-lucide="${attr(icon)}" class="icon-sm"></i>
+        <span class="week-tray__title">${esc(title)}</span>
+        <span class="week-tray__count num">${sorted.length}</span>
+      </header>
+      <div class="week-tray__list">
+        ${sorted.map((task) => weekTask(task, people, showPeople)).join('')}
+      </div>
+      ${addable ? weekComposer(id, week) : ''}
+    </section>`;
+}
+
+function weekComposer(key, week) {
+  return week.composer === key
+    ? `<input class="week-add" data-day="${attr(key)}" value="${attr(week.draft)}"
+              maxlength="200" placeholder="اكتب ثم Enter" aria-label="مهمة جديدة">`
+    : `<button class="week-add-btn" type="button" data-add="${attr(key)}">
+         <i data-lucide="plus" class="icon-sm"></i> أضف</button>`;
+}
+
+/**
+ * One line, not a card. A week is read down a column, and a column of cards is
+ * three tasks tall before it needs scrolling.
+ */
+function weekTask(task, people, showPeople) {
+  const finished = isFinished(task);
+  const assignees = showPeople
+    ? (task.assignees || []).map((id) => people[id]).filter(Boolean)
+    : [];
+
+  return `
+    <article class="week-task${finished ? ' is-done' : ''}${isOverdue(task) ? ' is-late' : ''}"
+             data-task="${attr(task.id)}" data-priority="${attr(task.priority)}"
+             title="${attr(task.title)}" draggable="true" tabindex="0">
+      <button class="week-task__check" type="button" data-check="${attr(task.id)}"
+              aria-pressed="${finished}"
+              aria-label="${finished ? 'إعادة فتح المهمة' : 'إنهاء المهمة'}">
+        <i data-lucide="check" class="icon-sm"></i>
+      </button>
+      <span class="week-task__title">${esc(task.title)}</span>
+      ${assignees.length ? avatarStack(assignees, 2) : ''}
+    </article>`;
+}
+
+/** Dragging a task from one day to another is how its deadline is moved. */
+function enableWeekDrag(host) {
+  let dragged = null;
+
+  $$('.week-task', host).forEach((row) => {
+    row.addEventListener('dragstart', (e) => {
+      dragged = row;
+      row.classList.add('is-dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      // Firefox will not start a drag at all without a payload on it.
+      e.dataTransfer.setData('text/plain', row.dataset.task);
+    });
+    row.addEventListener('dragend', () => {
+      row.classList.remove('is-dragging');
+      dragged = null;
+    });
+  });
+
+  // `section[data-day]`, not `[data-day]`: the add-box inside a cell carries
+  // the same attribute, and a drop landing on it would fire the input's
+  // handler and then the cell's as it bubbled — two writes for one drop.
+  $$('section[data-day]', host).forEach((cell) => {
+    cell.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      cell.classList.add('is-drop-target');
+    });
+    cell.addEventListener('dragleave', () => cell.classList.remove('is-drop-target'));
+    cell.addEventListener('drop', async (e) => {
+      e.preventDefault();
+      cell.classList.remove('is-drop-target');
+
+      // Only our own rows: anything else dropped here is text from elsewhere
+      // on the machine, and it names no task.
+      if (!dragged) return;
+      const id = dragged.dataset.task;
+      const day = cell.dataset.day;
+      const dueAt = day === 'undated' ? null : new Date(`${day}T23:59:00`);
+
+      try {
+        await updateDoc(ref('tasks', id), { dueAt, updatedAt: ts() });
+        await logActivity(id, 'edit',
+          dueAt ? `نقل الموعد إلى ${formatDate(dueAt)}` : 'أزال موعد التسليم');
+        toastSuccess(dueAt ? 'تم تغيير الموعد.' : 'تمت إزالة الموعد.');
+      } catch (err) {
+        reportError(err, 'week-move');
+      }
+    });
+  });
+}
+
 /* ========================================================================== */
 /* Task detail                                                                */
 /* ========================================================================== */
@@ -1207,6 +1597,53 @@ export async function changeStatus(taskId, status, task = null) {
   await logActivity(taskId, 'status', `غيّر الحالة إلى «${statusLabel(status)}»`);
 }
 
+/**
+ * Write a new task, and everything that has to be true alongside it.
+ *
+ * Shared by the full form and the week planner's one-line composer, so a task
+ * added in two keystrokes is the same shape as one filled in field by field.
+ * The defaults below are what the form would have submitted had the user left
+ * every optional control alone — without them a quick-added task would be
+ * missing fields the rest of the app reads without checking.
+ */
+async function createTask(fields) {
+  const now = ts();
+  const status = fields.status || 'new';
+
+  const created = await addDoc(col('tasks'), {
+    description: '', project: '',
+    clientId: null, clientName: null,
+    priority: 'medium', status, checklist: [],
+    workType: 'other', imageCount: null, videoCount: null, videoDuration: null,
+    dueAt: null, startedAt: null,
+    ...fields,
+    titleLower: fields.title.toLowerCase(),
+    createdBy: session.uid,
+    createdAt: now,
+    // A task can be created already finished or already under way; see
+    // birthFields for why assuming otherwise was wrong in three places.
+    ...birthFields(status, { now, startedAt: fields.startedAt || null }),
+    timeSpentMs: 0,
+    commentCount: 0,
+    attachments: [],
+    watchers: [session.uid],
+    deleted: false,
+    updatedAt: now
+  });
+
+  await logActivity(created.id, 'create', 'أنشأ المهمة');
+
+  // A second entry, because "created" and "completed" are two facts and the
+  // log is what a person reads to find out what happened. This one also
+  // records the contributor, which the 'create' entry deliberately does not.
+  if (status === 'completed') {
+    await logActivity(created.id, 'status', `غيّر الحالة إلى «${statusLabel('completed')}»`);
+  }
+
+  announce('task.created', created.id);
+  return created;
+}
+
 async function logActivity(taskId, type, text) {
   try {
     await addDoc(col('tasks', taskId, 'activity'), {
@@ -1586,33 +2023,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
             await logActivity(task.id, 'edit', 'عدّل تفاصيل المهمة');
             toastSuccess('تم حفظ التعديلات.');
           } else {
-            const created = await addDoc(col('tasks'), {
-              ...payload,
-              createdBy: session.uid,
-              createdAt: ts(),
-              // A task can be created already finished or already under way;
-              // see birthFields for why assuming otherwise was wrong.
-              ...birthFields(payload.status, {
-                now: ts(),
-                startedAt: payload.startedAt
-              }),
-              timeSpentMs: 0,
-              commentCount: 0,
-              attachments: [],
-              watchers: [session.uid],
-              deleted: false
-            });
-            await logActivity(created.id, 'create', 'أنشأ المهمة');
-
-            // A second entry, because "created" and "completed" are two facts
-            // and the log is what a person reads to find out what happened.
-            // This one also records the contributor, which the 'create' entry
-            // deliberately does not.
-            if (payload.status === 'completed') {
-              await logActivity(created.id, 'status', `غيّر الحالة إلى «${statusLabel('completed')}»`);
-            }
-
-            announce('task.created', created.id);
+            await createTask(payload);
             toastSuccess('تم إنشاء المهمة بنجاح.');
           }
           api.close();
