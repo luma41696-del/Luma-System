@@ -59,7 +59,10 @@ async function renderBoard(container, ctx) {
   const unsubs = [];
 
   let tasks = [];
-  let view = localStorage.getItem(VIEW_KEY) || 'list';
+  // The week leads the switcher, so it is also what opens for anyone who has
+  // not picked a view — the first segment of a control like this is the one
+  // people read as the normal way to look at the page.
+  let view = localStorage.getItem(VIEW_KEY) || 'week';
   let filters = {
     status: ctx.query.status || 'all',
     priority: 'all',
@@ -100,10 +103,10 @@ async function renderBoard(container, ctx) {
         </div>
         <div class="page-head__actions">
           <div class="btn-group" id="view-switch">
+            <button data-view="week" title="أسبوع"><i data-lucide="calendar-days"></i> أسبوع</button>
             <button data-view="list" title="قائمة"><i data-lucide="list"></i> قائمة</button>
             <button data-view="board" title="لوحة"><i data-lucide="columns-3"></i> لوحة</button>
             <button data-view="table" title="جدول"><i data-lucide="table"></i> جدول</button>
-            <button data-view="week" title="أسبوع"><i data-lucide="calendar-days"></i> أسبوع</button>
           </div>
           ${!scopeMine && canSeeAll ? '' : `<a class="btn btn--ghost" href="#/tasks">كل المهام</a>`}
           ${can(session.claims, 'tasks.ai')
