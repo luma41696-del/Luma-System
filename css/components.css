@@ -897,7 +897,19 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 /* The bell's popover: the newest few, enough to decide whether to go and read
    the rest. Wider than a menu because these rows carry a sentence each. */
 .notif-menu { width: min(330px, calc(100vw - 32px)); }
-.notif-mini { align-items: flex-start; gap: var(--sp-2); }
+.notif-mini {
+  align-items: flex-start;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border-radius: var(--radius-sm);
+  /* Every row gets its own surface, not just the unread ones: six read rows
+     with no ground under them run together into one block of near-identical
+     titles, which is what a list of task assignments looks like. */
+  background: var(--bg-inset);
+}
+/* Set apart rather than stacked flush: two unread rows share a tint, and with
+   no gap between them they read as one block of text with two titles in it. */
+.notif-mini + .notif-mini { margin-top: 6px; }
 .notif-mini.is-unread { background: var(--bg-active); }
 .notif-mini__icon {
   flex: none;
@@ -906,7 +918,8 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
   border-radius: var(--radius-xs);
   display: grid;
   place-items: center;
-  background: var(--bg-inset);
+  /* Lighter than the row it sits on, now that the row has a ground of its own. */
+  background: var(--bg-elevated);
   color: var(--text-secondary);
 }
 .notif-mini__icon svg { width: 15px; height: 15px; }
