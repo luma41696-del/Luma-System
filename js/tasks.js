@@ -300,6 +300,30 @@ async function renderBoard(container, ctx) {
       paint();
     });
   });
+
+  /* The way out to the full form, carrying everything the box already knows. */
+  on(container, 'click', '[data-pick="more"]', (_, button) => {
+    const day = button.dataset.day;
+    const title = sanitizeText(week.draft, 200);
+
+    // The box closes: the form is where this task is being written now, and
+    // leaving a half-typed line behind invites adding it a second time.
+    week.composer = null;
+    week.draft = '';
+    paint();
+
+    openTaskModal({
+      personal: !canAssign,
+      defaults: {
+        title,
+        assignees: [week.assignee || quickAssignee()],
+        clientId: week.client?.id || '',
+        // A bare date; the form turns it into the end of that day, the same
+        // way a quick add does.
+        ...(day === 'undated' ? {} : { dueAt: day })
+      }
+    });
+  });
   on(container, 'input', '.week-add', (_, input) => { week.draft = input.value; });
   on(container, 'keydown', '.week-add', (e, input) => {
     if (e.key === 'Escape') { week.composer = null; week.draft = ''; paint(); return; }
@@ -1119,6 +1143,11 @@ function weekTray({ id, title, icon, tone, items, week, people, showPeople, comp
  * having to re-pick on every Enter would be worse than the form this box is
  * meant to replace. The chip is always on screen saying whose week is being
  * filled, so what it will do is never a guess.
+ *
+ * «تفاصيل» is the way out to the full form for the line that needs a
+ * description, a priority or a checklist. It carries everything already
+ * decided here across with it, so nothing is retyped — Enter stays the fast
+ * path, and the form is a click away rather than in front of it.
  */
 function weekComposer(key, week, { people, canPickPerson, canPickClient, assignTo }) {
   if (week.composer !== key) {
@@ -1133,8 +1162,7 @@ function weekComposer(key, week, { people, canPickPerson, canPickClient, assignT
     <div class="week-compose">
       <input class="week-add" data-day="${attr(key)}" value="${attr(week.draft)}"
              maxlength="200" placeholder="اكتب ثم Enter" aria-label="مهمة جديدة">
-      ${canPickPerson || canPickClient ? `
-        <div class="week-compose__meta">
+      <div class="week-compose__meta">
           ${canPickPerson ? `
             <button type="button" class="week-pick" data-pick="person"
                     title="الموظف الذي سينجز المهمة">
@@ -1149,7 +1177,12 @@ function weekComposer(key, week, { people, canPickPerson, canPickClient, assignT
                 : '<i data-lucide="briefcase" class="icon-sm"></i>'}
               <span>${esc(client?.name || 'بدون عميل')}</span>
             </button>` : ''}
-        </div>` : ''}
+          <button type="button" class="week-pick week-pick--more" data-pick="more"
+                  data-day="${attr(key)}" title="وصف، أولوية، نوع العمل، قائمة تحقّق…">
+            <i data-lucide="sliders-horizontal" class="icon-sm"></i>
+            <span>تفاصيل</span>
+          </button>
+      </div>
     </div>`;
 }
 
@@ -1159,12 +1192,19 @@ function weekComposer(key, week, { people, canPickPerson, canPickClient, assignT
  */
 function weekTask(task, people, showPeople) {
   const finished = isFinished(task);
+  const overdue = isOverdue(task);
   const assignees = showPeople
     ? (task.assignees || []).map((id) => people[id]).filter(Boolean)
     : [];
 
+  // Being worked on right now is the one status that describes something
+  // happening at this moment rather than a state the task is parked in, so it
+  // is the only row that moves. Same rule the board's live badge uses: a task
+  // that is both in progress and already late is late first.
+  const live = !overdue && !finished && task.status === 'inprogress';
+
   return `
-    <article class="week-task${finished ? ' is-done' : ''}${isOverdue(task) ? ' is-late' : ''}"
+    <article class="week-task${finished ? ' is-done' : ''}${overdue ? ' is-late' : ''}${live ? ' is-active' : ''}"
              data-task="${attr(task.id)}" data-priority="${attr(task.priority)}"
              title="${attr(task.title)}" draggable="true" tabindex="0">
       <button class="week-task__check" type="button" data-check="${attr(task.id)}"
@@ -1173,6 +1213,7 @@ function weekTask(task, people, showPeople) {
         <i data-lucide="check" class="icon-sm"></i>
       </button>
       <span class="week-task__title">${esc(task.title)}</span>
+      ${live ? '<span class="week-task__live" title="قيد التنفيذ الآن"></span>' : ''}
       ${assignees.length ? avatarStack(assignees, 2) : ''}
     </article>`;
 }

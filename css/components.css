@@ -1431,6 +1431,46 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
 }
 .week-task.is-late .week-task__title { color: var(--danger-ink); }
 
+/* Being worked on right now. The same language the board's live badge speaks —
+   a breathing dot — because it is the same fact, and the row is too small for
+   the sweeping highlight the card uses. The priority mark breathes with it, so
+   the movement is visible from across a seven-column grid without a second
+   colour entering the cell. */
+/* A light tint, not `--brand-soft`: the dot is the brand colour too, and at
+   the soft token's strength it was the brand on a brand wash — 2.4:1 on the
+   warmer themes. Backing the row off gives the dot somewhere to stand, and a
+   row inside a seven-column grid does not need to shout anyway. */
+.week-task.is-active { background: color-mix(in srgb, var(--brand) 8%, transparent); }
+.week-task.is-active:hover { background: var(--bg-hover); }
+.week-task.is-active::before { animation: week-bar-breathe 1.9s var(--ease) infinite; }
+
+.week-task__live {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  margin-top: 6px;
+  border-radius: 50%;
+  /* The brand pulled towards the text colour. The row it sits on is tinted
+     with the brand and so is the cell under it, so the brand on its own was
+     brand-on-brand — 2.2:1 on the warmer themes. Mixing in the ink darkens it
+     on the pale themes and lightens it on the dark ones, which is the only
+     way one declaration clears every palette. */
+  background: color-mix(in srgb, var(--brand) 60%, var(--text-primary));
+  animation: task-pulse 1.6s var(--ease) infinite;
+}
+
+@keyframes week-bar-breathe {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
+}
+
+/* Motion is the whole point here, so it goes entirely rather than being
+   shortened when the reader has asked for less of it. */
+@media (prefers-reduced-motion: reduce) {
+  .week-task.is-active::before,
+  .week-task__live { animation: none; }
+}
+
 /* Ticked: struck through and on its way out. It is still here, and clicking
    the box again brings it back — the row only leaves a few seconds later. */
 .week-task.is-done { opacity: 0.45; }
