@@ -18,7 +18,7 @@ export const STRINGS = {
 
     /* nav */
     'nav.home': 'الرئيسية',
-    'nav.myTasks': 'مهامي',
+    'nav.myTasks': 'مهامي الشخصية',
     'nav.calendar': 'التقويم',
     'nav.team': 'الفريق',
     'nav.employees': 'الموظفون',
@@ -36,8 +36,8 @@ export const STRINGS = {
 
     /* route titles / breadcrumbs */
     'route.home': 'الرئيسية',
-    'route.myTasks': 'مهامي',
-    'route.allTasks': 'كل المهام',
+    'route.myTasks': 'مهامي الشخصية',
+    'route.allTasks': 'مهام الفريق',
     'route.taskDetail': 'تفاصيل المهمة',
     'route.calendar': 'التقويم',
     'route.team': 'الفريق',
@@ -86,7 +86,7 @@ export const STRINGS = {
 
     /* profile dropdown */
     'profileMenu.myProfile': 'ملفي الشخصي',
-    'profileMenu.myTasks': 'مهامي',
+    'profileMenu.myTasks': 'مهامي الشخصية',
     'profileMenu.myRequests': 'طلباتي',
     'profileMenu.settings': 'الإعدادات',
     'profileMenu.changePassword': 'تغيير كلمة المرور',
@@ -279,7 +279,7 @@ export const STRINGS = {
     /* route titles / breadcrumbs */
     'route.home': 'Home',
     'route.myTasks': 'My Tasks',
-    'route.allTasks': 'All Tasks',
+    'route.allTasks': 'Team Tasks',
     'route.taskDetail': 'Task Details',
     'route.calendar': 'Calendar',
     'route.team': 'Team',

@@ -97,7 +97,7 @@ async function renderBoard(container, ctx) {
     <div class="page__inner">
       <div class="page-head">
         <div>
-          <div class="page-head__title">${scopeMine ? 'مهامي' : 'كل المهام'}</div>
+          <div class="page-head__title">${scopeMine ? 'مهامي الشخصية' : 'مهام الفريق'}</div>
           <div class="page-head__sub" id="task-count">…</div>
         </div>
         <div class="page-head__actions">
@@ -107,7 +107,7 @@ async function renderBoard(container, ctx) {
             <button data-view="board" title="لوحة"><i data-lucide="columns-3"></i> لوحة</button>
             <button data-view="table" title="جدول"><i data-lucide="table"></i> جدول</button>
           </div>
-          ${!scopeMine && canSeeAll ? '' : `<a class="btn btn--ghost" href="#/tasks">كل المهام</a>`}
+          ${!scopeMine && canSeeAll ? '' : `<a class="btn btn--ghost" href="#/tasks">مهام الفريق</a>`}
           ${can(session.claims, 'tasks.ai')
             ? `<button class="btn btn--ai" id="manager-ai-btn">
                  <i data-lucide="sparkles"></i> Luma AI
@@ -178,7 +178,7 @@ async function renderBoard(container, ctx) {
   ['#f-status', '#f-priority', '#f-assignee', '#f-client'].forEach((sel) => {
     $(sel)?.addEventListener('change', applyFilters);
   });
-  on(container, 'click', '[data-load]', (_, node) => {
+  unsubs.push(on(container, 'click', '[data-load]', (_, node) => {
     const id = node.dataset.load;
     // A second click on the same person clears it, so the strip is a toggle
     // rather than a trap you have to leave through the filter bar.
@@ -186,37 +186,40 @@ async function renderBoard(container, ctx) {
     const select = $('#f-assignee');
     if (select) select.value = filters.assignee;
     paint();
-  });
+  }));
 
   /* ----------------------------------------------------- week planner */
-  // Bound once, on the container, rather than per render: the view repaints on
-  // every snapshot, and re-binding each time would run a handler twice for one
-  // click — which for "add task" means two tasks.
+  // Bound on the container rather than per render, because the view repaints on
+  // every snapshot and re-binding each time would run a handler twice for one
+  // click. The disposers go into `unsubs`: the router gives every route the
+  // same container and only swaps its contents, so a listener left behind here
+  // fires again on the next visit to this page — which for "add" meant the
+  // dialog opening once per visit made so far.
 
   // A quick add lands on whoever the board is filtered to, so one person's
   // week can be filled in without opening a picker for every line.
   const quickAssignee = () =>
     (!scopeMine && canAssign && filters.assignee !== 'all' ? filters.assignee : session.uid);
 
-  on(container, 'click', '[data-week]', (_, node) => {
+  unsubs.push(on(container, 'click', '[data-week]', (_, node) => {
     const act = node.dataset.week;
     if (act === 'prev') week.offset -= 1;
     else if (act === 'next') week.offset += 1;
     else week.offset = 0;
     paint();
-  });
+  }));
 
-  on(container, 'change', '#week-done', (_, node) => {
+  unsubs.push(on(container, 'change', '#week-done', (_, node) => {
     week.showDone = node.checked;
     paint();
-  });
+  }));
 
-  on(container, 'click', '.week-task', (e, node) => {
+  unsubs.push(on(container, 'click', '.week-task', (e, node) => {
     if (e.target.closest('button')) return;
     location.hash = `#/tasks/${node.dataset.task}`;
-  });
+  }));
 
-  on(container, 'click', '[data-check]', async (_, button) => {
+  unsubs.push(on(container, 'click', '[data-check]', async (_, button) => {
     const id = button.dataset.check;
     const task = tasks.find((t) => t.id === id);
     if (!task) return;
@@ -256,14 +259,14 @@ async function renderBoard(container, ctx) {
       reportError(err, 'week-done');
       paint();
     }
-  });
+  }));
 
   /* --------------------------------------------------------- quick add */
 
   const canPickPerson = !scopeMine && canAssign && directory.length > 1;
   const canPickClient = clients.length > 0;
 
-  on(container, 'click', '[data-add]', (_, node) => openQuickAdd(node.dataset.add));
+  unsubs.push(on(container, 'click', '[data-add]', (_, node) => openQuickAdd(node.dataset.add)));
 
   /**
    * Adding, as a small dialog rather than a box inside the day cell.
@@ -301,7 +304,7 @@ async function renderBoard(container, ctx) {
         <button class="btn btn--ghost quick-add__more" id="qa-more">
           <i data-lucide="sliders-horizontal"></i> تفاصيل أكثر
         </button>
-        <button class="btn btn--secondary" data-modal-close>تم</button>
+        <button class="btn btn--secondary" data-modal-close>إغلاق</button>
         <button class="btn btn--primary" id="qa-add"><i data-lucide="plus"></i> إضافة</button>`,
       onMount: (api) => {
         const input = api.$('#qa-title');
@@ -340,7 +343,14 @@ async function renderBoard(container, ctx) {
           else pickClient(button, paintMeta);
         });
 
-        const add = async () => {
+        /**
+         * `andClose` is what separates the two ways of committing: the button
+         * finishes and shuts the dialog, Enter adds and stays for the next one.
+         * Someone filling a day types a run of lines and never reaches for the
+         * mouse; someone adding one task clicks the button and expects to be
+         * back on the week.
+         */
+        const add = async (andClose) => {
           const title = sanitizeText(input.value, 200);
           if (!title) { input.focus(); return; }
 
@@ -361,13 +371,17 @@ async function renderBoard(container, ctx) {
             });
             added += 1;
             input.value = '';
+            if (andClose) { api.close(); return; }
             count.hidden = false;
+            // Not "press إضافة to finish": that button needs a title to do
+            // anything, so an empty field would make it look broken.
             count.textContent = `أُضيفت ${pluralAr(added, 'مهمة')} — اكتب التالية أو أغلق.`;
           } catch (err) {
             reportError(err, 'week-add');
           } finally {
             button.classList.remove('is-loading');
             input.disabled = false;
+            if (!input.isConnected) return;      // the dialog closed under us
             input.focus();
           }
         };
@@ -375,9 +389,9 @@ async function renderBoard(container, ctx) {
         input.addEventListener('keydown', (e) => {
           if (e.key !== 'Enter') return;
           e.preventDefault();
-          add();
+          add(false);
         });
-        api.$('#qa-add').addEventListener('click', add);
+        api.$('#qa-add').addEventListener('click', () => add(true));
 
         /* The way out to the full form, carrying everything decided here. */
         api.$('#qa-more').addEventListener('click', () => {
@@ -1893,7 +1907,7 @@ export async function openTaskModal({ task = null, personal = false, clientId = 
 
   const modal = openModal({
     title: isEdit ? 'تعديل المهمة' : (personal ? 'مهمة شخصية جديدة' : 'مهمة جديدة'),
-    subtitle: personal ? 'ستظهر لك وحدك ضمن مهامي' : '',
+    subtitle: personal ? 'ستظهر لك وحدك ضمن مهامك الشخصية' : '',
     size: 'lg',
     bodyHTML: `
       <form id="task-form">

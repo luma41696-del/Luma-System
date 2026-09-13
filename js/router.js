@@ -20,8 +20,8 @@ import { render, refreshIcons, esc } from './utils/dom.js';
  */
 const ROUTES = [
   { path: '/',              title: 'الرئيسية',           titleKey: 'route.home',            module: () => import('./dashboard.js'),        crumbs: [] },
-  { path: '/my-tasks',      title: 'مهامي',              titleKey: 'route.myTasks',         module: () => import('./tasks.js'),            crumbs: [['المهام', '#/my-tasks']], crumbKeys: [['nav.tasksSection', '#/my-tasks']] },
-  { path: '/tasks',         title: 'كل المهام',          titleKey: 'route.allTasks',        module: () => import('./tasks.js'),            crumbs: [['المهام', '#/tasks']], crumbKeys: [['nav.tasksSection', '#/tasks']] },
+  { path: '/my-tasks',      title: 'مهامي الشخصية',              titleKey: 'route.myTasks',         module: () => import('./tasks.js'),            crumbs: [['المهام', '#/my-tasks']], crumbKeys: [['nav.tasksSection', '#/my-tasks']] },
+  { path: '/tasks',         title: 'مهام الفريق',          titleKey: 'route.allTasks',        module: () => import('./tasks.js'),            crumbs: [['المهام', '#/tasks']], crumbKeys: [['nav.tasksSection', '#/tasks']] },
   { path: '/tasks/:id',     title: 'تفاصيل المهمة',      titleKey: 'route.taskDetail',      module: () => import('./tasks.js'),            crumbs: [['المهام', '#/tasks']], crumbKeys: [['nav.tasksSection', '#/tasks']] },
   { path: '/calendar',      title: 'التقويم',            titleKey: 'route.calendar',        module: () => import('./calendar.js'),         crumbs: [] },
   { path: '/team',          title: 'الفريق',             titleKey: 'route.team',            module: () => import('./team.js'),             crumbs: [] },

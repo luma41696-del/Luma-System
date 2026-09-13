@@ -108,11 +108,23 @@ export function bootIcons() {
   window.addEventListener('load', () => refreshIcons(document), { once: true });
 }
 
+/**
+ * Delegated event listener.
+ *
+ * Returns a function that removes it. That matters when the root outlives the
+ * page that bound to it: the router hands every route the same container
+ * element and only replaces its contents, so a listener left on it survives
+ * the page that added it and fires again — once more on every later visit.
+ * A page that binds here should push the returned disposer into whatever it
+ * tears down on the way out.
+ */
 export function on(root, event, selector, handler) {
-  root.addEventListener(event, (e) => {
+  const listener = (e) => {
     const target = e.target.closest(selector);
     if (target && root.contains(target)) handler(e, target);
-  });
+  };
+  root.addEventListener(event, listener);
+  return () => root.removeEventListener(event, listener);
 }
 
 export function show(node, visible = true) {
