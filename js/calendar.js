@@ -41,6 +41,17 @@ export const EVENT_TYPES = {
 
 export async function render(container, ctx) {
   const unsubs = [];
+
+  // Delegated listeners for whichever view is on screen. They go on #cal-body,
+  // which is built once and then has only its contents replaced, so binding
+  // them again on each paint stacked them — and one double-click ended up
+  // opening one "new event" dialog per paint since the page was opened, which
+  // is every month stepped through and every snapshot that arrived.
+  let viewBindings = [];
+  const bindView = (dispose) => viewBindings.push(dispose);
+  const dropViewBindings = () => { viewBindings.forEach((fn) => fn()); viewBindings = []; };
+  unsubs.push(dropViewBindings);
+
   const canSeeAll = can(session.claims, 'dashboard.viewCompany') || can(session.claims, 'tasks.editAll');
 
   let view = localStorage.getItem('luma.calView') || 'month';
@@ -259,6 +270,7 @@ export async function render(container, ctx) {
   }
 
   function paint() {
+    dropViewBindings();
     const items = collect().filter((e) => e.at);
     const host = $('#cal-body');
     const strip = $('#cal-strip');
@@ -345,7 +357,8 @@ export async function render(container, ctx) {
       </div>`;
 
     enableDrop(host, items);
-    on(host, 'dblclick', '.cal-cell', (e, cell) => openEventModal({ date: new Date(cell.dataset.date) }));
+    bindView(on(host, 'dblclick', '.cal-cell',
+      (e, cell) => openEventModal({ date: new Date(cell.dataset.date) })));
   }
 
   function renderWeek(host, start, items) {
@@ -371,8 +384,8 @@ export async function render(container, ctx) {
           }).join('')}`).join('')}
       </div>`;
 
-    on(host, 'dblclick', '.cal-week__slot', (e, slot) =>
-      openEventModal({ date: new Date(slot.dataset.slot) }));
+    bindView(on(host, 'dblclick', '.cal-week__slot',
+      (e, slot) => openEventModal({ date: new Date(slot.dataset.slot) })));
   }
 
   function renderDay(host, date, items) {
@@ -450,10 +463,10 @@ export async function render(container, ctx) {
   }
 
   function bindEventClicks(host, items) {
-    on(host, 'click', '[data-event]', (ev, node) => {
+    bindView(on(host, 'click', '[data-event]', (ev, node) => {
       const item = items.find((i) => i.id === node.dataset.event);
       if (item) openEventDetail(item, people);
-    });
+    }));
   }
 
   /** Drag an event chip onto another day to reschedule it. */

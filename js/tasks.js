@@ -79,6 +79,7 @@ async function renderBoard(container, ctx) {
     showDone: false,
     assignee: null,            // who the next added task is for (null = the default)
     client: null,              // which client it belongs to, if any
+    priority: 'medium',        // how urgent it is — the form's default too
     undo: new Map(),           // ticked task id -> the status it had before
     timers: new Set()
   };
@@ -331,7 +332,12 @@ async function renderBoard(container, ctx) {
                   ? avatarHTML({ name: client.name, photoURL: client.logoURL }, 'xs')
                   : '<i data-lucide="briefcase" class="icon-sm"></i>'}
                 <span>${esc(client?.name || 'بدون عميل')}</span>
-              </button>` : ''}`;
+              </button>` : ''}
+            <button type="button" class="week-pick${week.priority !== 'medium' ? ' is-set' : ''}"
+                    data-pick="priority" title="أولوية المهمة">
+              <span class="week-pick__dot" style="background:${PRIORITIES[week.priority].color}"></span>
+              <span>${esc(priorityLabel(week.priority))}</span>
+            </button>`;
           refreshIcons(meta);
         };
         paintMeta();
@@ -340,7 +346,8 @@ async function renderBoard(container, ctx) {
           const button = e.target.closest('[data-pick]');
           if (!button) return;
           if (button.dataset.pick === 'person') pickPerson(button, paintMeta);
-          else pickClient(button, paintMeta);
+          else if (button.dataset.pick === 'client') pickClient(button, paintMeta);
+          else pickPriority(button, paintMeta);
         });
 
         /**
@@ -361,6 +368,7 @@ async function renderBoard(container, ctx) {
             await createTask({
               title,
               status: canAssign ? 'assigned' : 'new',
+              priority: week.priority,
               assignees: [week.assignee || quickAssignee()],
               clientId: week.client?.id || null,
               clientName: week.client ? sanitizeText(week.client.name, 140) : null,
@@ -401,6 +409,7 @@ async function renderBoard(container, ctx) {
             personal: !canAssign,
             defaults: {
               title,
+              priority: week.priority,
               assignees: [week.assignee || quickAssignee()],
               clientId: week.client?.id || '',
               // A bare date; the form turns it into the end of that day, the
@@ -422,6 +431,19 @@ async function renderBoard(container, ctx) {
         </button>`).join('');
     dropdown(anchor, rows, (act, close) => {
       week.assignee = act;
+      close();
+      done();
+    });
+  }
+
+  function pickPriority(anchor, done) {
+    const rows = Object.entries(PRIORITIES).map(([key, meta]) => `
+      <button type="button" class="dropdown__item" data-act="${attr(key)}">
+        <span class="week-pick__dot" style="background:${meta.color}"></span>
+        <span>${esc(meta.ar)}</span>
+      </button>`).join('');
+    dropdown(anchor, rows, (act, close) => {
+      week.priority = act;
       close();
       done();
     });
