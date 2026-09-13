@@ -76,7 +76,10 @@ async function renderBoard(container, ctx) {
   // task, and it would otherwise send the user back to the current week.
   const week = {
     offset: 0,                 // weeks away from this one
-    showDone: false,
+    // On, so the week opens showing what was finished as well as what is left.
+    // The toggle still takes it away, and a task ticked here still leaves the
+    // grid a few seconds later — the difference is only where the week starts.
+    showDone: true,
     assignee: null,            // who the next added task is for (null = the default)
     client: null,              // which client it belongs to, if any
     priority: 'medium',        // how urgent it is — the form's default too

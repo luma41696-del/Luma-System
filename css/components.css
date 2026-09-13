@@ -893,6 +893,65 @@ html[dir="ltr"] .switch input:checked + .switch__track::after { transform: trans
 .dropdown__item--danger { color: var(--danger); }
 .dropdown__item--danger:hover { background: var(--danger-soft); color: var(--danger); }
 .dropdown__sep { height: 1px; background: var(--border-soft); margin: var(--sp-2) 0; }
+
+/* The bell's popover: the newest few, enough to decide whether to go and read
+   the rest. Wider than a menu because these rows carry a sentence each. */
+.notif-menu { width: min(330px, calc(100vw - 32px)); }
+.notif-mini { align-items: flex-start; gap: var(--sp-2); }
+.notif-mini.is-unread { background: var(--bg-active); }
+.notif-mini__icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  display: grid;
+  place-items: center;
+  background: var(--bg-inset);
+  color: var(--text-secondary);
+}
+.notif-mini__icon svg { width: 15px; height: 15px; }
+/* The unread row is tinted with the accent and so was this glyph, which made
+   it the brand on a wash of the brand — 1.9:1 on the pale themes, 2.3:1 on the
+   dark ones. Pulling the accent towards the ink darkens it where the tint is
+   pale and lightens it where the tint is dark, which is the only way one
+   declaration clears all twelve. */
+.notif-mini.is-unread .notif-mini__icon {
+  color: color-mix(in srgb, var(--yellow) 55%, var(--text-primary));
+}
+.notif-mini__body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.notif-mini__title {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+/* Two lines of the body, because the point is to recognise the notification,
+   not to read it here. */
+.notif-mini__text {
+  font-size: var(--fs-xs);
+  color: var(--text-secondary);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.notif-mini__time {
+  flex: none;
+  align-self: flex-start;
+  margin-top: 2px;
+  font-size: var(--fs-2xs);
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.notif-mini__empty {
+  padding: var(--sp-5) var(--sp-3);
+  text-align: center;
+  font-size: var(--fs-sm);
+  color: var(--text-muted);
+}
 .dropdown__header { padding: var(--sp-2) var(--sp-3); font-size: var(--fs-2xs); color: var(--text-muted); font-weight: 700; }
 
 /* ================================================================ TOASTS */

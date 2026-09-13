@@ -20,10 +20,11 @@ import {
 import { formatStopwatch, formatDuration, timeAgo } from './utils/format.js';
 import { initSound, playNotificationSound, isAway } from './utils/sound.js';
 import {
-  col, query, where, orderBy, limit, onSnapshot, getMany, updateDoc, ref, callFn, getDirectory
+  col, query, where, orderBy, limit, onSnapshot, getMany, updateDoc, ref, ts, callFn, getDirectory
 } from './utils/api.js';
 import { t, applyStaticI18n } from './utils/i18n.js';
 import { showBrowserNotification } from './utils/browser-notify.js';
+import { kindOf } from './utils/notification-kinds.js';
 import { THEME_META, getTheme, cycleTheme } from './utils/theme.js';
 
 /* -------------------------------------------------------------- elements */
@@ -287,7 +288,7 @@ function wireChrome() {
   $('#profile-btn').addEventListener('click', (e) => openProfileMenu(e.currentTarget));
 
   /* notifications --------------------------------------------------------- */
-  $('#notif-btn').addEventListener('click', () => navigate('#/notifications'));
+  $('#notif-btn').addEventListener('click', (e) => openNotificationsMenu(e.currentTarget));
 
   /* search ---------------------------------------------------------------- */
   wireSearch();
@@ -504,6 +505,70 @@ async function openQuickTask(options = {}) {
 
 /* --------------------------------------------------------- notifications */
 
+/**
+ * The last snapshot the listener below delivered.
+ *
+ * The bell's popover reads this rather than querying: the listener is already
+ * holding the thirty newest, so opening the menu costs nothing and shows what
+ * the dot is about without a round trip or a page change.
+ */
+let latestNotifications = [];
+
+/** How many fit in the popover before it stops being a glance. */
+const NOTIF_PREVIEW = 6;
+
+function openNotificationsMenu(anchor) {
+  // A second click on the bell puts it away. Matching on our own menu rather
+  // than on any open dropdown, so clicking the bell while the profile menu is
+  // open opens this one instead of just closing that one.
+  const open = document.querySelector('.dropdown .notif-menu');
+  if (open) { open.closest('.dropdown').remove(); return; }
+
+  const items = latestNotifications.slice(0, NOTIF_PREVIEW);
+  const unread = latestNotifications.filter((n) => !n.read).length;
+
+  const rows = items.length
+    ? items.map((n) => {
+        const kind = kindOf(n.kind);
+        return `
+          <button class="dropdown__item notif-mini${n.read ? '' : ' is-unread'}"
+                  data-act="open:${attr(n.id)}">
+            <span class="notif-mini__icon"><i data-lucide="${attr(n.icon || kind.icon)}"></i></span>
+            <span class="notif-mini__body">
+              <span class="notif-mini__title">${esc(n.title || kind.ar)}</span>
+              ${n.body ? `<span class="notif-mini__text">${esc(n.body)}</span>` : ''}
+            </span>
+            <span class="notif-mini__time">${esc(timeAgo(n.createdAt))}</span>
+          </button>`;
+      }).join('')
+    : `<div class="notif-mini__empty">${esc(t('notifications.noneYet'))}</div>`;
+
+  dropdown(anchor, `
+    <div class="notif-menu">
+      <div class="dropdown__header">
+        ${esc(t('nav.notifications'))}${unread ? ` · ${unread}` : ''}
+      </div>
+      ${rows}
+      <div class="dropdown__sep"></div>
+      <button class="dropdown__item" data-act="__all__">
+        <i data-lucide="list"></i> ${esc(t('notifications.showMore'))}
+      </button>
+    </div>`, (act, close) => {
+    close();
+    if (act === '__all__') { navigate('#/notifications'); return; }
+
+    const id = act.slice(5);
+    const item = latestNotifications.find((n) => n.id === id);
+    // Reading it in the popover is still reading it.
+    if (item && !item.read) {
+      updateDoc(ref('notifications', id), { read: true, readAt: ts() })
+        .catch((err) => console.warn('[luma] mark read', err.code));
+    }
+    // A notification with nowhere to go still deserves somewhere to go.
+    navigate(item?.link || '#/notifications');
+  });
+}
+
 function watchNotifications() {
   const q = query(
     col('notifications'),
@@ -514,6 +579,7 @@ function watchNotifications() {
 
   track(onSnapshot(q, (snap) => {
     const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    latestNotifications = items;
     const unread = items.filter((n) => !n.read);
 
     $('#notif-dot').hidden = unread.length === 0;

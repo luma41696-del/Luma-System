@@ -15,6 +15,8 @@ export const STRINGS = {
     'app.brand': 'لوما',
     'common.employee': 'موظف',
     'common.newNotification': 'إشعار جديد',
+    'notifications.noneYet': 'لا توجد إشعارات بعد',
+    'notifications.showMore': 'إظهار المزيد',
 
     /* nav */
     'nav.home': 'الرئيسية',
@@ -257,6 +259,8 @@ export const STRINGS = {
     'app.brand': 'Luma',
     'common.employee': 'Employee',
     'common.newNotification': 'New notification',
+    'notifications.noneYet': 'No notifications yet',
+    'notifications.showMore': 'Show more',
 
     /* nav */
     'nav.home': 'Home',

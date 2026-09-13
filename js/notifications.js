@@ -9,20 +9,7 @@ import {
   col, ref, query, where, orderBy, limit, onSnapshot, updateDoc, deleteDoc, ts
 } from './utils/api.js';
 import { timeAgo, formatDateTime } from './utils/format.js';
-
-const KINDS = {
-  task_assigned:   { ar: 'إسناد مهمة',        icon: 'check-square' },
-  task_due:        { ar: 'اقتراب موعد',       icon: 'clock' },
-  task_overdue:    { ar: 'مهمة متأخرة',       icon: 'alert-triangle' },
-  task_comment:    { ar: 'تعليق جديد',        icon: 'message-square' },
-  request_decided: { ar: 'قرار على طلب',      icon: 'gavel' },
-  request_new:     { ar: 'طلب جديد',          icon: 'inbox' },
-  chat_message:    { ar: 'رسالة جديدة',       icon: 'message-circle' },
-  chat_mention:    { ar: 'إشارة إليك',        icon: 'at-sign' },
-  client_updated:  { ar: 'تحديث بيانات عميل', icon: 'briefcase' },
-  announcement:    { ar: 'إعلان للفريق',      icon: 'megaphone' },
-  system:          { ar: 'النظام',            icon: 'bell' }
-};
+import { KINDS, kindOf } from './utils/notification-kinds.js';
 
 export async function render(container) {
   const unsubs = [];
@@ -169,7 +156,7 @@ export async function render(container) {
     }
 
     host.innerHTML = rows.map((n) => {
-      const kind = KINDS[n.kind] || KINDS.system;
+      const kind = kindOf(n.kind);
       return `
         <div class="notif-row${n.read ? '' : ' is-unread'}" data-notif="${attr(n.id)}">
           <span class="notif-row__icon"><i data-lucide="${attr(n.icon || kind.icon)}"></i></span>
