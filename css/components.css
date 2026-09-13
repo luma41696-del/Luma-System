@@ -1571,7 +1571,11 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
   gap: var(--sp-1);
   width: 100%;
   padding: 7px var(--sp-2);
-  border: 1px dashed var(--border-strong);
+  /* The border is the box, so it has to be a box you can see. `--border-strong`
+     measured 1.05:1 against the tinted "today" cell on the light themes — a
+     dashed line nobody can find is the same as no line. Pulling the accent
+     towards the ink clears 4.8:1 on the worst of the twelve. */
+  border: 1px dashed color-mix(in srgb, var(--brand) 55%, var(--text-primary));
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
@@ -1582,9 +1586,11 @@ html[dir="rtl"] .task-card.is-active .progress::after { animation-name: task-swe
   transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease),
               color var(--t-fast) var(--ease);
 }
+/* Hover fills and brightens rather than recolouring the border: on the dark
+   themes the plain accent is fainter than the mix above, so moving the border
+   to it on hover would make the box harder to see, not easier. */
 .week-add-btn:hover {
   background: var(--bg-hover);
-  border-color: var(--brand);
   color: var(--text-primary);
 }
 .week-add-btn:focus-visible { outline: 2px solid var(--brand); outline-offset: 1px; }
