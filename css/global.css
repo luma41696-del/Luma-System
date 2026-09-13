@@ -210,29 +210,45 @@ svg.lucide {
 .logo-mark {
   -webkit-mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
   mask: url("../assets/logo/luma-mark.png") center / contain no-repeat;
-  /* A dark berry base keeps the mark visible before its moving paint loads. */
-  background-color: #a43b78;
-  background-image: linear-gradient(
-    125deg,
-    #762b5d 0%,
-    #d34b8e 19%,
-    #ff3b9a 34%,
-    #e99a78 48%,
-    #a33a76 64%,
-    #ff4aa2 82%,
-    #762b5d 100%
-  );
+  /* Painted first, so the mark is never invisible if the gradient fails. */
+  background-color: var(--brand);
+  /* Two layers: the light travelling across the mark, and the mark's own
+     colour underneath it.
+     Both are mixed from `--brand`, never from fixed hex. The reference clip
+     this motion came from is a pink logo, and copying its pinks left the mark
+     the same berry colour on all twelve themes — a logo that ignores the
+     palette the rest of the screen is painted in. */
+  background-image:
+    linear-gradient(
+      125deg,
+      /* Kept light-handed: the band crosses every part of the mark in turn,
+         and a stronger one washes the logo out to near-white on the pale
+         themes, where it is sitting on a white card. */
+      rgba(255, 255, 255, 0) 34%,
+      rgba(255, 255, 255, 0.3) 46%,
+      rgba(255, 255, 255, 0) 60%
+    ),
+    linear-gradient(
+      125deg,
+      color-mix(in srgb, var(--brand) 74%, #000) 0%,
+      var(--brand) 32%,
+      var(--brand-light) 50%,
+      var(--brand) 68%,
+      color-mix(in srgb, var(--brand) 74%, #000) 100%
+    );
   /* The reference keeps the mark still and moves only its diagonal colour. */
   background-size: 260% 260%;
   animation: logo-sheen 4.8s linear infinite;
-  filter: drop-shadow(0 0 8px rgba(238, 70, 151, .14));
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--brand) 22%, transparent));
   aspect-ratio: 216 / 604;
   flex: none;
 }
 
+/* Both layers travel together, so the highlight stays put inside the colour
+   it belongs to rather than drifting across it. */
 @keyframes logo-sheen {
-  0%   { background-position: 100% 100%; }
-  100% { background-position:   0%   0%; }
+  0%   { background-position: 100% 100%, 100% 100%; }
+  100% { background-position:   0%   0%,   0%   0%; }
 }
 
 /* A logo that never stops moving is a logo nobody stops noticing. */
